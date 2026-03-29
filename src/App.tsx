@@ -14,7 +14,7 @@ import { InventoryLayout } from '@/components/inventory/InventoryLayout';
 import { FinanceLayout } from '@/components/finance/FinanceLayout';
 import { SettingsLayout } from '@/components/settings/SettingsLayout';
 import { ContactsLayout } from '@/components/crm/ContactsLayout';
-import { CRMModule } from '@/components/crm/CRMModule';
+import { CompaniesLayout } from '@/components/crm/CompaniesLayout';
 import { FormsLayout } from '@/components/forms/FormsLayout';
 import { SalesLayout } from '@/components/sales/SalesLayout';
 import { PlanningListLayout } from '@/components/planning/PlanningListLayout';
@@ -47,7 +47,7 @@ export default function App() {
             {activeView === 'finance' && <FinanceLayout />}
             {activeView === 'settings' && <SettingsLayout />}
             {activeView === 'crm' && <ContactsLayout />}
-            {activeView === 'crm_bedrijven' && <CRMModule />}
+            {activeView === 'crm_bedrijven' && <CompaniesLayout />}
             {activeView === 'forms' && <FormsLayout />}
             {activeView === 'sales' && <SalesLayout />}
             {activeView !== 'project_detail' && activeView !== 'dashboard' && activeView !== 'projects' && activeView !== 'my_projects' && activeView !== 'planning' && activeView !== 'planning_list' && activeView !== 'inventory' && activeView !== 'finance' && activeView !== 'settings' && activeView !== 'crm' && activeView !== 'crm_bedrijven' && activeView !== 'forms' && activeView !== 'sales' && (
