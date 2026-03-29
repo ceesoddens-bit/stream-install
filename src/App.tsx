@@ -47,10 +47,10 @@ export default function App() {
             {activeView === 'finance' && <FinanceLayout />}
             {activeView === 'settings' && <SettingsLayout />}
             {activeView === 'crm' && <ContactsLayout />}
-            {activeView === 'crm_bedrijven' && <CompaniesLayout />}
+            {activeView === 'crm_companies' && <CompaniesLayout />}
             {activeView === 'forms' && <FormsLayout />}
             {activeView === 'sales' && <SalesLayout />}
-            {activeView !== 'project_detail' && activeView !== 'dashboard' && activeView !== 'projects' && activeView !== 'my_projects' && activeView !== 'planning' && activeView !== 'planning_list' && activeView !== 'inventory' && activeView !== 'finance' && activeView !== 'settings' && activeView !== 'crm' && activeView !== 'crm_bedrijven' && activeView !== 'forms' && activeView !== 'sales' && (
+            {activeView !== 'project_detail' && activeView !== 'dashboard' && activeView !== 'projects' && activeView !== 'my_projects' && activeView !== 'planning' && activeView !== 'planning_list' && activeView !== 'inventory' && activeView !== 'finance' && activeView !== 'settings' && activeView !== 'crm' && activeView !== 'crm_companies' && activeView !== 'forms' && activeView !== 'sales' && (
               <div className="flex items-center justify-center h-full text-gray-500">
                 <div className="text-center">
                   <h2 className="text-2xl font-bold mb-2 capitalize">{activeView.replace('_', ' ')}</h2>
