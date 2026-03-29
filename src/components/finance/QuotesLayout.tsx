@@ -1,27 +1,27 @@
 import React, { useState } from 'react';
 import { 
-  Layers, Settings, Columns3, SlidersHorizontal, AlignJustify, Maximize2, Download, Search, Plus, Archive, Edit, Info, ChevronDown, MoreHorizontal, CheckCircle2, FileText, Send, CheckSquare, MessageSquare
+  Layers, Settings, Columns3, SlidersHorizontal, AlignJustify, Maximize2, Download, Search, Plus, Archive, Edit, Info, ChevronDown, MoreHorizontal, CheckCircle2, FileText, Send, CheckSquare, MessageSquare, Check, X, UserCircle2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const quotesData = [
-  { id: 530, naam: 'Nieuwe offerte', status: 'Afgerond', statusColor: 'bg-green-100 text-green-800', geaccept: 'pending', projStatus: 'Offerte verstuurd', projColor: 'bg-green-200 text-green-900', project: '2500179-fam Caeta...', contact: 'fam Caetano', inbeh: '0%', gefac: '0%', totaal: '6.1...' },
-  { id: 529, naam: 'Nieuwe offerte', status: 'Afgerond', statusColor: 'bg-green-100 text-green-800', geaccept: 'pending', projStatus: '-', projColor: 'bg-gray-100 text-gray-800', project: '-', contact: '-', inbeh: '0%', gefac: '0%', totaal: '6.8...' },
-  { id: 528, naam: 'Nieuwe offerte', status: 'Concept', statusColor: 'bg-orange-100 text-orange-800', geaccept: 'pending', projStatus: 'Offerte maken', projColor: 'bg-green-200 text-green-900', project: '2600135-Fam. van d...', contact: 'Fam. van den Brink', inbeh: '0%', gefac: '0%', totaal: '-' },
-  { id: 527, naam: 'Nieuwe offerte', status: 'Afgerond', statusColor: 'bg-green-100 text-green-800', geaccept: 'pending', projStatus: 'Montage gepland', projColor: 'bg-yellow-200 text-yellow-900', project: '2600124-Mireille de l...', contact: 'Mireille de Haan', inbeh: '0%', gefac: '0%', totaal: '1.2...' },
-  { id: 526, naam: 'Nieuwe offerte', status: 'Afgerond', statusColor: 'bg-green-100 text-green-800', geaccept: 'accepted', projStatus: 'Oplevering controle', projColor: 'bg-purple-500 text-white', project: '2600210-Centrada-l...', contact: '-', inbeh: '0%', gefac: '0%', totaal: '2.9...' },
-  { id: 525, naam: 'Nieuwe offerte', status: 'Concept', statusColor: 'bg-orange-100 text-orange-800', geaccept: 'pending', projStatus: 'Offerte maken', projColor: 'bg-green-200 text-green-900', project: '2600144-Frank van d...', contact: 'Frank van der Drift', inbeh: '0%', gefac: '0%', totaal: '1.0...' },
-  { id: 524, naam: 'Nieuwe offerte', status: 'Afgerond', statusColor: 'bg-green-100 text-green-800', geaccept: 'pending', projStatus: 'Offerte verstuurd', projColor: 'bg-green-200 text-green-900', project: '2600207-Martijn van...', contact: 'Martijn van de Laar', inbeh: '0%', gefac: '0%', totaal: '1.6...' },
-  { id: 523, naam: 'Nieuwe offerte', status: 'Afgerond', statusColor: 'bg-green-100 text-green-800', geaccept: 'pending', projStatus: 'Offerte verstuurd', projColor: 'bg-green-200 text-green-900', project: '2600205-V & O Cars...', contact: '-', inbeh: '0%', gefac: '0%', totaal: '1.7.9...' },
-  { id: 522, naam: 'Nieuwe offerte', status: 'Afgerond', statusColor: 'bg-green-100 text-green-800', geaccept: 'pending', projStatus: 'Offerte verstuurd', projColor: 'bg-green-200 text-green-900', project: '2600204-V & O Cars...', contact: '-', inbeh: '0%', gefac: '0%', totaal: '6.2...' },
-  { id: 521, naam: 'Nieuwe offerte', status: 'Afgerond', statusColor: 'bg-green-100 text-green-800', geaccept: 'pending', projStatus: 'Offerte verstuurd', projColor: 'bg-green-200 text-green-900', project: '2600163-Rob Holtsla...', contact: 'Rob Holtslag', inbeh: '0%', gefac: '0%', totaal: '8.3...' },
-  { id: 520, naam: 'Nieuwe offerte', status: 'Afgerond', statusColor: 'bg-green-100 text-green-800', geaccept: 'pending', projStatus: 'Offerte verstuurd', projColor: 'bg-green-200 text-green-900', project: '2600196-Mark MCT...', contact: 'Mark MCT', inbeh: '0%', gefac: '0%', totaal: '3.8...' },
-  { id: 519, naam: 'Nieuwe offerte', status: 'Afgerond', statusColor: 'bg-green-100 text-green-800', geaccept: 'pending', projStatus: 'Offerte verstuurd', projColor: 'bg-green-200 text-green-900', project: '2600194-Sylvia van d...', contact: 'Sylvia van den Hoek', inbeh: '0%', gefac: '0%', totaal: '6.8...' },
-  { id: 518, naam: 'Nieuwe offerte', status: 'Afgerond', statusColor: 'bg-green-100 text-green-800', geaccept: 'pending', projStatus: 'Offerte verstuurd', projColor: 'bg-green-200 text-green-900', project: '2600194-Sylvia van d...', contact: 'Sylvia van den Hoek', inbeh: '0%', gefac: '0%', totaal: '4.9...' },
-  { id: 515, naam: 'Nieuwe offerte', status: 'Afgerond', statusColor: 'bg-green-100 text-green-800', geaccept: 'pending', projStatus: 'Offerte verstuurd', projColor: 'bg-green-200 text-green-900', project: '2600190-Beauty by ...', contact: '-', inbeh: '0%', gefac: '0%', totaal: '1.6...' },
-  { id: 514, naam: 'Nieuwe offerte', status: 'Afgerond', statusColor: 'bg-green-100 text-green-800', geaccept: 'pending', projStatus: 'Montage plannen', projColor: 'bg-yellow-200 text-yellow-900', project: '2600168-Stephan Pr...', contact: 'Stephan Prins', inbeh: '0%', gefac: '0%', totaal: '2.6...' },
-  { id: 513, naam: 'naam', status: 'Concept', statusColor: 'bg-orange-100 text-orange-800', geaccept: 'pending', projStatus: 'Offerte verstuurd', projColor: 'bg-green-200 text-green-900', project: '2500179-fam Caeta...', contact: 'fam Caetano', inbeh: '0%', gefac: '0%', totaal: '5.2...' },
-  { id: 512, naam: 'Nieuwe offerte', status: 'Afgerond', statusColor: 'bg-green-100 text-green-800', geaccept: 'pending', projStatus: 'Offerte verstuurd', projColor: 'bg-green-200 text-green-900', project: '2600186-Almira Kalk...', contact: 'Almira Kalkhoven', inbeh: '0%', gefac: '0%', totaal: '1.8...' },
+  { id: 530, naam: 'Nieuwe offerte', status: 'Afgerond', statusColor: 'bg-green-100 text-green-800', geaccept: 'pending', projStatus: 'Offerte verstuurd', projColor: 'bg-green-200 text-green-900', project: '2500179-fam Caeta...', contact: 'fam Caetano', inbeh: '0%', gefac: '0%', totaal: '6.1...', mail: 'check', verstuurd: '26-03-26 11:03', geopend: '-', keren: '0', reden: '', gemaakt_op: '26-03-2026 11:00', gemaakt_door: 'Sven | Ins...' },
+  { id: 529, naam: 'Nieuwe offerte', status: 'Afgerond', statusColor: 'bg-green-100 text-green-800', geaccept: 'pending', projStatus: '-', projColor: 'bg-gray-100 text-gray-800', project: '-', contact: '-', inbeh: '0%', gefac: '0%', totaal: '6.8...', mail: 'check', verstuurd: '25-03-26 12:20', geopend: '25-03-26 12:22', keren: '2', reden: '', gemaakt_op: '25-03-2026 12:19', gemaakt_door: 'Sven | Ins...' },
+  { id: 528, naam: 'Nieuwe offerte', status: 'Concept', statusColor: 'bg-orange-100 text-orange-800', geaccept: 'pending', projStatus: 'Offerte maken', projColor: 'bg-green-200 text-green-900', project: '2600135-Fam. van d...', contact: 'Fam. van den Brink', inbeh: '0%', gefac: '0%', totaal: '-', mail: 'cross', verstuurd: '-', geopend: '-', keren: '0', reden: '', gemaakt_op: '25-03-2026 09:22', gemaakt_door: 'Sven | Ins...' },
+  { id: 527, naam: 'Nieuwe offerte', status: 'Afgerond', statusColor: 'bg-green-100 text-green-800', geaccept: 'pending', projStatus: 'Montage gepland', projColor: 'bg-yellow-200 text-yellow-900', project: '2600124-Mireille de l...', contact: 'Mireille de Haan', inbeh: '0%', gefac: '0%', totaal: '1.2...', mail: 'check', verstuurd: '25-03-26 09:21', geopend: '-', keren: '0', reden: '', gemaakt_op: '25-03-2026 09:09', gemaakt_door: 'Sven | Ins...' },
+  { id: 526, naam: 'Nieuwe offerte', status: 'Afgerond', statusColor: 'bg-green-100 text-green-800', geaccept: 'accepted', projStatus: 'Oplevering controle', projColor: 'bg-purple-500 text-white', project: '2600210-Centrada-l...', contact: '-', inbeh: '0%', gefac: '0%', totaal: '2.9...', mail: 'cross', verstuurd: '-', geopend: '-', keren: '0', reden: 'Woco', gemaakt_op: '25-03-2026 08:58', gemaakt_door: 'Sven | Ins...' },
+  { id: 525, naam: 'Nieuwe offerte', status: 'Concept', statusColor: 'bg-orange-100 text-orange-800', geaccept: 'pending', projStatus: 'Offerte maken', projColor: 'bg-green-200 text-green-900', project: '2600144-Frank van d...', contact: 'Frank van der Drift', inbeh: '0%', gefac: '0%', totaal: '1.0...', mail: 'cross', verstuurd: '-', geopend: '-', keren: '0', reden: '', gemaakt_op: '24-03-2026 15:49', gemaakt_door: 'Sven | Ins...' },
+  { id: 524, naam: 'Nieuwe offerte', status: 'Afgerond', statusColor: 'bg-green-100 text-green-800', geaccept: 'pending', projStatus: 'Offerte verstuurd', projColor: 'bg-green-200 text-green-900', project: '2600207-Martijn van...', contact: 'Martijn van de Laar', inbeh: '0%', gefac: '0%', totaal: '1.6...', mail: 'check', verstuurd: '24-03-26 15:38', geopend: '26-03-26 10:29', keren: '2', reden: '', gemaakt_op: '24-03-2026 15:28', gemaakt_door: 'Sven | Ins...' },
+  { id: 523, naam: 'Nieuwe offerte', status: 'Afgerond', statusColor: 'bg-green-100 text-green-800', geaccept: 'pending', projStatus: 'Offerte verstuurd', projColor: 'bg-green-200 text-green-900', project: '2600205-V & O Cars...', contact: '-', inbeh: '0%', gefac: '0%', totaal: '1.7.9...', mail: 'check', verstuurd: '24-03-26 10:33', geopend: '-', keren: '0', reden: '', gemaakt_op: '24-03-2026 10:13', gemaakt_door: 'Sven | Ins...' },
+  { id: 522, naam: 'Nieuwe offerte', status: 'Afgerond', statusColor: 'bg-green-100 text-green-800', geaccept: 'pending', projStatus: 'Offerte verstuurd', projColor: 'bg-green-200 text-green-900', project: '2600204-V & O Cars...', contact: '-', inbeh: '0%', gefac: '0%', totaal: '6.2...', mail: 'check', verstuurd: '24-03-26 08:35', geopend: '-', keren: '0', reden: '', gemaakt_op: '24-03-2026 08:24', gemaakt_door: 'Sven | Ins...' },
+  { id: 521, naam: 'Nieuwe offerte', status: 'Afgerond', statusColor: 'bg-green-100 text-green-800', geaccept: 'pending', projStatus: 'Offerte verstuurd', projColor: 'bg-green-200 text-green-900', project: '2600163-Rob Holtsla...', contact: 'Rob Holtslag', inbeh: '0%', gefac: '0%', totaal: '8.3...', mail: 'check', verstuurd: '23-03-26 14:38', geopend: '23-03-26 21:29', keren: '7', reden: '', gemaakt_op: '23-03-2026 14:03', gemaakt_door: 'Sven | Ins...' },
+  { id: 520, naam: 'Nieuwe offerte', status: 'Afgerond', statusColor: 'bg-green-100 text-green-800', geaccept: 'pending', projStatus: 'Offerte verstuurd', projColor: 'bg-green-200 text-green-900', project: '2600196-Mark MCT...', contact: 'Mark MCT', inbeh: '0%', gefac: '0%', totaal: '3.8...', mail: 'check', verstuurd: '20-03-26 12:36', geopend: '20-03-26 14:07', keren: '4', reden: '', gemaakt_op: '20-03-2026 12:10', gemaakt_door: 'Sven | Ins...' },
+  { id: 519, naam: 'Nieuwe offerte', status: 'Afgerond', statusColor: 'bg-green-100 text-green-800', geaccept: 'pending', projStatus: 'Offerte verstuurd', projColor: 'bg-green-200 text-green-900', project: '2600194-Sylvia van d...', contact: 'Sylvia van den Hoek', inbeh: '0%', gefac: '0%', totaal: '6.8...', mail: 'cross', verstuurd: '-', geopend: '-', keren: '0', reden: '', gemaakt_op: '19-03-2026 13:22', gemaakt_door: 'Sven | Ins...' },
+  { id: 518, naam: 'Nieuwe offerte', status: 'Afgerond', statusColor: 'bg-green-100 text-green-800', geaccept: 'pending', projStatus: 'Offerte verstuurd', projColor: 'bg-green-200 text-green-900', project: '2600194-Sylvia van d...', contact: 'Sylvia van den Hoek', inbeh: '0%', gefac: '0%', totaal: '4.9...', mail: 'cross', verstuurd: '-', geopend: '-', keren: '0', reden: '', gemaakt_op: '19-03-2026 13:12', gemaakt_door: 'Sven | Ins...' },
+  { id: 515, naam: 'Nieuwe offerte', status: 'Afgerond', statusColor: 'bg-green-100 text-green-800', geaccept: 'pending', projStatus: 'Offerte verstuurd', projColor: 'bg-green-200 text-green-900', project: '2600190-Beauty by ...', contact: '-', inbeh: '0%', gefac: '0%', totaal: '1.6...', mail: 'check', verstuurd: '18-03-26 14:43', geopend: '-', keren: '0', reden: '', gemaakt_op: '18-03-2026 14:33', gemaakt_door: 'Sven | Ins...' },
+  { id: 514, naam: 'Nieuwe offerte', status: 'Afgerond', statusColor: 'bg-green-100 text-green-800', geaccept: 'pending', projStatus: 'Montage plannen', projColor: 'bg-yellow-200 text-yellow-900', project: '2600168-Stephan Pr...', contact: 'Stephan Prins', inbeh: '0%', gefac: '0%', totaal: '2.6...', mail: 'check', verstuurd: '18-03-26 12:56', geopend: '21-03-26 13:29', keren: '2', reden: '', gemaakt_op: '18-03-2026 12:20', gemaakt_door: 'Sven | Ins...' },
+  { id: 513, naam: 'naam', status: 'Concept', statusColor: 'bg-orange-100 text-orange-800', geaccept: 'pending', projStatus: 'Offerte verstuurd', projColor: 'bg-green-200 text-green-900', project: '2500179-fam Caeta...', contact: 'fam Caetano', inbeh: '0%', gefac: '0%', totaal: '5.2...', mail: 'cross', verstuurd: '-', geopend: '-', keren: '0', reden: '', gemaakt_op: '18-03-2026 11:33', gemaakt_door: 'Sven | Ins...' },
+  { id: 512, naam: 'Nieuwe offerte', status: 'Afgerond', statusColor: 'bg-green-100 text-green-800', geaccept: 'pending', projStatus: 'Offerte verstuurd', projColor: 'bg-green-200 text-green-900', project: '2600186-Almira Kalk...', contact: 'Almira Kalkhoven', inbeh: '0%', gefac: '0%', totaal: '1.8...', mail: 'check', verstuurd: '18-03-26 11:09', geopend: '18-03-26 11:19', keren: '1', reden: '', gemaakt_op: '18-03-2026 11:04', gemaakt_door: 'Sven | Ins...' },
 ];
 
 export function QuotesLayout() {
@@ -117,7 +117,15 @@ export function QuotesLayout() {
                 <th className="p-3 font-semibold text-gray-800">In beh...</th>
                 <th className="p-3 font-semibold text-gray-800">Gefac...</th>
                 <th className="p-3 font-semibold text-gray-800">Totaal</th>
-                <th className="p-3 w-40"></th>
+                <th className="p-3 font-semibold text-gray-800">ndtekening d...</th>
+                <th className="p-3 font-semibold text-gray-800">Mail</th>
+                <th className="p-3 font-semibold text-gray-800">Verstuurd op</th>
+                <th className="p-3 font-semibold text-gray-800">Geopend door kla...</th>
+                <th className="p-3 font-semibold text-gray-800">Keren geopend door ...</th>
+                <th className="p-3 font-semibold text-gray-800">Reden</th>
+                <th className="p-3 font-semibold text-gray-800 flex items-center gap-1 cursor-pointer">Gemaakt op <ChevronDown className="h-3.5 w-3.5" /></th>
+                <th className="p-3 font-semibold text-gray-800">Gemaakt door</th>
+                <th className="p-3 w-40 sticky right-0 bg-white shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)]"></th>
               </tr>
             </thead>
             <tbody>
@@ -174,10 +182,43 @@ export function QuotesLayout() {
                   <td className="p-3 text-[13px] text-gray-600">
                     {row.gefac}
                   </td>
-                  <td className="p-3 text-[13px] text-gray-900 font-medium">
-                    {row.totaal}
+                  <td className="p-3 text-[13px] text-gray-900 font-medium whitespace-nowrap">
+                    {row.totaal !== '-' ? `€ ${row.totaal}` : '-'}
                   </td>
-                  <td className="p-3 text-right">
+                  <td className="p-3 text-[13px] text-gray-600">
+                    {/* Empty column */}
+                  </td>
+                  <td className="p-3 text-[13px] text-gray-600">
+                    {row.mail === 'check' ? (
+                      <Check className="h-4 w-4 text-gray-600" />
+                    ) : (
+                      <X className="h-4 w-4 text-gray-300" />
+                    )}
+                  </td>
+                  <td className="p-3 text-[13px] text-gray-700 whitespace-nowrap">
+                    {row.verstuurd}
+                  </td>
+                  <td className="p-3 text-[13px] text-gray-700 whitespace-nowrap">
+                    {row.geopend}
+                  </td>
+                  <td className="p-3 text-[13px] text-gray-700 text-right pr-6">
+                    {row.keren}
+                  </td>
+                  <td className="p-3 text-[13px] text-gray-700">
+                    {row.reden ? (
+                      <span className="bg-green-500 text-white font-bold text-[11px] px-2 py-0.5 rounded-sm shadow-sm">{row.reden}</span>
+                    ) : ''}
+                  </td>
+                  <td className="p-3 text-[13px] text-gray-700 whitespace-nowrap">
+                    {row.gemaakt_op}
+                  </td>
+                  <td className="p-3 text-[13px] text-gray-600">
+                    <div className="flex items-center gap-2 max-w-[120px]">
+                      <UserCircle2 className="h-4 w-4 text-gray-400 shrink-0" />
+                      <span className="truncate" title={row.gemaakt_door}>{row.gemaakt_door}</span>
+                    </div>
+                  </td>
+                  <td className="p-3 text-right sticky right-0 bg-white/95 backdrop-blur-sm group-hover:bg-gray-50/95 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.02)] transition-colors">
                      <div className="flex items-center justify-end gap-2 text-emerald-600">
                       <button className="hover:text-emerald-800 p-0.5"><Edit className="h-3.5 w-3.5" /></button>
                       <button className="hover:text-emerald-800 p-0.5"><Download className="h-3.5 w-3.5" /></button>
