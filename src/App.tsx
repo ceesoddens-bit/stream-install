@@ -16,6 +16,7 @@ import { SettingsLayout } from '@/components/settings/SettingsLayout';
 import { CRMModule } from '@/components/crm/CRMModule';
 import { FormsLayout } from '@/components/forms/FormsLayout';
 import { SalesLayout } from '@/components/sales/SalesLayout';
+import { PlanningListLayout } from '@/components/planning/PlanningListLayout';
 import { TooltipProvider } from '@/components/ui/tooltip';
 
 export default function App() {
@@ -40,13 +41,14 @@ export default function App() {
             {activeView === 'project_detail' && <ProjectDetail onBack={() => setActiveView('projects')} />}
             {(activeView === 'projects' || activeView === 'my_projects') && <KanbanBoard onViewProject={(id) => setActiveView('project_detail')} />}
             {activeView === 'planning' && <PlannerView />}
+            {activeView === 'planning_list' && <PlanningListLayout />}
             {activeView === 'inventory' && <InventoryLayout />}
             {activeView === 'finance' && <FinanceLayout />}
             {activeView === 'settings' && <SettingsLayout />}
             {activeView === 'crm' && <CRMModule />}
             {activeView === 'forms' && <FormsLayout />}
             {activeView === 'sales' && <SalesLayout />}
-            {activeView !== 'project_detail' && activeView !== 'dashboard' && activeView !== 'projects' && activeView !== 'my_projects' && activeView !== 'planning' && activeView !== 'inventory' && activeView !== 'finance' && activeView !== 'settings' && activeView !== 'crm' && activeView !== 'forms' && activeView !== 'sales' && (
+            {activeView !== 'project_detail' && activeView !== 'dashboard' && activeView !== 'projects' && activeView !== 'my_projects' && activeView !== 'planning' && activeView !== 'planning_list' && activeView !== 'inventory' && activeView !== 'finance' && activeView !== 'settings' && activeView !== 'crm' && activeView !== 'forms' && activeView !== 'sales' && (
               <div className="flex items-center justify-center h-full text-gray-500">
                 <div className="text-center">
                   <h2 className="text-2xl font-bold mb-2 capitalize">{activeView.replace('_', ' ')}</h2>
