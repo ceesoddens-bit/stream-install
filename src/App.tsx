@@ -13,6 +13,7 @@ import { ProjectDetail } from '@/components/crm/ProjectDetail';
 import { InventoryLayout } from '@/components/inventory/InventoryLayout';
 import { FinanceLayout } from '@/components/finance/FinanceLayout';
 import { SettingsLayout } from '@/components/settings/SettingsLayout';
+import { ContactsLayout } from '@/components/crm/ContactsLayout';
 import { CRMModule } from '@/components/crm/CRMModule';
 import { FormsLayout } from '@/components/forms/FormsLayout';
 import { SalesLayout } from '@/components/sales/SalesLayout';
@@ -45,10 +46,11 @@ export default function App() {
             {activeView === 'inventory' && <InventoryLayout />}
             {activeView === 'finance' && <FinanceLayout />}
             {activeView === 'settings' && <SettingsLayout />}
-            {activeView === 'crm' && <CRMModule />}
+            {activeView === 'crm' && <ContactsLayout />}
+            {activeView === 'crm_bedrijven' && <CRMModule />}
             {activeView === 'forms' && <FormsLayout />}
             {activeView === 'sales' && <SalesLayout />}
-            {activeView !== 'project_detail' && activeView !== 'dashboard' && activeView !== 'projects' && activeView !== 'my_projects' && activeView !== 'planning' && activeView !== 'planning_list' && activeView !== 'inventory' && activeView !== 'finance' && activeView !== 'settings' && activeView !== 'crm' && activeView !== 'forms' && activeView !== 'sales' && (
+            {activeView !== 'project_detail' && activeView !== 'dashboard' && activeView !== 'projects' && activeView !== 'my_projects' && activeView !== 'planning' && activeView !== 'planning_list' && activeView !== 'inventory' && activeView !== 'finance' && activeView !== 'settings' && activeView !== 'crm' && activeView !== 'crm_bedrijven' && activeView !== 'forms' && activeView !== 'sales' && (
               <div className="flex items-center justify-center h-full text-gray-500">
                 <div className="text-center">
                   <h2 className="text-2xl font-bold mb-2 capitalize">{activeView.replace('_', ' ')}</h2>
