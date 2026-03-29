@@ -42,7 +42,7 @@ type NavItem = {
   icon: any;
   label: string;
   id: string;
-  subItems?: { label: string; id: string; icon?: any }[];
+  subItems?: { label: string; id: string; icon?: any; badge?: string }[];
 };
 
 const navItems: NavItem[] = [
@@ -64,8 +64,10 @@ const navItems: NavItem[] = [
     label: 'PLANNING',
     id: 'planning_parent',
     subItems: [
-      { label: 'Planner', id: 'planning', icon: Map },
+      { label: 'Planner', id: 'planning', icon: Calendar },
+      { label: 'Planner', id: 'planning_beta', icon: Calendar, badge: 'BETA' },
       { label: 'Lijst', id: 'planning_list', icon: List },
+      { label: 'Teams', id: 'teams', icon: Users },
     ]
   },
   {
@@ -210,8 +212,15 @@ export function Sidebar({ collapsed, setCollapsed, activeView, onViewChange }: S
                           : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                       )}
                     >
-                      {subItem.icon && <subItem.icon className={cn('h-4 w-4 shrink-0', activeView === subItem.id ? 'text-blue-700' : 'text-gray-400')} />}
-                      <span>{subItem.label}</span>
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        {subItem.icon && <subItem.icon className={cn('h-4 w-4 shrink-0', activeView === subItem.id ? 'text-blue-700' : 'text-gray-400')} />}
+                        <span className="truncate">{subItem.label}</span>
+                      </div>
+                      {subItem.badge && (
+                        <span className="bg-blue-500 text-white text-[9px] px-1.5 py-0.5 rounded font-bold shrink-0">
+                          {subItem.badge}
+                        </span>
+                      )}
                     </button>
                   ))}
                 </div>
