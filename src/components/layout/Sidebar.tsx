@@ -42,7 +42,13 @@ type NavItem = {
   icon: any;
   label: string;
   id: string;
-  subItems?: { label: string; id: string; icon?: any; badge?: string }[];
+  subItems?: { 
+    label: string; 
+    id: string; 
+    icon?: any; 
+    badge?: string;
+    subItems?: { label: string; id: string; icon?: any }[];
+  }[];
 };
 
 const navItems: NavItem[] = [
@@ -52,7 +58,16 @@ const navItems: NavItem[] = [
     id: 'mijn_omgeving',
     subItems: [
       { label: 'Home', id: 'dashboard', icon: Home },
-      { label: 'Tickets', id: 'tickets', icon: Ticket },
+      { 
+        label: 'Tickets', 
+        id: 'tickets_parent', 
+        icon: Ticket, 
+        badge: '0',
+        subItems: [
+          { label: 'Alle Tickets', id: 'tickets_all' },
+          { label: 'Mijn Tickets', id: 'tickets_my' }
+        ]
+      },
       { label: 'Taken', id: 'tasks', icon: CheckSquare },
       { label: 'Kalender', id: 'calendar', icon: Calendar },
       { label: 'Mijn Uren', id: 'hours', icon: Clock },
@@ -131,7 +146,8 @@ export function Sidebar({ collapsed, setCollapsed, activeView, onViewChange }: S
     'formulieren_parent',
     'finance_parent',
     'logistiek_parent',
-    'settings_parent'
+    'settings_parent',
+    'tickets_parent'
   ]);
 
   const toggleExpand = (id: string) => {
@@ -169,7 +185,7 @@ export function Sidebar({ collapsed, setCollapsed, activeView, onViewChange }: S
         {navItems.map((item) => {
           const isExpanded = expandedItems.includes(item.id);
           const hasSubItems = item.subItems && item.subItems.length > 0;
-          const isActive = activeView === item.id || (hasSubItems && item.subItems?.some(sub => sub.id === activeView));
+          const isActive = activeView === item.id || (hasSubItems && item.subItems?.some(sub => sub.id === activeView || sub.subItems?.some(s => s.id === activeView)));
 
           return (
             <div key={item.id} className="flex flex-col space-y-1">
@@ -201,28 +217,68 @@ export function Sidebar({ collapsed, setCollapsed, activeView, onViewChange }: S
               
               {!collapsed && hasSubItems && isExpanded && (
                 <div className="flex flex-col pl-9 pr-2 space-y-1 mt-1">
-                  {item.subItems?.map((subItem) => (
-                    <button
-                      key={subItem.id}
-                      onClick={() => onViewChange(subItem.id)}
-                      className={cn(
-                        'flex items-center gap-2 text-left w-full rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
-                        activeView === subItem.id
-                          ? 'bg-blue-50 text-blue-700'
-                          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                      )}
-                    >
-                      <div className="flex items-center gap-2 flex-1 min-w-0">
-                        {subItem.icon && <subItem.icon className={cn('h-4 w-4 shrink-0', activeView === subItem.id ? 'text-blue-700' : 'text-gray-400')} />}
-                        <span className="truncate">{subItem.label}</span>
+                  {item.subItems?.map((subItem) => {
+                    const hasSubSubItems = subItem.subItems && subItem.subItems.length > 0;
+                    const isSubExpanded = expandedItems.includes(subItem.id);
+                    const isSubActive = activeView === subItem.id || (hasSubSubItems && subItem.subItems?.some(s => s.id === activeView));
+
+                    return (
+                      <div key={subItem.id} className="flex flex-col space-y-1">
+                        <button
+                          onClick={() => {
+                            if (hasSubSubItems) {
+                              toggleExpand(subItem.id);
+                            } else {
+                              onViewChange(subItem.id);
+                            }
+                          }}
+                          className={cn(
+                            'flex items-center justify-between w-full rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
+                            !hasSubSubItems && isSubActive
+                              ? 'bg-blue-50 text-blue-700'
+                              : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900',
+                          )}
+                        >
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                            {subItem.icon && <subItem.icon className={cn('h-4 w-4 shrink-0', (isSubActive && !hasSubSubItems) ? 'text-blue-700' : 'text-gray-400')} />}
+                            <span className={cn("truncate", hasSubSubItems && isSubActive ? "text-blue-700 font-semibold" : "")}>{subItem.label}</span>
+                          </div>
+                          
+                          <div className="flex items-center gap-2">
+                            {subItem.badge && (
+                              <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] px-1.5 py-0.5 rounded font-bold shrink-0">
+                                {subItem.badge}
+                              </span>
+                            )}
+                            {hasSubSubItems && (
+                              <ChevronDown className={cn('h-3.5 w-3.5 text-gray-400 transition-transform', isSubExpanded && 'rotate-180')} />
+                            )}
+                          </div>
+                        </button>
+
+                        {/* Third level */}
+                        {hasSubSubItems && isSubExpanded && (
+                          <div className="flex flex-col pl-6 space-y-1 mt-0.5">
+                            {subItem.subItems?.map((subSubItem) => (
+                              <button
+                                key={subSubItem.id}
+                                onClick={() => onViewChange(subSubItem.id)}
+                                className={cn(
+                                  'flex items-center gap-2 text-left w-full rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
+                                  activeView === subSubItem.id
+                                    ? 'text-blue-700 bg-blue-50/50'
+                                    : 'text-gray-500 hover:text-gray-900'
+                                )}
+                              >
+                                <div className={cn("h-1 w-1 rounded-full shrink-0", activeView === subSubItem.id ? "bg-blue-600" : "bg-gray-400")} />
+                                <span className="truncate">{subSubItem.label}</span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                      {subItem.badge && (
-                        <span className="bg-blue-500 text-white text-[9px] px-1.5 py-0.5 rounded font-bold shrink-0">
-                          {subItem.badge}
-                        </span>
-                      )}
-                    </button>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
