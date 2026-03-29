@@ -21,7 +21,10 @@ import {
   List,
   Box,
   Target,
-  FileText
+  FileText,
+  Ticket,
+  Clock,
+  BarChart3
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -49,8 +52,11 @@ const navItems: NavItem[] = [
     id: 'mijn_omgeving',
     subItems: [
       { label: 'Home', id: 'dashboard', icon: Home },
+      { label: 'Tickets', id: 'tickets', icon: Ticket },
       { label: 'Taken', id: 'tasks', icon: CheckSquare },
       { label: 'Kalender', id: 'calendar', icon: Calendar },
+      { label: 'Mijn Uren', id: 'hours', icon: Clock },
+      { label: 'Verkoop', id: 'sales', icon: BarChart3 },
     ]
   },
   {
