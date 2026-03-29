@@ -5,21 +5,21 @@ import {
 import { cn } from '@/lib/utils';
 
 const contactsData = [
-  { id: 1, naam: 'Test test', roepnaam: 'Test', achternaam: 'test', tags: '', pr: '0', adres: 'Joop Geesinkweg 601, 1114...', mobiel: '-', telefoon: '1245784521', email: 'test@test.c...' },
-  { id: 2, naam: 'Johnny Doe', roepnaam: 'Johnny', achternaam: 'Doe', tags: '', pr: '0', adres: 'Maagdenburgstraat 5, 7421...', mobiel: '-', telefoon: '1234567789', email: 'test-accou...' },
-  { id: 3, naam: 'Johnny Doe', roepnaam: 'Johnny', achternaam: 'Doe', tags: '', pr: '0', adres: 'Maagdenburgstraat 5, 7421...', mobiel: '-', telefoon: '1234567789', email: 'test@doma...' },
-  { id: 4, naam: 'N. Ahmed', roepnaam: 'N.', achternaam: 'Ahmed', tags: '', pr: '0', adres: 'Hemmeland 23, 8223ZG, Lel...', mobiel: '0642794218', telefoon: '-', email: 'admin@inst...' },
-  { id: 5, naam: 'fam. Strating', roepnaam: 'fam.', achternaam: 'Strating', tags: '', pr: '0', adres: 'Kamp 16 50, 8225DK, Lelysta...', mobiel: '-', telefoon: '-', email: 'josientje16...' },
-  { id: 6, naam: 'fam. Bragt', roepnaam: 'fam.', achternaam: 'Bragt', tags: '', pr: '0', adres: 'Steile Bank 2, 8223BA, Lelyst...', mobiel: '-', telefoon: '-', email: 'admin@inst...' },
-  { id: 7, naam: 'Sven Nooij', roepnaam: 'Sven', achternaam: 'Nooij', tags: '', pr: '3', adres: 'Bunschotenlaan 17, 8244DS...', mobiel: '0642794218', telefoon: '-', email: 'sven@insta...' },
-  { id: 8, naam: 'Johnny Doe', roepnaam: 'Johnny', achternaam: 'Doe', tags: '', pr: '0', adres: 'Maagdenburgstraat 5, 7421...', mobiel: '-', telefoon: '1234567789', email: 'test@doma...' },
-  { id: 9, naam: 'test Doe', roepnaam: 'test', achternaam: 'Doe', tags: '', pr: '0', adres: 'Melkdistel 3, 1775HA, Midde...', mobiel: '-', telefoon: '06 45545223', email: 'john.renata...' },
-  { id: 10, naam: 'Test Abnormal', roepnaam: 'Test', achternaam: 'Abnormal', tags: '', pr: '3', adres: 'Joop Geesinkweg 601, 1114...', mobiel: '-', telefoon: '0123456789', email: 'onderhoud...' },
-  { id: 11, naam: 'Test new test', roepnaam: 'Test new', achternaam: 'test', tags: '', pr: '0', adres: 'Joop Geesinkweg 601, 1114...', mobiel: '-', telefoon: '2145784512', email: 'chetan@ab...' },
-  { id: 12, naam: 'Test test', roepnaam: 'Test', achternaam: 'test', tags: '', pr: '0', adres: 'Joop Geesinkweg 601, 1114...', mobiel: '-', telefoon: '32323', email: 'chetan@ab...' },
-  { id: 13, naam: 'VL Dempster', roepnaam: 'VL', achternaam: 'Dempster', tags: '', pr: '0', adres: 'Bunschotenlaan 17, 8244DS...', mobiel: '-', telefoon: '0641212954', email: 'viclouisede...' },
-  { id: 14, naam: 'Damian -', roepnaam: 'Damian', achternaam: '-', tags: '', pr: '0', adres: '- -, -, -', mobiel: '-', telefoon: '0653585871', email: 'jamal1918@...' },
-  { id: 15, naam: 'Fam. Kort - de Groot', roepnaam: 'Fam.', achternaam: 'Kort - de Gro...', tags: '', pr: '1', adres: 'Zoom 11 5, 8225KC, Lelysta...', mobiel: '-', telefoon: '-', email: 'h.kort1@ch...' },
+  { id: 1, naam: 'Test test', roepnaam: 'Test', achternaam: 'test', tags: '', pr: '0', adres: 'Joop Geesinkweg 601, 1114...', mobiel: '-', telefoon: '1245784521', email: 'test@test.com', gemaakt: 'Systeem', type: 'sys' },
+  { id: 2, naam: 'Johnny Doe', roepnaam: 'Johnny', achternaam: 'Doe', tags: '', pr: '0', adres: 'Maagdenburgstraat 5, 7421...', mobiel: '-', telefoon: '1234567789', email: 'test-account@yourdomain...', gemaakt: 'Systeem', type: 'sys' },
+  { id: 3, naam: 'Johnny Doe', roepnaam: 'Johnny', achternaam: 'Doe', tags: '', pr: '0', adres: 'Maagdenburgstraat 5, 7421...', mobiel: '-', telefoon: '1234567789', email: 'test@domain.com', gemaakt: 'Systeem', type: 'sys' },
+  { id: 4, naam: 'N. Ahmed', roepnaam: 'N.', achternaam: 'Ahmed', tags: '', pr: '0', adres: 'Hemmeland 23, 8223ZG, Lel...', mobiel: '0642794218', telefoon: '-', email: 'admin@installatiegroepduur...', gemaakt: 'Sven | Installatiegroep', type: 'user' },
+  { id: 5, naam: 'fam. Strating', roepnaam: 'fam.', achternaam: 'Strating', tags: '', pr: '0', adres: 'Kamp 16 50, 8225DK, Lelysta...', mobiel: '-', telefoon: '-', email: 'josientje16@gmail.com', gemaakt: 'Sven | Installatiegroep', type: 'user' },
+  { id: 6, naam: 'fam. Bragt', roepnaam: 'fam.', achternaam: 'Bragt', tags: '', pr: '0', adres: 'Steile Bank 2, 8223BA, Lelyst...', mobiel: '-', telefoon: '-', email: 'admin@installatiegroepduur...', gemaakt: 'Sven | Installatiegroep', type: 'user' },
+  { id: 7, naam: 'Sven Nooij', roepnaam: 'Sven', achternaam: 'Nooij', tags: '', pr: '3', adres: 'Bunschotenlaan 17, 8244DS...', mobiel: '0642794218', telefoon: '-', email: 'sven@installatiegroepduurza...', gemaakt: 'Sven | Installatiegroep', type: 'user' },
+  { id: 8, naam: 'Johnny Doe', roepnaam: 'Johnny', achternaam: 'Doe', tags: '', pr: '0', adres: 'Maagdenburgstraat 5, 7421...', mobiel: '-', telefoon: '1234567789', email: 'test@domain.com', gemaakt: 'Systeem', type: 'sys' },
+  { id: 9, naam: 'test Doe', roepnaam: 'test', achternaam: 'Doe', tags: '', pr: '0', adres: 'Melkdistel 3, 1775HA, Midde...', mobiel: '-', telefoon: '06 45545223', email: 'john.renata@quicknet.nl', gemaakt: 'Systeem', type: 'sys' },
+  { id: 10, naam: 'Test Abnormal', roepnaam: 'Test', achternaam: 'Abnormal', tags: '', pr: '3', adres: 'Joop Geesinkweg 601, 1114...', mobiel: '-', telefoon: '0123456789', email: 'onderhoud@abnormal.nl', gemaakt: 'Systeem', type: 'sys' },
+  { id: 11, naam: 'Test new test', roepnaam: 'Test new', achternaam: 'test', tags: '', pr: '0', adres: 'Joop Geesinkweg 601, 1114...', mobiel: '-', telefoon: '2145784512', email: 'chetan@abnormal.nl', gemaakt: 'Systeem', type: 'sys' },
+  { id: 12, naam: 'Test test', roepnaam: 'Test', achternaam: 'test', tags: '', pr: '0', adres: 'Joop Geesinkweg 601, 1114...', mobiel: '-', telefoon: '32323', email: 'chetan@abnormal.nl', gemaakt: 'Systeem', type: 'sys' },
+  { id: 13, naam: 'VL Dempster', roepnaam: 'VL', achternaam: 'Dempster', tags: '', pr: '0', adres: 'Bunschotenlaan 17, 8244DS...', mobiel: '-', telefoon: '0641212954', email: 'viclouisedemp@hotmail.com', gemaakt: 'Systeem', type: 'sys' },
+  { id: 14, naam: 'Damian -', roepnaam: 'Damian', achternaam: '-', tags: '', pr: '0', adres: '- -, -, -', mobiel: '-', telefoon: '0653585871', email: 'jamal1918@wp.pl', gemaakt: 'Systeem', type: 'sys' },
+  { id: 15, naam: 'Fam. Kort - de Groot', roepnaam: 'Fam.', achternaam: 'Kort - de Gro...', tags: '', pr: '1', adres: 'Zoom 11 5, 8225KC, Lelysta...', mobiel: '-', telefoon: '-', email: 'h.kort1@chello.nl', gemaakt: 'Sven | Installatiegroep', type: 'user' },
 ];
 
 export function ContactsLayout() {
@@ -102,8 +102,10 @@ export function ContactsLayout() {
                 <th className="p-3 font-semibold text-gray-800">Adres</th>
                 <th className="p-3 font-semibold text-gray-800">Mobiele num...</th>
                 <th className="p-3 font-semibold text-gray-800">Telefoonnum...</th>
-                <th className="p-3 font-semibold text-gray-800">E-mailadre...</th>
-                <th className="p-3 w-32"></th>
+                <th className="p-3 font-semibold text-gray-800">E-mailadres</th>
+                <th className="p-3 font-semibold text-gray-800">Gemaakt door</th>
+                <th className="p-3 font-semibold text-gray-800">Bijgewerkt door</th>
+                <th className="p-3 w-32 sticky right-0 bg-white shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)]"></th>
               </tr>
             </thead>
             <tbody>
@@ -140,10 +142,30 @@ export function ContactsLayout() {
                   <td className="p-3 text-[13px] font-medium text-blue-600">
                     {row.telefoon}
                   </td>
-                  <td className="p-3 text-[13px] font-semibold text-emerald-600 hover:underline cursor-pointer truncate max-w-[150px]" title={row.email}>
+                  <td className="p-3 text-[13px] font-semibold text-emerald-600 hover:underline cursor-pointer truncate max-w-[200px]" title={row.email}>
                     {row.email}
                   </td>
-                  <td className="p-3 text-right">
+                  <td className="p-3 text-[13px] text-gray-800 whitespace-nowrap">
+                    <div className="flex items-center gap-2">
+                      {row.type === 'sys' ? (
+                        <div className="h-6 w-6 bg-yellow-400 text-black font-bold flex items-center justify-center rounded-full text-xs">S</div>
+                      ) : (
+                        <UserCircle2 className="h-5 w-5 text-gray-400 shrink-0" />
+                      )}
+                      <span>{row.gemaakt}</span>
+                    </div>
+                  </td>
+                  <td className="p-3 text-[13px] text-gray-800 whitespace-nowrap">
+                    <div className="flex items-center gap-2">
+                      {row.type === 'sys' ? (
+                        <div className="h-6 w-6 bg-yellow-400 text-black font-bold flex items-center justify-center rounded-full text-xs">S</div>
+                      ) : (
+                        <UserCircle2 className="h-5 w-5 text-gray-400 shrink-0" />
+                      )}
+                      <span>{row.gemaakt}</span>
+                    </div>
+                  </td>
+                  <td className="p-3 text-right sticky right-0 bg-white/95 backdrop-blur-sm group-hover:bg-gray-50/95 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.02)] transition-colors">
                     <div className="flex items-center justify-end gap-3 text-emerald-700">
                       <button className="hover:text-emerald-900 group relative">
                         <UserCircle2 className="h-4 w-4" strokeWidth={2.5} />
