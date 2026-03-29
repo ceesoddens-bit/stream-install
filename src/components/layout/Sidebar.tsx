@@ -101,7 +101,7 @@ const navItems: NavItem[] = [
     label: 'ADMINISTRATIE',
     id: 'finance_parent',
     subItems: [
-      { label: 'Overzicht', id: 'finance', icon: CreditCard }
+      { label: 'Offertes', id: 'quotes', icon: FileText }
     ]
   },
   {

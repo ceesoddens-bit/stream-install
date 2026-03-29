@@ -15,6 +15,7 @@ import { FinanceLayout } from '@/components/finance/FinanceLayout';
 import { SettingsLayout } from '@/components/settings/SettingsLayout';
 import { ContactsLayout } from '@/components/crm/ContactsLayout';
 import { CompaniesLayout } from '@/components/crm/CompaniesLayout';
+import { QuotesLayout } from '@/components/finance/QuotesLayout';
 import { FormsLayout } from '@/components/forms/FormsLayout';
 import { SalesLayout } from '@/components/sales/SalesLayout';
 import { PlanningListLayout } from '@/components/planning/PlanningListLayout';
@@ -45,12 +46,13 @@ export default function App() {
             {activeView === 'planning_list' && <PlanningListLayout />}
             {activeView === 'inventory' && <InventoryLayout />}
             {activeView === 'finance' && <FinanceLayout />}
+            {activeView === 'quotes' && <QuotesLayout />}
             {activeView === 'settings' && <SettingsLayout />}
             {activeView === 'crm' && <ContactsLayout />}
             {activeView === 'crm_companies' && <CompaniesLayout />}
             {activeView === 'forms' && <FormsLayout />}
             {activeView === 'sales' && <SalesLayout />}
-            {activeView !== 'project_detail' && activeView !== 'dashboard' && activeView !== 'projects' && activeView !== 'my_projects' && activeView !== 'planning' && activeView !== 'planning_list' && activeView !== 'inventory' && activeView !== 'finance' && activeView !== 'settings' && activeView !== 'crm' && activeView !== 'crm_companies' && activeView !== 'forms' && activeView !== 'sales' && (
+            {activeView !== 'project_detail' && activeView !== 'dashboard' && activeView !== 'projects' && activeView !== 'my_projects' && activeView !== 'planning' && activeView !== 'planning_list' && activeView !== 'inventory' && activeView !== 'finance' && activeView !== 'quotes' && activeView !== 'settings' && activeView !== 'crm' && activeView !== 'crm_companies' && activeView !== 'forms' && activeView !== 'sales' && (
               <div className="flex items-center justify-center h-full text-gray-500">
                 <div className="text-center">
                   <h2 className="text-2xl font-bold mb-2 capitalize">{activeView.replace('_', ' ')}</h2>
