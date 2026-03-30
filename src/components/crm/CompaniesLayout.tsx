@@ -5,25 +5,25 @@ import {
 import { cn } from '@/lib/utils';
 
 const companiesData = [
-  { id: 1, ref: '2600001', naam: 'W.P.J. Montage Vloerverwar...', tags: '', telefoon: '-', kvk: '-', contact: '-', moeder: '-', adres: 'Schieland 27, 8245GB, Lelys...', btw: '-' },
-  { id: 2, ref: '2600010', naam: 'V & O Cars', tags: '', telefoon: '0642516759', kvk: '-', contact: '-', moeder: '-', adres: 'Apolloweg 138, 8239DA, Lely...', btw: '-' },
-  { id: 3, ref: '2500011', naam: 'Test company', tags: '', telefoon: '-', kvk: '-', contact: '-', moeder: '-', adres: 'Maagdenburgstraat 5, 7421...', btw: '-' },
-  { id: 4, ref: '2500019', naam: 'Smits', tags: '', telefoon: '-', kvk: '-', contact: '-', moeder: '-', adres: 'A. Hofmanweg 24, 2031 BL, H...', btw: '-' },
-  { id: 5, ref: '2600003', naam: 'Salverda Bouw B.V.', tags: '', telefoon: '0525-651666', kvk: '-', contact: '-', moeder: '-', adres: 'Industrieweg 13, 8084 GS, \'t...', btw: '-' },
-  { id: 6, ref: '2600004', naam: 'Rebo OGV Amsterdam BV', tags: '', telefoon: '-', kvk: '-', contact: '-', moeder: '-', adres: 'Haparandaweg 13, 1013 BD...', btw: '-' },
-  { id: 7, ref: '2600002', naam: 'RMT Autoschade', tags: '', telefoon: '-', kvk: '-', contact: '-', moeder: '-', adres: 'De Steiger 27, 1351AB, Alme...', btw: '-' },
-  { id: 8, ref: '2500020', naam: 'R. Jannink Beheer B.V.', tags: '', telefoon: '06-53255507', kvk: '39064065', contact: '-', moeder: '-', adres: 'Hollandse Hout 240, 8244GK...', btw: 'NL80...' },
-  { id: 9, ref: '2500007', naam: 'OpusFlow', tags: '', telefoon: '-', kvk: '-', contact: '-', moeder: '-', adres: 'Maagdenburgstraat 5, 7421...', btw: '-' },
-  { id: 10, ref: '2500010', naam: 'Not provided', tags: '', telefoon: '-', kvk: '-', contact: '-', moeder: '-', adres: 'Joop Geesinkweg 601, 1114...', btw: '-' },
-  { id: 11, ref: '2500...', naam: 'M2U Holding BV', tags: '', telefoon: '-', kvk: '-', contact: '-', moeder: '-', adres: 'Smedengilde 8, 8253 HV, Dro...', btw: '-' },
-  { id: 12, ref: '2600008', naam: 'Lenferink Zwolle Renovatie B...', tags: '', telefoon: '038-4651455', kvk: '-', contact: '-', moeder: '-', adres: 'Wilhelm Röntgenstraat 3, 80...', btw: '-' },
-  { id: 13, ref: '2500008', naam: 'Installatiegroep Duurzaam B...', tags: '', telefoon: '+31851308934', kvk: '78281725', contact: '-', moeder: '-', adres: 'Wigstraat 13B, 8223 EE, Lely...', btw: 'NL86...' },
-  { id: 14, ref: '2500018', naam: 'Inntens Klimaattechniek', tags: '', telefoon: '-', kvk: '-', contact: '-', moeder: '-', adres: 'Zuiveringweg 50A, 8243PZ, L...', btw: '-' },
-  { id: 15, ref: '2500016', naam: 'Hilal Bakkerij', tags: '', telefoon: '0681683186', kvk: '-', contact: '-', moeder: '-', adres: 'Voorstraat 481, 8226KD, Lely...', btw: '-' },
-  { id: 16, ref: '2600006', naam: 'HKV Vastgoed B.V.', tags: '', telefoon: '0320-294252', kvk: '39069387', contact: '-', moeder: '-', adres: 'Botter 11 29, 8232JN, Lelysta...', btw: '-' },
-  { id: 17, ref: '2600005', naam: 'HKV Lijn in Water B.V.', tags: '', telefoon: '0320-294248', kvk: '39060355', contact: '-', moeder: '-', adres: 'Botter 11 29, 8232 JN, Lelysta...', btw: '-' },
-  { id: 18, ref: '2500013', naam: 'Energy Bridge', tags: '', telefoon: '0854005050', kvk: '-', contact: '-', moeder: '-', adres: 'Bobinestraat 74, 3903 KG, Ve...', btw: '-' },
-  { id: 19, ref: '2500012', naam: 'Energiewacht B.V.', tags: '', telefoon: '088-5553000', kvk: '76591042', contact: '-', moeder: '-', adres: 'Lippestraat 1, 8028 PS, Zwoll...', btw: 'NL860...' },
+  { id: 1, ref: '2600001', naam: 'W.P.J. Montage Vloerverwar...', tags: '', telefoon: '-', kvk: '-', contact: '-', moeder: '-', adres: 'Schieland 27, 8245GB, Lelys...', btw: '-', projecten: 1, gemaaktOp: '20-01-2026 08:06', gemaaktDoor: 'Sven | Installatiegroep', bijgewerktOp: '20-01-2026 08:06', bijgewerktDoor: 'Sven | Installatiegroep', color: 'gray' },
+  { id: 2, ref: '2600010', naam: 'V & O Cars', tags: '', telefoon: '0642516759', kvk: '-', contact: '-', moeder: '-', adres: 'Apolloweg 138, 8239DA, Lely...', btw: '-', projecten: 2, gemaaktOp: '24-03-2026 08:20', gemaaktDoor: 'Sven | Installatiegroep', bijgewerktOp: '24-03-2026 08:20', bijgewerktDoor: 'Sven | Installatiegroep', color: 'gray' },
+  { id: 3, ref: '2500011', naam: 'Test company', tags: '', telefoon: '-', kvk: '-', contact: '-', moeder: '-', adres: 'Maagdenburgstraat 5, 7421...', btw: '-', projecten: 0, gemaaktOp: '22-07-2025 07:45', gemaaktDoor: 'Systeem', bijgewerktOp: '22-07-2025 07:45', bijgewerktDoor: 'Systeem', color: 'yellow' },
+  { id: 4, ref: '2500019', naam: 'Smits', tags: '', telefoon: '-', kvk: '-', contact: '-', moeder: '-', adres: 'A. Hofmanweg 24, 2031 BL, H...', btw: '-', projecten: 1, gemaaktOp: '05-11-2025 07:17', gemaaktDoor: 'Sven | Installatiegroep', bijgewerktOp: '05-11-2025 07:17', bijgewerktDoor: 'Sven | Installatiegroep', color: 'gray' },
+  { id: 5, ref: '2600003', naam: 'Salverda Bouw B.V.', tags: '', telefoon: '0525-651666', kvk: '-', contact: '-', moeder: '-', adres: 'Industrieweg 13, 8084 GS, \'t...', btw: '-', projecten: 1, gemaaktOp: '30-01-2026 13:22', gemaaktDoor: 'Sandra Brader', bijgewerktOp: '30-01-2026 13:22', bijgewerktDoor: 'Sandra Brader', color: 'gray' },
+  { id: 6, ref: '2600004', naam: 'Rebo OGV Amsterdam BV', tags: '', telefoon: '-', kvk: '-', contact: '-', moeder: '-', adres: 'Haparandaweg 13, 1013 BD...', btw: '-', projecten: 1, gemaaktOp: '11-02-2026 15:34', gemaaktDoor: 'Sven | Installatiegroep', bijgewerktOp: '11-02-2026 15:34', bijgewerktDoor: 'Sven | Installatiegroep', color: 'gray' },
+  { id: 7, ref: '2600002', naam: 'RMT Autoschade', tags: '', telefoon: '-', kvk: '-', contact: '-', moeder: '-', adres: 'De Steiger 27, 1351AB, Alme...', btw: '-', projecten: 1, gemaaktOp: '23-01-2026 13:41', gemaaktDoor: 'Sven | Installatiegroep', bijgewerktOp: '23-01-2026 13:41', bijgewerktDoor: 'Sven | Installatiegroep', color: 'gray' },
+  { id: 8, ref: '2500020', naam: 'R. Jannink Beheer B.V.', tags: '', telefoon: '06-53255507', kvk: '39064065', contact: '-', moeder: '-', adres: 'Hollandse Hout 240, 8244GK...', btw: 'NL8059...', projecten: 2, gemaaktOp: '03-12-2025 12:43', gemaaktDoor: 'Sandra Brader', bijgewerktOp: '17-12-2025 12:00', bijgewerktDoor: 'Sandra Brader', color: 'gray' },
+  { id: 9, ref: '2500007', naam: 'OpusFlow', tags: '', telefoon: '-', kvk: '-', contact: '-', moeder: '-', adres: 'Maagdenburgstraat 5, 7421...', btw: '-', projecten: 0, gemaaktOp: '24-07-2025 14:16', gemaaktDoor: 'Lars Albregts', bijgewerktOp: '24-07-2025 14:17', bijgewerktDoor: 'Lars Albregts', color: 'blue' },
+  { id: 10, ref: '2500010', naam: 'Not provided', tags: '', telefoon: '-', kvk: '-', contact: '-', moeder: '-', adres: 'Joop Geesinkweg 601, 1114...', btw: '-', projecten: 1, gemaaktOp: '21-07-2025 17:22', gemaaktDoor: 'Systeem', bijgewerktOp: '21-07-2025 17:22', bijgewerktDoor: 'Systeem', color: 'yellow' },
+  { id: 11, ref: '2500...', naam: 'M2U Holding BV', tags: '', telefoon: '-', kvk: '-', contact: '-', moeder: '-', adres: 'Smedengilde 8, 8253 HV, Dro...', btw: '-', projecten: 1, gemaaktOp: '23-10-2025 09:30', gemaaktDoor: 'Sven | Installatiegroep', bijgewerktOp: '23-10-2025 09:30', bijgewerktDoor: 'Sven | Installatiegroep', color: 'gray' },
+  { id: 12, ref: '2600008', naam: 'Lenferink Zwolle Renovatie B...', tags: '', telefoon: '038-4651455', kvk: '-', contact: '-', moeder: '-', adres: 'Wilhelm Röntgenstraat 3, 80...', btw: '-', projecten: 1, gemaaktOp: '09-03-2026 12:37', gemaaktDoor: 'Sandra Brader', bijgewerktOp: '09-03-2026 12:37', bijgewerktDoor: 'Sandra Brader', color: 'gray' },
+  { id: 13, ref: '2500008', naam: 'Installatiegroep Duurzaam B...', tags: '', telefoon: '+31851308934', kvk: '78281725', contact: '-', moeder: '-', adres: 'Wigstraat 13B, 8223 EE, Lely...', btw: 'NL8613...', projecten: 0, gemaaktOp: '12-05-2025 12:20', gemaaktDoor: 'Lars Albregts', bijgewerktOp: '11-11-2025 12:13', bijgewerktDoor: 'Sandra Brader', color: 'blue' },
+  { id: 14, ref: '2500018', naam: 'Inntens Klimaattechniek', tags: '', telefoon: '-', kvk: '-', contact: '-', moeder: '-', adres: 'Zuiveringweg 50A, 8243PZ, L...', btw: '-', projecten: 1, gemaaktOp: '30-10-2025 12:43', gemaaktDoor: 'Sven | Installatiegroep', bijgewerktOp: '30-10-2025 12:43', bijgewerktDoor: 'Sven | Installatiegroep', color: 'gray' },
+  { id: 15, ref: '2500016', naam: 'Hilal Bakkerij', tags: '', telefoon: '0681683186', kvk: '-', contact: '-', moeder: '-', adres: 'Voorstraat 481, 8226KD, Lely...', btw: '-', projecten: 1, gemaaktOp: '24-10-2025 09:20', gemaaktDoor: 'Sven | Installatiegroep', bijgewerktOp: '24-10-2025 09:20', bijgewerktDoor: 'Sven | Installatiegroep', color: 'gray' },
+  { id: 16, ref: '2600006', naam: 'HKV Vastgoed B.V.', tags: '', telefoon: '0320-294252', kvk: '39069387', contact: '-', moeder: '-', adres: 'Botter 11 29, 8232JN, Lelysta...', btw: '-', projecten: 0, gemaaktOp: '19-02-2026 08:32', gemaaktDoor: 'Sandra Brader', bijgewerktOp: '19-02-2026 08:32', bijgewerktDoor: 'Sandra Brader', color: 'gray' },
+  { id: 17, ref: '2600005', naam: 'HKV Lijn in Water B.V.', tags: '', telefoon: '0320-294248', kvk: '39060355', contact: '-', moeder: '-', adres: 'Botter 11 29, 8232 JN, Lelysta...', btw: '-', projecten: 0, gemaaktOp: '19-02-2026 08:29', gemaaktDoor: 'Sandra Brader', bijgewerktOp: '19-02-2026 08:29', bijgewerktDoor: 'Sandra Brader', color: 'gray' },
+  { id: 18, ref: '2500013', naam: 'Energy Bridge', tags: '', telefoon: '0854005050', kvk: '-', contact: '-', moeder: '-', adres: 'Bobinestraat 74, 3903 KG, Ve...', btw: '-', projecten: 2, gemaaktOp: '08-10-2025 18:45', gemaaktDoor: 'Sven | Installatiegroep', bijgewerktOp: '08-10-2025 18:45', bijgewerktDoor: 'Sven | Installatiegroep', color: 'gray' },
+  { id: 19, ref: '2500012', naam: 'Energiewacht B.V.', tags: '', telefoon: '088-5553000', kvk: '76591042', contact: '-', moeder: '-', adres: 'Lippestraat 1, 8028 PS, Zwoll...', btw: 'NL8606...', projecten: 86, gemaaktOp: '18-08-2025 15:25', gemaaktDoor: 'Sven | Installatiegroep', bijgewerktOp: '11-11-2025 12:16', bijgewerktDoor: 'Sandra Brader', color: 'gray' },
 ];
 
 export function CompaniesLayout() {
@@ -109,9 +109,15 @@ export function CompaniesLayout() {
                 <th className="p-3 font-semibold text-gray-800">KVK</th>
                 <th className="p-3 font-semibold text-gray-800">Primaire contactpersoon</th>
                 <th className="p-3 font-semibold text-gray-800">Moederbe...</th>
-                <th className="p-3 font-semibold text-gray-800">Adres</th>
-                <th className="p-3 font-semibold text-gray-800">BTW</th>
-                <th className="p-3 w-14"></th>
+                <th className="p-3 font-semibold text-gray-800 whitespace-nowrap">Adres</th>
+                <th className="p-3 font-semibold text-gray-800 whitespace-nowrap">BTW</th>
+                <th className="p-3 font-semibold text-gray-800 whitespace-nowrap text-right">Projecten</th>
+                <th className="p-3 font-semibold text-gray-800 whitespace-nowrap">Gemaakt op</th>
+                <th className="p-3 font-semibold text-gray-800 whitespace-nowrap">Gemaakt door</th>
+                <th className="p-3 font-semibold text-gray-800 whitespace-nowrap">Bijgewerkt op</th>
+                <th className="p-3 font-semibold text-gray-800 whitespace-nowrap">Bijgewerkt door</th>
+                <th className="p-3 font-semibold text-gray-800 whitespace-nowrap">Archief</th>
+                <th className="p-3 w-14 sticky right-0 bg-white shadow-[-10px_0_15px_-10px_rgba(0,0,0,0.1)] z-20"></th>
               </tr>
             </thead>
             <tbody>
@@ -153,9 +159,49 @@ export function CompaniesLayout() {
                   <td className="p-3 text-[13px] text-gray-600 truncate max-w-[100px]">
                     {row.btw}
                   </td>
-                  <td className="p-3 text-right">
+                  <td className="p-3 text-[13px] text-gray-600 text-right font-medium">
+                    {row.projecten}
+                  </td>
+                  <td className="p-3 text-[13px] text-gray-600 whitespace-nowrap">
+                    {row.gemaaktOp}
+                  </td>
+                  <td className="p-3 whitespace-nowrap">
+                    <div className="flex items-center gap-2">
+                      <div className={cn(
+                        "w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold",
+                        row.color === 'yellow' ? 'bg-amber-500' :
+                        row.color === 'blue' ? 'bg-[#0f2e60]' :
+                        'bg-gray-300'
+                      )}>
+                        {row.color === 'gray' ? <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor"><path fillRule="evenodd" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z" clipRule="evenodd"/></svg> : row.gemaaktDoor.charAt(0)}
+                      </div>
+                      <span className="text-[13px] text-gray-700">{row.gemaaktDoor}</span>
+                    </div>
+                  </td>
+                  <td className="p-3 text-[13px] text-gray-600 whitespace-nowrap">
+                    {row.bijgewerktOp}
+                  </td>
+                  <td className="p-3 whitespace-nowrap">
+                    <div className="flex items-center gap-2">
+                      <div className={cn(
+                        "w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold",
+                        row.bijgewerktDoor === 'Systeem' ? 'bg-amber-500' :
+                        row.bijgewerktDoor === 'Lars Albregts' ? 'bg-[#0f2e60]' :
+                        'bg-gray-300'
+                      )}>
+                        {(row.bijgewerktDoor === 'Systeem' || row.bijgewerktDoor === 'Lars Albregts') ? row.bijgewerktDoor.charAt(0) : <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor"><path fillRule="evenodd" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z" clipRule="evenodd"/></svg>}
+                      </div>
+                      <span className="text-[13px] text-gray-700">{row.bijgewerktDoor}</span>
+                    </div>
+                  </td>
+                  <td className="p-3 text-center w-14">
+                    <button className="text-gray-400 hover:text-gray-600 transition-colors">
+                      <svg className="w-4 h-4 mx-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                    </button>
+                  </td>
+                  <td className="p-3 text-right sticky right-0 bg-white group-hover:bg-gray-50/80 transition-colors z-10">
                     <div className="flex items-center justify-end">
-                      <button className="text-emerald-600 hover:text-emerald-800 p-1 group relative">
+                      <button className="text-emerald-700 hover:text-emerald-900 p-1 group/btn relative">
                         <Edit className="h-4 w-4" />
                       </button>
                     </div>
@@ -163,7 +209,7 @@ export function CompaniesLayout() {
                 </tr>
               ))}
               <tr className="h-auto">
-                <td colSpan={11}></td>
+                <td colSpan={17}></td>
               </tr>
             </tbody>
           </table>
