@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Play, Square, Check, Plus, X, Clock, MapPin, ExternalLink } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { formatSeconds } from '@/lib/timeUtils';
+import { hoursService, HourEntry } from '@/lib/hoursService';
 
 interface HoursWidgetProps {
   timerSeconds: number;
@@ -13,38 +14,32 @@ interface HoursWidgetProps {
   onResetTimer: () => void;
 }
 
-interface HourEntry {
-  id: number;
-  type: string;
-  begin: string;
-  einde: string;
-  pauze: string;
-  duur: string;
-  project: string;
-  date: string;
-}
-
 export function HoursWidget({ timerSeconds, isTimerRunning, onToggleTimer, onResetTimer }: HoursWidgetProps) {
   const [isManualModalOpen, setIsManualModalOpen] = useState(false);
-  const [entries, setEntries] = useState<HourEntry[]>([
-    { id: 101, type: 'Project', begin: '08:30', einde: '10:00', pauze: '0m', duur: '01:30:00', project: 'Solar West', date: '26-03-2026' }
-  ]);
+  const [entries, setEntries] = useState<HourEntry[]>([]);
 
   const [manualForm, setManualForm] = useState({
-    date: '2026-03-31',
+    date: new Date().toISOString().split('T')[0],
     start: '09:00',
     end: '10:00',
     project: 'Solar Expertise'
   });
 
-  const handleManualSubmit = (e: React.FormEvent) => {
+  // Subscribe to real-time updates from Firebase
+  useEffect(() => {
+    const unsubscribe = hoursService.subscribeToHours((fetchedEntries) => {
+      setEntries(fetchedEntries);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const handleManualSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const [startH, startM] = manualForm.start.split(':').map(Number);
     const [endH, endM] = manualForm.end.split(':').map(Number);
     const durationSeconds = (endH * 3600 + endM * 60) - (startH * 3600 + startM * 60);
 
-    const newEntry: HourEntry = {
-      id: Date.now(),
+    const newEntry = {
       type: 'Handmatig',
       begin: manualForm.start,
       einde: manualForm.end,
@@ -54,18 +49,17 @@ export function HoursWidget({ timerSeconds, isTimerRunning, onToggleTimer, onRes
       date: manualForm.date
     };
 
-    setEntries([newEntry, ...entries]);
+    await hoursService.addEntry(newEntry);
     setIsManualModalOpen(false);
   };
 
-  const handleAfronden = () => {
+  const handleAfronden = async () => {
     if (timerSeconds === 0) return;
     
     const now = new Date();
     const beginTime = new Date(now.getTime() - timerSeconds * 1000);
     
-    const newEntry: HourEntry = {
-      id: Date.now(),
+    const newEntry = {
       type: 'Project',
       begin: beginTime.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' }),
       einde: now.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' }),
@@ -75,7 +69,7 @@ export function HoursWidget({ timerSeconds, isTimerRunning, onToggleTimer, onRes
       date: now.toLocaleDateString('nl-NL')
     };
 
-    setEntries([newEntry, ...entries]);
+    await hoursService.addEntry(newEntry);
     onResetTimer();
   };
 

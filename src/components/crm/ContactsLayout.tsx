@@ -1,31 +1,25 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
-  Target, Settings, Columns3, SlidersHorizontal, AlignJustify, Maximize2, Download, Search, Plus, UserCircle2, Network, FileText, Info
+  Target, Settings, Columns3, SlidersHorizontal, AlignJustify, Maximize2, Download, Search, Plus, UserCircle2, Network, FileText, Trash2, Edit
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-const contactsData = [
-  { id: 1, naam: 'Test test', roepnaam: 'Test', achternaam: 'test', tags: '', pr: '0', adres: 'Joop Geesinkweg 601, 1114...', mobiel: '-', telefoon: '1245784521', email: 'test@test.com', gemaakt: 'Systeem', type: 'sys' },
-  { id: 2, naam: 'Johnny Doe', roepnaam: 'Johnny', achternaam: 'Doe', tags: '', pr: '0', adres: 'Maagdenburgstraat 5, 7421...', mobiel: '-', telefoon: '1234567789', email: 'test-account@yourdomain...', gemaakt: 'Systeem', type: 'sys' },
-  { id: 3, naam: 'Johnny Doe', roepnaam: 'Johnny', achternaam: 'Doe', tags: '', pr: '0', adres: 'Maagdenburgstraat 5, 7421...', mobiel: '-', telefoon: '1234567789', email: 'test@domain.com', gemaakt: 'Systeem', type: 'sys' },
-  { id: 4, naam: 'N. Ahmed', roepnaam: 'N.', achternaam: 'Ahmed', tags: '', pr: '0', adres: 'Hemmeland 23, 8223ZG, Lel...', mobiel: '0642794218', telefoon: '-', email: 'admin@installatiegroepduur...', gemaakt: 'Sven | Installatiegroep', type: 'user' },
-  { id: 5, naam: 'fam. Strating', roepnaam: 'fam.', achternaam: 'Strating', tags: '', pr: '0', adres: 'Kamp 16 50, 8225DK, Lelysta...', mobiel: '-', telefoon: '-', email: 'josientje16@gmail.com', gemaakt: 'Sven | Installatiegroep', type: 'user' },
-  { id: 6, naam: 'fam. Bragt', roepnaam: 'fam.', achternaam: 'Bragt', tags: '', pr: '0', adres: 'Steile Bank 2, 8223BA, Lelyst...', mobiel: '-', telefoon: '-', email: 'admin@installatiegroepduur...', gemaakt: 'Sven | Installatiegroep', type: 'user' },
-  { id: 7, naam: 'Sven Nooij', roepnaam: 'Sven', achternaam: 'Nooij', tags: '', pr: '3', adres: 'Bunschotenlaan 17, 8244DS...', mobiel: '0642794218', telefoon: '-', email: 'sven@installatiegroepduurza...', gemaakt: 'Sven | Installatiegroep', type: 'user' },
-  { id: 8, naam: 'Johnny Doe', roepnaam: 'Johnny', achternaam: 'Doe', tags: '', pr: '0', adres: 'Maagdenburgstraat 5, 7421...', mobiel: '-', telefoon: '1234567789', email: 'test@domain.com', gemaakt: 'Systeem', type: 'sys' },
-  { id: 9, naam: 'test Doe', roepnaam: 'test', achternaam: 'Doe', tags: '', pr: '0', adres: 'Melkdistel 3, 1775HA, Midde...', mobiel: '-', telefoon: '06 45545223', email: 'john.renata@quicknet.nl', gemaakt: 'Systeem', type: 'sys' },
-  { id: 10, naam: 'Test Abnormal', roepnaam: 'Test', achternaam: 'Abnormal', tags: '', pr: '3', adres: 'Joop Geesinkweg 601, 1114...', mobiel: '-', telefoon: '0123456789', email: 'onderhoud@abnormal.nl', gemaakt: 'Systeem', type: 'sys' },
-  { id: 11, naam: 'Test new test', roepnaam: 'Test new', achternaam: 'test', tags: '', pr: '0', adres: 'Joop Geesinkweg 601, 1114...', mobiel: '-', telefoon: '2145784512', email: 'chetan@abnormal.nl', gemaakt: 'Systeem', type: 'sys' },
-  { id: 12, naam: 'Test test', roepnaam: 'Test', achternaam: 'test', tags: '', pr: '0', adres: 'Joop Geesinkweg 601, 1114...', mobiel: '-', telefoon: '32323', email: 'chetan@abnormal.nl', gemaakt: 'Systeem', type: 'sys' },
-  { id: 13, naam: 'VL Dempster', roepnaam: 'VL', achternaam: 'Dempster', tags: '', pr: '0', adres: 'Bunschotenlaan 17, 8244DS...', mobiel: '-', telefoon: '0641212954', email: 'viclouisedemp@hotmail.com', gemaakt: 'Systeem', type: 'sys' },
-  { id: 14, naam: 'Damian -', roepnaam: 'Damian', achternaam: '-', tags: '', pr: '0', adres: '- -, -, -', mobiel: '-', telefoon: '0653585871', email: 'jamal1918@wp.pl', gemaakt: 'Systeem', type: 'sys' },
-  { id: 15, naam: 'Fam. Kort - de Groot', roepnaam: 'Fam.', achternaam: 'Kort - de Gro...', tags: '', pr: '1', adres: 'Zoom 11 5, 8225KC, Lelysta...', mobiel: '-', telefoon: '-', email: 'h.kort1@chello.nl', gemaakt: 'Sven | Installatiegroep', type: 'user' },
-];
+import { crmService, Contact } from '@/lib/crmService';
 
 export function ContactsLayout() {
-  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const toggleSelect = (id: number) => {
+  // Subscribe to real-time updates from Firebase
+  useEffect(() => {
+    const unsubscribe = crmService.subscribeToContacts((fetched) => {
+      setContacts(fetched);
+      setIsLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const toggleSelect = (id: string) => {
     if (selectedIds.includes(id)) {
       setSelectedIds(selectedIds.filter(x => x !== id));
     } else {
@@ -33,10 +27,29 @@ export function ContactsLayout() {
     }
   };
 
+  const handleDelete = async (id: string) => {
+    if (window.confirm("Weet je zeker dat je dit contact wilt verwijderen?")) {
+      await crmService.deleteContact(id);
+    }
+  };
+
+  const handleAddSample = async () => {
+    const names = ["Cees Oddens", "Sandra Brader", "Sven Nooij", "Lars Albregts"];
+    const randomName = names[Math.floor(Math.random() * names.length)];
+    await crmService.addContact({
+      name: randomName,
+      email: `${randomName.toLowerCase().replace(' ', '.')}@example.com`,
+      phone: "06-12345678",
+      company: "Installatiegroep Duurzaam",
+      role: "Beheerder",
+      status: "Actief"
+    });
+  };
+
   return (
     <div className="flex flex-col h-full bg-slate-50 relative space-y-4 pt-2 pb-8">
       
-      {/* ── Page Header Mimicking Screenshot ── */}
+      {/* ── Page Header ── */}
       <div className="flex items-center gap-3 px-6 pb-2 shrink-0">
         <Target className="h-6 w-6 text-purple-700 bg-purple-100 p-1 rounded" />
         <h1 className="text-xl font-bold text-gray-900">Contactenlijst</h1>
@@ -48,13 +61,16 @@ export function ContactsLayout() {
         <div className="flex flex-wrap items-center justify-between p-4 border-b border-gray-100 shrink-0">
           <div className="flex items-center gap-6 pb-1">
             <button className="flex items-center gap-2 text-sm font-bold text-gray-900 pb-1 border-b-2 border-green-600">
-              Alles <span className="bg-emerald-800 text-white text-[11px] px-2 py-0.5 rounded-full leading-none shrink-0 font-bold">318</span>
+              Alles <span className="bg-emerald-800 text-white text-[11px] px-2 py-0.5 rounded-full leading-none shrink-0 font-bold">{contacts.length}</span>
             </button>
           </div>
           
           <div className="flex items-center gap-3">
-            <button className="flex items-center gap-2 px-4 py-2 bg-emerald-800 text-white font-medium text-sm rounded-md shadow-sm opacity-90 hover:opacity-100 transition-opacity">
-              <Plus className="h-4 w-4" /> Contact Maken
+            <button 
+                onClick={handleAddSample}
+                className="flex items-center gap-2 px-4 py-2 bg-emerald-800 text-white font-medium text-sm rounded-md shadow-sm opacity-90 hover:opacity-100 transition-opacity"
+            >
+              <Plus className="h-4 w-4" /> Sample Toevoegen
             </button>
             <button className="p-2 border border-gray-200 text-gray-600 rounded-lg shadow-sm hover:bg-gray-50">
               <Settings className="h-4 w-4" />
@@ -69,10 +85,6 @@ export function ContactsLayout() {
             <button className="flex items-center gap-1.5 hover:text-gray-900"><SlidersHorizontal className="h-4 w-4" /> Filters</button>
             <button className="flex items-center gap-1.5 hover:text-gray-900"><AlignJustify className="h-4 w-4" /> Dichtheid</button>
             <button className="flex items-center gap-1.5 hover:text-gray-900"><Maximize2 className="h-4 w-4" /> Schaal</button>
-            <button className="flex items-center gap-1.5 hover:text-gray-900 text-gray-400">
-              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>
-              Bulk
-            </button>
             <button className="flex items-center gap-1.5 hover:text-gray-900"><Download className="h-4 w-4" /> Exporteren</button>
           </div>
           <div className="relative w-64 flex items-center">
@@ -82,132 +94,95 @@ export function ContactsLayout() {
               placeholder="Zoeken..."
               className="pl-9 pr-8 py-1.5 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50/50 w-full"
             />
-            <Info className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-emerald-800" />
           </div>
         </div>
 
         {/* Data Table */}
         <div className="overflow-auto flex-1">
-          <table className="w-full text-left text-sm border-collapse min-w-[1200px]">
-            <thead className="sticky top-0 bg-white z-10 shadow-sm shadow-gray-100/50">
-              <tr className="border-b border-gray-200">
+          <table className="w-full text-left text-sm border-collapse min-w-[1000px]">
+            <thead className="sticky top-0 bg-white z-10 shadow-sm border-b border-gray-100">
+              <tr className="bg-gray-50/30 font-bold uppercase tracking-tighter text-gray-400 text-[11px]">
                 <th className="p-3 pl-4 w-10 text-center">
-                  <input type="checkbox" className="rounded border-gray-300 text-green-600 focus:ring-green-500 h-4 w-4" />
+                  <input type="checkbox" className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 h-4 w-4" />
                 </th>
-                <th className="p-3 font-semibold text-gray-800">Naam</th>
-                <th className="p-3 font-semibold text-gray-800">Voornaam</th>
-                <th className="p-3 font-semibold text-gray-800">Achternaam</th>
-                <th className="p-3 font-semibold text-gray-800">Tags</th>
-                <th className="p-3 font-semibold text-gray-800">Pr...</th>
-                <th className="p-3 font-semibold text-gray-800">Adres</th>
-                <th className="p-3 font-semibold text-gray-800">Mobiele num...</th>
-                <th className="p-3 font-semibold text-gray-800">Telefoonnum...</th>
-                <th className="p-3 font-semibold text-gray-800">E-mailadres</th>
-                <th className="p-3 font-semibold text-gray-800">Gemaakt door</th>
-                <th className="p-3 font-semibold text-gray-800">Bijgewerkt door</th>
-                <th className="p-3 w-32 sticky right-0 bg-white shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)]"></th>
+                <th className="p-3">Naam</th>
+                <th className="p-3">Email</th>
+                <th className="p-3">Bedrijf</th>
+                <th className="p-3">Telefoon</th>
+                <th className="p-3">Rol</th>
+                <th className="p-3">Status</th>
+                <th className="p-3 w-40 sticky right-0 bg-white z-20"></th>
               </tr>
             </thead>
             <tbody>
-              {contactsData.map((row, i) => (
-                <tr key={row.id} className="border-b border-gray-100 hover:bg-gray-50/80 transition-colors">
+              {isLoading ? (
+                <tr>
+                  <td colSpan={8} className="p-20 text-center text-gray-400 italic">
+                    Laden van contacten...
+                  </td>
+                </tr>
+              ) : contacts.length === 0 ? (
+                <tr>
+                   <td colSpan={8} className="p-20 text-center text-gray-400 italic">
+                    Geen contacten gevonden. Klik op "+ Sample Toevoegen" om te testen!
+                  </td>
+                </tr>
+              ) : contacts.map((row) => (
+                <tr key={row.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors group">
                   <td className="p-3 pl-4 text-center">
                     <input 
                       type="checkbox" 
-                      className="rounded border-gray-300 text-green-600 focus:ring-green-500 h-4 w-4 cursor-pointer" 
-                      onClick={() => toggleSelect(row.id)}
+                      className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 h-4 w-4 cursor-pointer" 
+                      checked={selectedIds.includes(row.id!)}
+                      onChange={() => toggleSelect(row.id!)}
                     />
                   </td>
-                  <td className="p-3 text-[13px] font-semibold text-emerald-600 hover:underline cursor-pointer truncate max-w-[180px]" title={row.naam}>
-                    {row.naam}
+                  <td className="p-3 text-[13px] font-bold text-emerald-800 hover:underline cursor-pointer">
+                    <div className="flex items-center gap-2">
+                        <div className="h-6 w-6 bg-slate-200 rounded-full flex items-center justify-center text-[10px] font-bold text-slate-600">
+                            {row.name.charAt(0)}
+                        </div>
+                        {row.name}
+                    </div>
                   </td>
-                  <td className="p-3 text-[13px] text-gray-700">
-                    {row.roepnaam}
-                  </td>
-                  <td className="p-3 text-[13px] text-gray-700">
-                    {row.achternaam}
-                  </td>
-                  <td className="p-3 text-[13px] text-gray-700">
-                    {row.tags}
-                  </td>
-                  <td className="p-3 text-[13px] text-gray-700">
-                    {row.pr}
-                  </td>
-                  <td className="p-3 text-[13px] text-gray-600 truncate max-w-[200px]" title={row.adres}>
-                    {row.adres}
-                  </td>
-                  <td className="p-3 text-[13px] font-medium text-blue-600">
-                    {row.mobiel}
-                  </td>
-                  <td className="p-3 text-[13px] font-medium text-blue-600">
-                    {row.telefoon}
-                  </td>
-                  <td className="p-3 text-[13px] font-semibold text-emerald-600 hover:underline cursor-pointer truncate max-w-[200px]" title={row.email}>
+                  <td className="p-3 text-[13px] font-medium text-emerald-600">
                     {row.email}
                   </td>
-                  <td className="p-3 text-[13px] text-gray-800 whitespace-nowrap">
-                    <div className="flex items-center gap-2">
-                      {row.type === 'sys' ? (
-                        <div className="h-6 w-6 bg-yellow-400 text-black font-bold flex items-center justify-center rounded-full text-xs">S</div>
-                      ) : (
-                        <UserCircle2 className="h-5 w-5 text-gray-400 shrink-0" />
-                      )}
-                      <span>{row.gemaakt}</span>
-                    </div>
+                  <td className="p-3 text-[13px] text-gray-600">
+                    {row.company}
                   </td>
-                  <td className="p-3 text-[13px] text-gray-800 whitespace-nowrap">
-                    <div className="flex items-center gap-2">
-                      {row.type === 'sys' ? (
-                        <div className="h-6 w-6 bg-yellow-400 text-black font-bold flex items-center justify-center rounded-full text-xs">S</div>
-                      ) : (
-                        <UserCircle2 className="h-5 w-5 text-gray-400 shrink-0" />
-                      )}
-                      <span>{row.gemaakt}</span>
-                    </div>
+                  <td className="p-3 text-[13px] text-blue-600 font-medium">
+                    {row.phone}
                   </td>
-                  <td className="p-3 text-right sticky right-0 bg-white/95 backdrop-blur-sm group-hover:bg-gray-50/95 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.02)] transition-colors">
+                  <td className="p-3">
+                    <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">{row.role}</span>
+                  </td>
+                  <td className="p-3">
+                    <span className={cn(
+                      "text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-tighter",
+                      row.status === 'Actief' ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"
+                    )}>
+                      {row.status}
+                    </span>
+                  </td>
+                  <td className="p-3 text-right sticky right-0 bg-white/90 backdrop-blur-sm group-hover:bg-gray-50/90 transition-colors z-10">
                     <div className="flex items-center justify-end gap-3 text-emerald-700">
-                      <button className="hover:text-emerald-900 group relative">
-                        <UserCircle2 className="h-4 w-4" strokeWidth={2.5} />
-                      </button>
-                      <button className="hover:text-emerald-900 group relative">
-                        <Network className="h-4 w-4" strokeWidth={2.5} />
-                      </button>
-                      <button className="hover:text-emerald-900 group relative">
-                        <FileText className="h-4 w-4" strokeWidth={2.5} />
-                      </button>
+                        <button className="hover:text-emerald-900 transition-colors"><UserCircle2 className="h-4 w-4" /></button>
+                        <button className="hover:text-emerald-900 transition-colors"><Network className="h-4 w-4" /></button>
+                        <button className="hover:text-emerald-900 transition-colors"><FileText className="h-4 w-4" /></button>
+                        <button onClick={() => handleDelete(row.id!)} className="text-gray-300 hover:text-red-500 transition-colors ml-1 border-l pl-3 border-gray-100">
+                            <Trash2 className="h-4 w-4" />
+                        </button>
                     </div>
                   </td>
                 </tr>
               ))}
-              <tr className="h-auto">
-                <td colSpan={11}></td>
-              </tr>
             </tbody>
           </table>
         </div>
 
-        {/* Footer info area */}
-        <div className="bg-white border-t border-gray-200 p-4 shrink-0 flex items-center justify-end">
-          <div className="flex items-center gap-6 text-[13px] font-medium text-gray-600">
-            <div className="flex items-center gap-2">
-              <span>Regels per pagina:</span>
-              <select className="border-none outline-none font-semibold text-gray-800 focus:ring-0 bg-transparent cursor-pointer">
-                <option>25</option>
-                <option>50</option>
-                <option>100</option>
-              </select>
-            </div>
-            <span>1–25 of 318</span>
-            <div className="flex gap-4 items-center pl-2">
-              <button className="text-gray-400 cursor-not-allowed">
-                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-              </button>
-              <button className="text-gray-700 hover:text-gray-900 cursor-pointer">
-                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
-              </button>
-            </div>
-          </div>
+        <div className="bg-white border-t border-gray-100 p-3 shrink-0 flex items-center justify-end text-[12px] text-gray-500 font-medium">
+           {contacts.length} contacten in totaal
         </div>
 
       </div>

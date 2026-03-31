@@ -1,35 +1,25 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
-  Target, Settings, Columns3, SlidersHorizontal, AlignJustify, Maximize2, Download, Search, Plus, Archive, Edit, Info
+  Target, Settings, Columns3, SlidersHorizontal, AlignJustify, Maximize2, Download, Search, Plus, Archive, Edit, Info, Trash2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-const companiesData = [
-  { id: 1, ref: '2600001', naam: 'W.P.J. Montage Vloerverwar...', tags: '', telefoon: '-', kvk: '-', contact: '-', moeder: '-', adres: 'Schieland 27, 8245GB, Lelys...', btw: '-', projecten: 1, gemaaktOp: '20-01-2026 08:06', gemaaktDoor: 'Sven | Installatiegroep', bijgewerktOp: '20-01-2026 08:06', bijgewerktDoor: 'Sven | Installatiegroep', color: 'gray' },
-  { id: 2, ref: '2600010', naam: 'V & O Cars', tags: '', telefoon: '0642516759', kvk: '-', contact: '-', moeder: '-', adres: 'Apolloweg 138, 8239DA, Lely...', btw: '-', projecten: 2, gemaaktOp: '24-03-2026 08:20', gemaaktDoor: 'Sven | Installatiegroep', bijgewerktOp: '24-03-2026 08:20', bijgewerktDoor: 'Sven | Installatiegroep', color: 'gray' },
-  { id: 3, ref: '2500011', naam: 'Test company', tags: '', telefoon: '-', kvk: '-', contact: '-', moeder: '-', adres: 'Maagdenburgstraat 5, 7421...', btw: '-', projecten: 0, gemaaktOp: '22-07-2025 07:45', gemaaktDoor: 'Systeem', bijgewerktOp: '22-07-2025 07:45', bijgewerktDoor: 'Systeem', color: 'yellow' },
-  { id: 4, ref: '2500019', naam: 'Smits', tags: '', telefoon: '-', kvk: '-', contact: '-', moeder: '-', adres: 'A. Hofmanweg 24, 2031 BL, H...', btw: '-', projecten: 1, gemaaktOp: '05-11-2025 07:17', gemaaktDoor: 'Sven | Installatiegroep', bijgewerktOp: '05-11-2025 07:17', bijgewerktDoor: 'Sven | Installatiegroep', color: 'gray' },
-  { id: 5, ref: '2600003', naam: 'Salverda Bouw B.V.', tags: '', telefoon: '0525-651666', kvk: '-', contact: '-', moeder: '-', adres: 'Industrieweg 13, 8084 GS, \'t...', btw: '-', projecten: 1, gemaaktOp: '30-01-2026 13:22', gemaaktDoor: 'Sandra Brader', bijgewerktOp: '30-01-2026 13:22', bijgewerktDoor: 'Sandra Brader', color: 'gray' },
-  { id: 6, ref: '2600004', naam: 'Rebo OGV Amsterdam BV', tags: '', telefoon: '-', kvk: '-', contact: '-', moeder: '-', adres: 'Haparandaweg 13, 1013 BD...', btw: '-', projecten: 1, gemaaktOp: '11-02-2026 15:34', gemaaktDoor: 'Sven | Installatiegroep', bijgewerktOp: '11-02-2026 15:34', bijgewerktDoor: 'Sven | Installatiegroep', color: 'gray' },
-  { id: 7, ref: '2600002', naam: 'RMT Autoschade', tags: '', telefoon: '-', kvk: '-', contact: '-', moeder: '-', adres: 'De Steiger 27, 1351AB, Alme...', btw: '-', projecten: 1, gemaaktOp: '23-01-2026 13:41', gemaaktDoor: 'Sven | Installatiegroep', bijgewerktOp: '23-01-2026 13:41', bijgewerktDoor: 'Sven | Installatiegroep', color: 'gray' },
-  { id: 8, ref: '2500020', naam: 'R. Jannink Beheer B.V.', tags: '', telefoon: '06-53255507', kvk: '39064065', contact: '-', moeder: '-', adres: 'Hollandse Hout 240, 8244GK...', btw: 'NL8059...', projecten: 2, gemaaktOp: '03-12-2025 12:43', gemaaktDoor: 'Sandra Brader', bijgewerktOp: '17-12-2025 12:00', bijgewerktDoor: 'Sandra Brader', color: 'gray' },
-  { id: 9, ref: '2500007', naam: 'OpusFlow', tags: '', telefoon: '-', kvk: '-', contact: '-', moeder: '-', adres: 'Maagdenburgstraat 5, 7421...', btw: '-', projecten: 0, gemaaktOp: '24-07-2025 14:16', gemaaktDoor: 'Lars Albregts', bijgewerktOp: '24-07-2025 14:17', bijgewerktDoor: 'Lars Albregts', color: 'blue' },
-  { id: 10, ref: '2500010', naam: 'Not provided', tags: '', telefoon: '-', kvk: '-', contact: '-', moeder: '-', adres: 'Joop Geesinkweg 601, 1114...', btw: '-', projecten: 1, gemaaktOp: '21-07-2025 17:22', gemaaktDoor: 'Systeem', bijgewerktOp: '21-07-2025 17:22', bijgewerktDoor: 'Systeem', color: 'yellow' },
-  { id: 11, ref: '2500...', naam: 'M2U Holding BV', tags: '', telefoon: '-', kvk: '-', contact: '-', moeder: '-', adres: 'Smedengilde 8, 8253 HV, Dro...', btw: '-', projecten: 1, gemaaktOp: '23-10-2025 09:30', gemaaktDoor: 'Sven | Installatiegroep', bijgewerktOp: '23-10-2025 09:30', bijgewerktDoor: 'Sven | Installatiegroep', color: 'gray' },
-  { id: 12, ref: '2600008', naam: 'Lenferink Zwolle Renovatie B...', tags: '', telefoon: '038-4651455', kvk: '-', contact: '-', moeder: '-', adres: 'Wilhelm Röntgenstraat 3, 80...', btw: '-', projecten: 1, gemaaktOp: '09-03-2026 12:37', gemaaktDoor: 'Sandra Brader', bijgewerktOp: '09-03-2026 12:37', bijgewerktDoor: 'Sandra Brader', color: 'gray' },
-  { id: 13, ref: '2500008', naam: 'Installatiegroep Duurzaam B...', tags: '', telefoon: '+31851308934', kvk: '78281725', contact: '-', moeder: '-', adres: 'Wigstraat 13B, 8223 EE, Lely...', btw: 'NL8613...', projecten: 0, gemaaktOp: '12-05-2025 12:20', gemaaktDoor: 'Lars Albregts', bijgewerktOp: '11-11-2025 12:13', bijgewerktDoor: 'Sandra Brader', color: 'blue' },
-  { id: 14, ref: '2500018', naam: 'Inntens Klimaattechniek', tags: '', telefoon: '-', kvk: '-', contact: '-', moeder: '-', adres: 'Zuiveringweg 50A, 8243PZ, L...', btw: '-', projecten: 1, gemaaktOp: '30-10-2025 12:43', gemaaktDoor: 'Sven | Installatiegroep', bijgewerktOp: '30-10-2025 12:43', bijgewerktDoor: 'Sven | Installatiegroep', color: 'gray' },
-  { id: 15, ref: '2500016', naam: 'Hilal Bakkerij', tags: '', telefoon: '0681683186', kvk: '-', contact: '-', moeder: '-', adres: 'Voorstraat 481, 8226KD, Lely...', btw: '-', projecten: 1, gemaaktOp: '24-10-2025 09:20', gemaaktDoor: 'Sven | Installatiegroep', bijgewerktOp: '24-10-2025 09:20', bijgewerktDoor: 'Sven | Installatiegroep', color: 'gray' },
-  { id: 16, ref: '2600006', naam: 'HKV Vastgoed B.V.', tags: '', telefoon: '0320-294252', kvk: '39069387', contact: '-', moeder: '-', adres: 'Botter 11 29, 8232JN, Lelysta...', btw: '-', projecten: 0, gemaaktOp: '19-02-2026 08:32', gemaaktDoor: 'Sandra Brader', bijgewerktOp: '19-02-2026 08:32', bijgewerktDoor: 'Sandra Brader', color: 'gray' },
-  { id: 17, ref: '2600005', naam: 'HKV Lijn in Water B.V.', tags: '', telefoon: '0320-294248', kvk: '39060355', contact: '-', moeder: '-', adres: 'Botter 11 29, 8232 JN, Lelysta...', btw: '-', projecten: 0, gemaaktOp: '19-02-2026 08:29', gemaaktDoor: 'Sandra Brader', bijgewerktOp: '19-02-2026 08:29', bijgewerktDoor: 'Sandra Brader', color: 'gray' },
-  { id: 18, ref: '2500013', naam: 'Energy Bridge', tags: '', telefoon: '0854005050', kvk: '-', contact: '-', moeder: '-', adres: 'Bobinestraat 74, 3903 KG, Ve...', btw: '-', projecten: 2, gemaaktOp: '08-10-2025 18:45', gemaaktDoor: 'Sven | Installatiegroep', bijgewerktOp: '08-10-2025 18:45', bijgewerktDoor: 'Sven | Installatiegroep', color: 'gray' },
-  { id: 19, ref: '2500012', naam: 'Energiewacht B.V.', tags: '', telefoon: '088-5553000', kvk: '76591042', contact: '-', moeder: '-', adres: 'Lippestraat 1, 8028 PS, Zwoll...', btw: 'NL8606...', projecten: 86, gemaaktOp: '18-08-2025 15:25', gemaaktDoor: 'Sven | Installatiegroep', bijgewerktOp: '11-11-2025 12:16', bijgewerktDoor: 'Sandra Brader', color: 'gray' },
-];
+import { crmService, Company } from '@/lib/crmService';
 
 export function CompaniesLayout() {
-  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const toggleSelect = (id: number) => {
+  // Subscribe to real-time updates from Firebase
+  useEffect(() => {
+    const unsubscribe = crmService.subscribeToCompanies((fetched) => {
+      setCompanies(fetched);
+      setIsLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const toggleSelect = (id: string) => {
     if (selectedIds.includes(id)) {
       setSelectedIds(selectedIds.filter(x => x !== id));
     } else {
@@ -37,10 +27,30 @@ export function CompaniesLayout() {
     }
   };
 
+  const handleDelete = async (id: string) => {
+    if (window.confirm("Weet je zeker dat je dit bedrijf wilt verwijderen?")) {
+      await crmService.deleteCompany(id);
+    }
+  };
+
+  const handleAddSample = async () => {
+    const names = ["Installatiegroep Duurzaam", "Solar Expertise", "Westland Daktechniek", "GroenStroom BV"];
+    const randomName = names[Math.floor(Math.random() * names.length)];
+    await crmService.addCompany({
+      name: `${randomName} ${Math.floor(Math.random() * 1000)}`,
+      email: "info@example.com",
+      phone: "06-12345678",
+      status: "Active",
+      type: "Klant",
+      address: "Hoofdstraat 1",
+      city: "Lelystad"
+    });
+  };
+
   return (
     <div className="flex flex-col h-full bg-slate-50 relative space-y-4 pt-2 pb-8">
       
-      {/* ── Page Header Mimicking Screenshot ── */}
+      {/* ── Page Header ── */}
       <div className="flex items-center gap-3 px-6 pb-2 shrink-0">
         <Target className="h-6 w-6 text-purple-700 bg-purple-100 p-1 rounded" />
         <h1 className="text-xl font-bold text-gray-900">Bedrijvenlijst</h1>
@@ -52,13 +62,16 @@ export function CompaniesLayout() {
         <div className="flex flex-wrap items-center justify-between p-4 border-b border-gray-100 shrink-0">
           <div className="flex items-center gap-6 pb-1">
             <button className="flex items-center gap-2 text-sm font-bold text-gray-900 pb-1 border-b-2 border-green-600">
-              Alles <span className="bg-emerald-800 text-white text-[11px] px-2 py-0.5 rounded-full leading-none shrink-0 font-bold">24</span>
+              Alles <span className="bg-emerald-800 text-white text-[11px] px-2 py-0.5 rounded-full leading-none shrink-0 font-bold">{companies.length}</span>
             </button>
           </div>
           
           <div className="flex items-center gap-3">
-            <button className="flex items-center gap-2 px-4 py-2 bg-emerald-800 text-white font-medium text-sm rounded-md shadow-sm opacity-90 hover:opacity-100 transition-opacity">
-              <Plus className="h-4 w-4" /> Bedrijf Maken
+            <button 
+                onClick={handleAddSample}
+                className="flex items-center gap-2 px-4 py-2 bg-emerald-800 text-white font-medium text-sm rounded-md shadow-sm opacity-90 hover:opacity-100 transition-opacity"
+            >
+              <Plus className="h-4 w-4" /> Sample Toevoegen
             </button>
             <button className="p-2 border border-gray-200 text-gray-600 rounded-lg shadow-sm hover:bg-gray-50">
               <Settings className="h-4 w-4" />
@@ -73,12 +86,7 @@ export function CompaniesLayout() {
             <button className="flex items-center gap-1.5 hover:text-gray-900"><SlidersHorizontal className="h-4 w-4" /> Filters</button>
             <button className="flex items-center gap-1.5 hover:text-gray-900"><AlignJustify className="h-4 w-4" /> Dichtheid</button>
             <button className="flex items-center gap-1.5 hover:text-gray-900"><Maximize2 className="h-4 w-4" /> Schaal</button>
-            <button className="flex items-center gap-1.5 hover:text-gray-900 text-gray-400">
-              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>
-              Bulk
-            </button>
             <button className="flex items-center gap-1.5 hover:text-gray-900"><Download className="h-4 w-4" /> Exporteren</button>
-            <button className="flex items-center gap-1.5 hover:text-gray-900"><Archive className="h-4 w-4" /> Archief</button>
           </div>
           <div className="relative w-64 flex items-center">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
@@ -87,155 +95,102 @@ export function CompaniesLayout() {
               placeholder="Zoeken..."
               className="pl-9 pr-8 py-1.5 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50/50 w-full"
             />
-            <Info className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-emerald-800" />
           </div>
         </div>
 
         {/* Data Table */}
         <div className="overflow-auto flex-1">
-          <table className="w-full text-left text-sm border-collapse min-w-[1200px]">
-            <thead className="sticky top-0 bg-white z-10 shadow-sm shadow-gray-100/50">
-              <tr className="border-b border-gray-200">
+          <table className="w-full text-left text-sm border-collapse min-w-[1000px]">
+            <thead className="sticky top-0 bg-white z-10 shadow-sm border-b border-gray-100">
+              <tr className="bg-gray-50/30">
                 <th className="p-3 pl-4 w-10 text-center">
-                  <input type="checkbox" className="rounded border-gray-300 text-green-600 focus:ring-green-500 h-4 w-4" />
+                  <input type="checkbox" className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 h-4 w-4" />
                 </th>
-                <th className="p-3 font-semibold text-gray-800">Referentie...</th>
-                <th className="p-3 font-semibold text-gray-800 flex items-center gap-1">
-                  Bedrijfsnaam 
-                  <svg className="h-3.5 w-3.5 text-gray-400" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-                </th>
-                <th className="p-3 font-semibold text-gray-800">Tags</th>
-                <th className="p-3 font-semibold text-gray-800">Telefoonnummer</th>
-                <th className="p-3 font-semibold text-gray-800">KVK</th>
-                <th className="p-3 font-semibold text-gray-800">Primaire contactpersoon</th>
-                <th className="p-3 font-semibold text-gray-800">Moederbe...</th>
-                <th className="p-3 font-semibold text-gray-800 whitespace-nowrap">Adres</th>
-                <th className="p-3 font-semibold text-gray-800 whitespace-nowrap">BTW</th>
-                <th className="p-3 font-semibold text-gray-800 whitespace-nowrap text-right">Projecten</th>
-                <th className="p-3 font-semibold text-gray-800 whitespace-nowrap">Gemaakt op</th>
-                <th className="p-3 font-semibold text-gray-800 whitespace-nowrap">Gemaakt door</th>
-                <th className="p-3 font-semibold text-gray-800 whitespace-nowrap">Bijgewerkt op</th>
-                <th className="p-3 font-semibold text-gray-800 whitespace-nowrap">Bijgewerkt door</th>
-                <th className="p-3 font-semibold text-gray-800 whitespace-nowrap">Archief</th>
-                <th className="p-3 w-14 sticky right-0 bg-white shadow-[-10px_0_15px_-10px_rgba(0,0,0,0.1)] z-20"></th>
+                <th className="p-3 font-semibold text-gray-800 text-[12px] uppercase">ID</th>
+                <th className="p-3 font-semibold text-gray-800 text-[12px] uppercase">Bedrijfsnaam</th>
+                <th className="p-3 font-semibold text-gray-800 text-[12px] uppercase">Type</th>
+                <th className="p-3 font-semibold text-gray-800 text-[12px] uppercase">Telefoon</th>
+                <th className="p-3 font-semibold text-gray-800 text-[12px] uppercase">Stad</th>
+                <th className="p-3 font-semibold text-gray-800 text-[12px] uppercase">Email</th>
+                <th className="p-3 font-semibold text-gray-800 text-[12px] uppercase whitespace-nowrap">Gemaakt op</th>
+                <th className="p-3 font-semibold text-gray-800 text-[12px] uppercase">Status</th>
+                <th className="p-3 w-14 sticky right-0 bg-white z-20"></th>
               </tr>
             </thead>
             <tbody>
-              {companiesData.map((row, i) => (
-                <tr key={row.id} className="border-b border-gray-100 hover:bg-gray-50/80 transition-colors">
+              {isLoading ? (
+                <tr>
+                  <td colSpan={10} className="p-20 text-center text-gray-400 italic">
+                    Laden van bedrijven...
+                  </td>
+                </tr>
+              ) : companies.length === 0 ? (
+                <tr>
+                   <td colSpan={10} className="p-20 text-center text-gray-400 italic">
+                    Geen bedrijven gevonden. Klik op "+ Sample Toevoegen" om te testen!
+                  </td>
+                </tr>
+              ) : companies.map((row) => (
+                <tr key={row.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors group">
                   <td className="p-3 pl-4 text-center">
                     <input 
                       type="checkbox" 
-                      className="rounded border-gray-300 text-green-600 focus:ring-green-500 h-4 w-4 cursor-pointer" 
-                      onClick={() => toggleSelect(row.id)}
+                      className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 h-4 w-4 cursor-pointer" 
+                      checked={selectedIds.includes(row.id!)}
+                      onChange={() => toggleSelect(row.id!)}
                     />
                   </td>
-                  <td className="p-3 text-[13px] text-gray-700">
-                    <span className={cn(row.ref.includes('...') && "bg-gray-600 text-white px-1 py-0.5 rounded text-[11px] font-medium")}>
-                      {row.ref.includes('...') ? '2500010' : row.ref}
-                    </span>
+                  <td className="p-3 text-[13px] text-gray-500 font-mono">
+                    {row.id?.slice(-6).toUpperCase()}
                   </td>
-                  <td className="p-3 text-[13px] font-semibold text-emerald-600 hover:underline cursor-pointer truncate max-w-[200px]" title={row.naam}>
-                    {row.naam}
+                  <td className="p-3 text-[13px] font-bold text-emerald-800 hover:underline cursor-pointer truncate max-w-[200px]">
+                    {row.name}
                   </td>
-                  <td className="p-3 text-[13px] text-gray-700">
-                    {row.tags}
+                  <td className="p-3">
+                    <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">{row.type}</span>
                   </td>
                   <td className="p-3 text-[13px] font-medium text-blue-600">
-                    {row.telefoon}
+                    {row.phone}
                   </td>
-                  <td className="p-3 text-[13px] text-gray-700">
-                    {row.kvk}
+                  <td className="p-3 text-[13px] text-gray-600">
+                    {row.city}
                   </td>
-                  <td className="p-3 text-[13px] text-gray-700">
-                    {row.contact}
+                  <td className="p-3 text-[13px] text-gray-600">
+                    {row.email}
                   </td>
-                  <td className="p-3 text-[13px] text-gray-700">
-                    {row.moeder}
+                  <td className="p-3 text-[13px] text-gray-500 whitespace-nowrap font-medium">
+                    {row.createdAt?.toDate().toLocaleDateString('nl-NL') || '-'}
                   </td>
-                  <td className="p-3 text-[13px] text-gray-600 truncate max-w-[200px]" title={row.adres}>
-                    {row.adres}
+                  <td className="p-3">
+                    <span className={cn(
+                      "text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-tighter",
+                      row.status === 'Active' ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"
+                    )}>
+                      {row.status}
+                    </span>
                   </td>
-                  <td className="p-3 text-[13px] text-gray-600 truncate max-w-[100px]">
-                    {row.btw}
-                  </td>
-                  <td className="p-3 text-[13px] text-gray-600 text-right font-medium">
-                    {row.projecten}
-                  </td>
-                  <td className="p-3 text-[13px] text-gray-600 whitespace-nowrap">
-                    {row.gemaaktOp}
-                  </td>
-                  <td className="p-3 whitespace-nowrap">
-                    <div className="flex items-center gap-2">
-                      <div className={cn(
-                        "w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold",
-                        row.color === 'yellow' ? 'bg-amber-500' :
-                        row.color === 'blue' ? 'bg-[#0f2e60]' :
-                        'bg-gray-300'
-                      )}>
-                        {row.color === 'gray' ? <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor"><path fillRule="evenodd" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z" clipRule="evenodd"/></svg> : row.gemaaktDoor.charAt(0)}
-                      </div>
-                      <span className="text-[13px] text-gray-700">{row.gemaaktDoor}</span>
-                    </div>
-                  </td>
-                  <td className="p-3 text-[13px] text-gray-600 whitespace-nowrap">
-                    {row.bijgewerktOp}
-                  </td>
-                  <td className="p-3 whitespace-nowrap">
-                    <div className="flex items-center gap-2">
-                      <div className={cn(
-                        "w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold",
-                        row.bijgewerktDoor === 'Systeem' ? 'bg-amber-500' :
-                        row.bijgewerktDoor === 'Lars Albregts' ? 'bg-[#0f2e60]' :
-                        'bg-gray-300'
-                      )}>
-                        {(row.bijgewerktDoor === 'Systeem' || row.bijgewerktDoor === 'Lars Albregts') ? row.bijgewerktDoor.charAt(0) : <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor"><path fillRule="evenodd" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z" clipRule="evenodd"/></svg>}
-                      </div>
-                      <span className="text-[13px] text-gray-700">{row.bijgewerktDoor}</span>
-                    </div>
-                  </td>
-                  <td className="p-3 text-center w-14">
-                    <button className="text-gray-400 hover:text-gray-600 transition-colors">
-                      <svg className="w-4 h-4 mx-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
-                    </button>
-                  </td>
-                  <td className="p-3 text-right sticky right-0 bg-white group-hover:bg-gray-50/80 transition-colors z-10">
-                    <div className="flex items-center justify-end">
-                      <button className="text-emerald-700 hover:text-emerald-900 p-1 group/btn relative">
+                  <td className="p-3 text-right">
+                    <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button className="text-gray-400 hover:text-emerald-700 p-1 rounded hover:bg-gray-100 transition-colors">
                         <Edit className="h-4 w-4" />
+                      </button>
+                      <button 
+                        onClick={() => handleDelete(row.id!)}
+                        className="text-gray-300 hover:text-red-500 p-1 rounded hover:bg-red-50 transition-colors"
+                      >
+                        <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
                   </td>
                 </tr>
               ))}
-              <tr className="h-auto">
-                <td colSpan={17}></td>
-              </tr>
             </tbody>
           </table>
         </div>
 
-        {/* Footer info area */}
-        <div className="bg-white border-t border-gray-200 p-4 shrink-0 flex items-center justify-end">
-          <div className="flex items-center gap-6 text-[13px] font-medium text-gray-600">
-            <div className="flex items-center gap-2">
-              <span>Regels per pagina:</span>
-              <select className="border-none outline-none font-semibold text-gray-800 focus:ring-0 bg-transparent cursor-pointer">
-                <option>25</option>
-                <option>50</option>
-                <option>100</option>
-              </select>
-            </div>
-            <span>1–24 of 24</span>
-            <div className="flex gap-4 items-center pl-2">
-              <button className="text-gray-400 cursor-not-allowed">
-                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-              </button>
-              <button className="text-gray-400 cursor-not-allowed">
-                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
-              </button>
-            </div>
-          </div>
+        {/* Footer */}
+        <div className="bg-white border-t border-gray-100 p-3 shrink-0 flex items-center justify-end text-[12px] text-gray-500 font-medium">
+           {companies.length} bedrijven in totaal
         </div>
 
       </div>
