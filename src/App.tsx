@@ -1,8 +1,3 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
 import React, { useState, useEffect } from 'react';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
@@ -26,31 +21,84 @@ import { HoursLayout } from '@/components/hours/HoursLayout';
 import { TeamsLayout } from '@/components/planning/TeamsLayout';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { AIChatPopup } from '@/components/layout/AIChatPopup';
+import { Target } from 'lucide-react';
+import { onAuthStateChanged, User } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
+import { LoginPage } from '@/components/auth/LoginPage';
+import { stateService, TimerState } from '@/lib/stateService';
 
 export default function App() {
+  const [user, setUser] = useState<User | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeView, setActiveView] = useState('dashboard');
   const [isChatOpen, setIsChatOpen] = useState(false);
 
-  // Global Timer State
-  const [timerSeconds, setTimerSeconds] = useState(0);
-  const [isTimerRunning, setIsTimerRunning] = useState(false);
+  // Monitor Authentication State
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (authUser) => {
+      setUser(authUser);
+      setAuthLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
 
+  // Global Timer State from Firestore
+  const [timerDoc, setTimerDoc] = useState<TimerState>({ isRunning: false, startTime: null, baseSeconds: 0 });
+  const [timerSeconds, setTimerSeconds] = useState(0);
+
+  // 1. Subscribe to Firestore Global State
+  useEffect(() => {
+    if (!user) return;
+    const unsubscribe = stateService.subscribeToTimer((state) => {
+      setTimerDoc(state);
+    });
+    return () => unsubscribe();
+  }, [user]);
+
+  // 2. Local UI Tick for smooth counting
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    if (isTimerRunning) {
-      interval = setInterval(() => {
-        setTimerSeconds(prev => prev + 1);
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [isTimerRunning]);
+    
+    const updateLocalTimer = () => {
+      if (timerDoc.isRunning && timerDoc.startTime) {
+        const startMillis = timerDoc.startTime.toMillis();
+        const elapsedSinceStart = Math.floor((Date.now() - startMillis) / 1000);
+        setTimerSeconds(timerDoc.baseSeconds + elapsedSinceStart);
+      } else {
+        setTimerSeconds(timerDoc.baseSeconds);
+      }
+    };
 
-  const toggleTimer = () => setIsTimerRunning(!isTimerRunning);
-  const resetTimer = () => {
-    setIsTimerRunning(false);
-    setTimerSeconds(0);
-  };
+    updateLocalTimer(); // Initial call
+
+    if (timerDoc.isRunning) {
+      interval = setInterval(updateLocalTimer, 1000);
+    }
+    
+    return () => clearInterval(interval);
+  }, [timerDoc]);
+
+  const toggleTimer = () => stateService.toggleTimer(timerDoc, timerSeconds);
+  const resetTimer = () => stateService.resetTimer();
+
+  const isTimerRunning = timerDoc.isRunning;
+
+  if (authLoading) {
+    return (
+      <div className="h-screen w-full flex flex-col items-center justify-center bg-gray-50">
+        <div className="relative">
+          <div className="h-16 w-16 border-4 border-emerald-100 border-t-emerald-600 rounded-full animate-spin" />
+          <Target className="h-6 w-6 text-emerald-600 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+        </div>
+        <p className="mt-4 text-gray-500 font-medium animate-pulse">Laden van uw dashbord...</p>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <LoginPage />;
+  }
 
   return (
     <TooltipProvider>

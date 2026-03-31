@@ -1,33 +1,56 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Hourglass, Search, Filter, Folder, X, Tag, ChevronLeft, ChevronRight, 
-  Menu, Grid, List, Columns, Calendar as CalendarIcon, Wrench
+  Menu, Grid, List, Columns, Calendar as CalendarIcon, Wrench, LayoutGrid as LayoutGridIcon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-
-const projectCards = [
-  { id: 1, city: 'Lelystad', name: 'Dylan Lanser', tag: 'Zonnepanelen', tagColor: 'bg-yellow-100 text-yellow-800' },
-  { id: 2, city: 'Lelystad', name: 'I. van Uitert', tag: 'Zonnepanelen', tagColor: 'bg-yellow-100 text-yellow-800' },
-  { id: 3, city: 'Almere', name: 'Herman Paddenburg -', tag: 'Isolatie', tagColor: 'bg-emerald-100 text-emerald-800' },
-  { id: 4, city: 'Lelystad', name: 'Centrada', tag: 'Zonnepanelen', tagColor: 'bg-yellow-100 text-yellow-800' },
-  { id: 5, city: 'Lelystad', name: 'Centrada', tag: 'Zonnepanelen', tagColor: 'bg-yellow-100 text-yellow-800' },
-  { id: 6, city: 'Lelystad', name: 'Centrada', tag: 'Zonnepanelen', tagColor: 'bg-yellow-100 text-yellow-800' },
-  { id: 7, city: 'Lelystad', name: 'Centrada', tag: 'Zonnepanelen', tagColor: 'bg-yellow-100 text-yellow-800' },
-];
-
-const teamRows = [
-  { eff: '', name: 'Connor van Dreemen', blocks: [{ title: 'Installatie voor Opdrachtgever', start: 7, end: 14.5, color: 'bg-green-100/80 border-green-200 text-green-800' }] },
-  { eff: '66.7%', name: 'Damian Tobolski', blocks: [{ title: 'Swifterbant - Zoon - 2500147', start: 8.5, end: 13, color: 'bg-pink-100/80 border-pink-200 text-pink-800' }] },
-  { eff: '44.4%', name: 'Daniel Leutscher', blocks: [{ title: 'Lelystad - Dam - 2600121', start: 12, end: 15, color: 'bg-gray-100/80 border-gray-200 text-gray-800' }] },
-  { eff: '', name: 'Elektra Team', blocks: [] },
-  { eff: '22.2%', name: 'hans alberts', blocks: [{ title: 'Lelystad - van Doore...', start: 8.5, end: 11, color: 'bg-blue-100/80 border-blue-200 text-blue-800' }] },
-  { eff: '', name: 'Patrick Van wingerden', blocks: [] },
-];
+import { planningService, PlanningEntry } from '@/lib/planningService';
+import { projectService, Project } from '@/lib/projectService';
 
 const HOURS = Array.from({ length: 12 }, (_, i) => i + 7); // 07 to 18
 
 export function PlannerView() {
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [entries, setEntries] = useState<PlanningEntry[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const unsubProjects = projectService.subscribeToProjects(setProjects);
+    const unsubPlanning = planningService.subscribeToPlanning(setEntries);
+    setIsLoading(false);
+    return () => {
+      unsubProjects();
+      unsubPlanning();
+    };
+  }, []);
+
+  // Process entries into team rows
+  const technicians = Array.from(new Set(entries.map(e => e.technician).filter(t => !!t)));
+  // Ensure we show at least some default techs if empty
+  const defaultTechs = ["Connor van Dreemen", "Damian Tobolski", "Daniel Leutscher", "Sven"];
+  const displayTechs = (technicians.length > 0 ? technicians : defaultTechs) as string[];
+
+  const getRows = () => {
+    return displayTechs.map(tech => {
+      const techEntries = entries.filter(e => e.technician === tech);
+      return {
+        name: tech,
+        eff: techEntries.length > 0 ? "85%" : "",
+        blocks: techEntries.map(e => {
+          const start = parseInt(e.startTime.split(':')[0]) + (parseInt(e.startTime.split(':')[1]) / 60);
+          const end = parseInt(e.endTime.split(':')[0]) + (parseInt(e.endTime.split(':')[1]) / 60);
+          return {
+            title: `${e.client} - ${e.projectName}`,
+            start,
+            end,
+            color: 'bg-emerald-100/80 border-emerald-200 text-emerald-800'
+          };
+        })
+      };
+    });
+  };
+
   return (
     <div className="flex flex-col h-full bg-slate-50 relative overflow-hidden space-y-4 pt-2">
       
@@ -60,45 +83,31 @@ export function PlannerView() {
             <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2 text-gray-400">
               <div className="relative cursor-pointer hover:text-gray-600">
                 <Filter className="h-4 w-4" />
-                <span className="absolute -top-1.5 -right-1.5 bg-green-600 text-white text-[9px] font-bold h-3.5 w-3.5 flex items-center justify-center rounded-full border-2 border-white">
-                  1
-                </span>
               </div>
               <Folder className="h-4 w-4 cursor-pointer hover:text-gray-600" />
             </div>
           </div>
         </div>
 
-        {/* Active Filters Pill */}
-        <div className="flex items-center gap-2 mb-4">
-          <div className="flex items-center gap-1.5 bg-gray-100 text-gray-600 text-xs px-3 py-1.5 rounded-full font-medium border border-gray-200 w-max">
-            Offerte beoordeeld op: oplopend
-            <X className="h-3 w-3 cursor-pointer hover:text-gray-900" />
-          </div>
-        </div>
-
         {/* Project Header */}
         <div className="flex justify-between items-center mb-3">
           <div className="flex items-center gap-2">
-            <h3 className="font-bold text-gray-900 -tracking-tight">Projecten</h3>
-            <span className="bg-green-700 text-white text-[10px] px-1.5 py-0.5 rounded font-bold">15/479</span>
+            <h3 className="font-bold text-gray-900 -tracking-tight">Beschikbare Projecten</h3>
+            <span className="bg-green-700 text-white text-[10px] px-1.5 py-0.5 rounded font-bold">{projects.length}</span>
           </div>
-          <button className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 p-1.5 rounded">
-            <Tag className="h-4 w-4 rotate-90" />
-          </button>
         </div>
 
         {/* Project Cards (Horizontal Scroll) */}
         <div className="flex items-center gap-3 overflow-x-auto pb-2 scrollbar-hide snap-x">
-          {projectCards.map((p, i) => (
+          {projects.map((p) => (
             <div 
               key={p.id} 
-              className="min-w-[180px] w-[180px] bg-white border border-gray-200 rounded-xl p-3 shadow-sm snap-start hover:border-gray-300 transition-colors cursor-pointer group"
+              className="min-w-[180px] w-[180px] bg-white border border-gray-200 rounded-xl p-3 shadow-sm snap-start hover:border-emerald-300 transition-all cursor-pointer group"
             >
-              <div className="text-xs text-gray-500 font-medium mb-0.5">{p.city}</div>
+              <div className="text-xs text-gray-500 font-medium mb-0.5">{p.client}</div>
               <div className="text-sm text-gray-900 font-semibold mb-3 truncate" title={p.name}>{p.name}</div>
-              <span className={cn("text-[9px] font-bold px-1.5 py-0.5 rounded", p.tagColor)}>
-                {p.tag}
+              <span className={cn("text-[8px] font-bold px-1.5 py-0.5 rounded uppercase", p.priority === 'High' ? "bg-red-100 text-red-700" : "bg-emerald-100 text-emerald-800")}>
+                {p.priority}
               </span>
             </div>
           ))}
@@ -108,42 +117,23 @@ export function PlannerView() {
       {/* ── Bottom Box: Timeline Grid ── */}
       <div className="bg-white mx-6 rounded-xl border border-gray-200 shadow-sm flex-1 flex flex-col overflow-hidden mb-6">
         
-        {/* Dropdowns */}
-        <div className="flex gap-4 p-4 border-b border-gray-100 shrink-0">
-          <select className="flex-1 bg-white border border-gray-200 text-gray-500 text-sm rounded-md px-3 py-2 outline-none focus:border-green-500 appearance-none">
-            <option>Selecteer groepen voor planning</option>
-          </select>
-          <select className="flex-1 bg-white border border-gray-200 text-gray-500 text-sm rounded-md px-3 py-2 outline-none focus:border-green-500 appearance-none">
-            <option>Selecteer rollen voor filter</option>
-          </select>
-          <button className="px-6 py-2 border border-green-600 text-green-700 font-semibold text-sm rounded-md hover:bg-green-50 transition-colors">
-            Handmatig
-          </button>
-        </div>
-
         {/* Date Navigator & Options */}
         <div className="flex justify-between items-center px-4 py-3 border-b border-gray-100 shrink-0">
           <div className="flex gap-1.5">
             <button className="p-1.5 rounded bg-gray-100 text-gray-600 hover:text-gray-900"><Menu className="h-4 w-4" /></button>
-            <button className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-900"><Columns className="h-4 w-4" /></button>
-            <button className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-900"><Grid className="h-4 w-4" /></button>
-            <button className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-900"><LayoutGridIcon className="h-4 w-4" /></button>
-            <button className="p-1.5 rounded bg-gray-600 text-white"><CalendarIcon className="h-4 w-4" /></button>
+            <button className="p-1.5 rounded bg-emerald-700 text-white"><CalendarIcon className="h-4 w-4" /></button>
             <button className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-900"><List className="h-4 w-4" /></button>
           </div>
 
           <div className="flex items-center gap-4 text-gray-800 font-bold">
             <button className="p-1 hover:bg-gray-100 rounded text-emerald-600"><ChevronLeft className="h-5 w-5" /></button>
-            <span>donderdag 26 maart 2026</span>
+            <span>vandaag</span>
             <button className="p-1 hover:bg-gray-100 rounded text-emerald-600"><ChevronRight className="h-5 w-5" /></button>
           </div>
 
           <div className="flex gap-2">
-            <button className="px-4 py-1.5 bg-emerald-700 text-white font-semibold text-sm rounded-md shadow-sm opacity-90 hover:opacity-100">
-              Exporteren Als URL
-            </button>
             <button className="px-4 py-1.5 bg-emerald-800 text-white font-semibold text-sm rounded-md shadow-sm">
-              Vandaag
+              Vernieuwen
             </button>
           </div>
         </div>
@@ -155,16 +145,12 @@ export function PlannerView() {
             {/* Table Header */}
             <div className="flex border-b border-gray-200 sticky top-0 bg-white z-30">
               <div className="w-[100px] border-r border-gray-200 p-3 shrink-0 flex items-end">
-                <span className="font-bold text-gray-800 text-xs">Efficiëntie</span>
+                <span className="font-bold text-gray-800 text-xs text-center w-full">Efficiëntie</span>
               </div>
               <div className="w-[200px] border-r border-gray-200 p-3 shrink-0 flex items-end">
-                <span className="font-bold text-gray-800 text-xs">Team</span>
+                <span className="font-bold text-gray-800 text-xs">Monteur</span>
               </div>
               <div className="flex-1 flex flex-col">
-                <div className="text-center text-xs font-bold text-gray-800 py-1 border-b border-gray-100 border-r border-red-200 relative">
-                  W 13
-                  <div className="absolute right-0 bottom-0 w-2 h-2 bg-red-500 translate-y-1/2 translate-x-1/2 rotate-45 transform" />
-                </div>
                 <div className="flex relative h-8">
                   {HOURS.map(h => (
                     <div key={h} className="flex-1 border-r border-gray-200 flex justify-start pl-2 items-center shrink-0 min-w-[50px]">
@@ -177,22 +163,25 @@ export function PlannerView() {
 
             {/* Table Body */}
             <div className="flex-1 relative z-10 w-full min-h-0 bg-white">
-              <div className="absolute inset-0 right-0 w-full">
-                {teamRows.map((row, i) => (
+              <div className="absolute inset-0 right-0 w-full overflow-y-auto">
+                {getRows().map((row, i) => (
                   <div key={i} className="flex border-b border-gray-100 h-12 w-full">
                     {/* Left Fixed Cols */}
                     <div className="w-[100px] border-r border-gray-100 shrink-0 flex items-center justify-center bg-gray-50/20">
-                      <span className="text-xs text-gray-600 font-medium">{row.eff}</span>
+                      <span className="text-[10px] text-gray-600 font-bold">{row.eff}</span>
                     </div>
-                    <div className="w-[200px] border-r border-gray-100 shrink-0 flex items-center px-3 bg-gray-50/20">
-                      <span className="text-xs text-gray-800">{row.name}</span>
+                    <div className="w-[200px] border-r border-gray-100 shrink-0 flex items-center px-3 bg-gray-50/30">
+                      <div className="h-6 w-6 bg-emerald-100 rounded-full mr-2 flex items-center justify-center text-[10px] font-bold text-emerald-800 border border-emerald-200">
+                        {row.name.charAt(0)}
+                      </div>
+                      <span className="text-xs text-gray-800 font-medium">{row.name}</span>
                     </div>
                     {/* Grid Area */}
                     <div className="flex-1 relative bg-white">
                       {/* Grid background lines */}
                       <div className="absolute inset-0 flex">
                         {HOURS.map(h => (
-                          <div key={h} className="flex-1 border-r border-gray-100 h-full shrink-0 min-w-[50px]"></div>
+                          <div key={h} className="flex-1 border-r border-gray-100/50 h-full shrink-0 min-w-[50px]"></div>
                         ))}
                       </div>
                       
@@ -204,7 +193,7 @@ export function PlannerView() {
                           <div 
                             key={bIdx}
                             className={cn(
-                              "absolute top-2 bottom-2 rounded-sm border px-2 flex items-center overflow-hidden cursor-pointer",
+                              "absolute top-2 bottom-2 rounded border px-2 flex items-center overflow-hidden cursor-pointer shadow-sm transition-all hover:scale-[1.02]",
                               b.color
                             )}
                             style={{ 
@@ -213,7 +202,7 @@ export function PlannerView() {
                               zIndex: 20
                             }}
                           >
-                            <span className="text-[10px] font-medium truncate flex-1">{b.title}</span>
+                            <span className="text-[9px] font-bold truncate flex-1">{b.title}</span>
                             <Wrench className="h-2.5 w-2.5 ml-1 shrink-0 opacity-70" />
                           </div>
                         )
@@ -223,13 +212,13 @@ export function PlannerView() {
                 ))}
                 
                 {/* Empty rows to visually fill up space */}
-                {Array.from({ length: 5 }).map((_, i) => (
+                {Array.from({ length: 4 }).map((_, i) => (
                   <div key={`empty-${i}`} className="flex border-b border-gray-100 h-12 w-full">
-                    <div className="w-[100px] border-r border-gray-100 shrink-0 bg-gray-50/20" />
-                    <div className="w-[200px] border-r border-gray-100 shrink-0 bg-gray-50/20" />
-                    <div className="flex-1 flex bg-white">
+                    <div className="w-[100px] border-r border-gray-100 shrink-0 bg-gray-50/10" />
+                    <div className="w-[200px] border-r border-gray-100 shrink-0 bg-gray-50/10" />
+                    <div className="flex-1 flex bg-white opacity-40">
                       {HOURS.map(h => (
-                        <div key={h} className="flex-1 border-r border-gray-100 h-full shrink-0 min-w-[50px]"></div>
+                        <div key={h} className="flex-1 border-r border-gray-100/30 h-full shrink-0 min-w-[50px]"></div>
                       ))}
                     </div>
                   </div>
@@ -245,8 +234,3 @@ export function PlannerView() {
     </div>
   );
 }
-
-// Just an alias for layout-grid from lucide missing from import initially
-const LayoutGridIcon = ({ className }: {className?: string}) => (
-  <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
-)

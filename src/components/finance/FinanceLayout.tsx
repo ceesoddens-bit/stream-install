@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { QuotesTable } from './QuotesTable';
 import { InvoicesTable } from './InvoicesTable';
 import { cn } from '@/lib/utils';
 import { Search, Filter, Plus, Download, FileText, CreditCard } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { financeService, Quote } from '@/lib/financeService';
 
 const tabs = [
   { id: 'offertes', label: 'Offertes', icon: FileText },
@@ -15,6 +16,29 @@ const tabs = [
 
 export function FinanceLayout() {
   const [activeTab, setActiveTab] = useState('offertes');
+  const [quotes, setQuotes] = useState<Quote[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = financeService.subscribeToQuotes((fetched) => {
+      setQuotes(fetched);
+      setIsLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const handleAddSample = async () => {
+    const clients = ["Jan van Doore", "Zonnig Huis B.V.", "Gijs Noort", "Miranda de Vries"];
+    const statuses: ('Draft' | 'Sent' | 'Accepted' | 'Declined')[] = ['Draft', 'Sent', 'Accepted', 'Declined'];
+    
+    await financeService.addQuote({
+      quoteNumber: `OFF-${Math.floor(Math.random() * 9000) + 1000}`,
+      client: clients[Math.floor(Math.random() * clients.length)],
+      amount: Math.floor(Math.random() * 5000) + 500,
+      status: statuses[Math.floor(Math.random() * statuses.length)],
+      date: new Date().toLocaleDateString('nl-NL')
+    });
+  };
 
   return (
     <div className="flex flex-col h-full gap-6">
@@ -45,9 +69,12 @@ export function FinanceLayout() {
             <Download className="h-4 w-4" />
             Exporteren
           </Button>
-          <Button size="sm" className="h-9 gap-2 bg-blue-600 hover:bg-blue-700">
+          <Button 
+            onClick={activeTab === 'offertes' ? handleAddSample : undefined}
+            size="sm" className="h-9 gap-2 bg-blue-600 hover:bg-blue-700 shadow-sm transition-all"
+          >
             <Plus className="h-4 w-4" />
-            Nieuwe {activeTab === 'offertes' ? 'Offerte' : 'Factuur'}
+            Nieuwe {activeTab === 'offertes' ? 'Offerte (Sample)' : 'Factuur'}
           </Button>
         </div>
       </div>
@@ -56,26 +83,30 @@ export function FinanceLayout() {
       <div className="flex items-center justify-between gap-4">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-          <Input placeholder="Zoek op nummer, project of contact..." className="pl-10 h-10" />
+          <Input placeholder="Zoek op nummer, project of contact..." className="pl-10 h-10 border-gray-200" />
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" className="h-10 w-10">
-            <Filter className="h-4 w-4" />
-          </Button>
+        <div className="flex items-center gap-2 text-sm text-gray-500 font-medium">
+           Totaal: {activeTab === 'offertes' ? quotes.length : 0} items
         </div>
       </div>
 
       {/* Content Area */}
       <div className="flex-1 overflow-auto">
-        {activeTab === 'offertes' && <QuotesTable />}
-        {activeTab === 'facturen' && <InvoicesTable />}
-        {activeTab !== 'offertes' && activeTab !== 'facturen' && (
-          <div className="flex flex-col items-center justify-center h-64 bg-white border border-dashed rounded-xl text-gray-400">
-            <div className="bg-gray-50 p-4 rounded-full mb-4">
-              <CreditCard className="h-8 w-8" />
-            </div>
-            <p className="font-medium">De module "{tabs.find(t => t.id === activeTab)?.label}" is nog in ontwikkeling.</p>
-          </div>
+        {isLoading ? (
+          <div className="p-20 text-center text-gray-400 italic">Laden van gegevens...</div>
+        ) : (
+          <>
+            {activeTab === 'offertes' && <QuotesTable quotes={quotes} />}
+            {activeTab === 'facturen' && <InvoicesTable />}
+            {activeTab !== 'offertes' && activeTab !== 'facturen' && (
+              <div className="flex flex-col items-center justify-center h-64 bg-white border border-dashed rounded-xl text-gray-400">
+                <div className="bg-gray-50 p-4 rounded-full mb-4">
+                  <CreditCard className="h-8 w-8 text-gray-300" />
+                </div>
+                <p className="font-medium text-gray-500">De module "{tabs.find(t => t.id === activeTab)?.label}" wordt gemigreerd naar Firestore.</p>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArticlesTable } from './ArticlesTable';
 import { BOMTable } from './BOMTable';
 import { cn } from '@/lib/utils';
@@ -6,7 +6,7 @@ import { Search, Filter, Plus, Download, PackageOpen, AlertTriangle, TrendingDow
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { articles } from '@/data/mockData';
+import { inventoryService, InventoryItem } from '@/lib/inventoryService';
 
 const tabs = [
   { id: 'artikelen', label: 'Alle Artikelen' },
@@ -19,15 +19,42 @@ const tabs = [
 
 export function InventoryLayout() {
   const [activeTab, setActiveTab] = useState('artikelen');
+  const [items, setItems] = useState<InventoryItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = inventoryService.subscribeToInventory((fetched) => {
+      setItems(fetched);
+      setIsLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const handleAddSample = async () => {
+    const cats = ['Warmtepompen', 'Batterij', 'Airco', 'Zonnepanelen'];
+    const names = ["Daikin Altherma 3", "Enphase Encharge 10", "LG Artcool Mirror", "Longi Solar 405W"];
+    
+    await inventoryService.addItem({
+      sku: `SKU-${Math.floor(Math.random() * 10000)}`,
+      name: names[Math.floor(Math.random() * names.length)],
+      category: cats[Math.floor(Math.random() * cats.length)],
+      stock: Math.floor(Math.random() * 50),
+      minStock: 10,
+      price: Math.floor(Math.random() * 2000) + 100,
+      unit: 'stk',
+      location: 'Magazijn A',
+      status: 'Op voorraad'
+    });
+  };
 
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(amount);
 
   // Kpi Calculations
-  const totalItems = articles.length;
-  const totalValue = articles.reduce((acc, art) => acc + (art.stockCount * art.purchasePrice), 0);
-  const lowStockItems = articles.filter(a => a.stockCount > 0 && a.stockCount <= a.minStock).length;
-  const outOfStockItems = articles.filter(a => a.stockCount === 0).length;
+  const totalItems = items.length;
+  const totalValue = items.reduce((acc, art) => acc + (art.stock * art.price), 0);
+  const lowStockItems = items.filter(a => a.stock > 0 && a.stock <= a.minStock).length;
+  const outOfStockItems = items.filter(a => a.stock === 0).length;
 
   return (
     <div className="flex flex-col h-full bg-gray-50/50">
@@ -121,9 +148,12 @@ export function InventoryLayout() {
               <Download className="h-3.5 w-3.5" />
               Exporteren
             </Button>
-            <Button size="sm" className="h-8 gap-2 bg-blue-600 hover:bg-blue-700 text-xs font-semibold ml-2">
+            <Button 
+              onClick={handleAddSample}
+              size="sm" className="h-8 gap-2 bg-blue-600 hover:bg-blue-700 text-xs font-semibold ml-2 shadow-sm"
+            >
               <Plus className="h-3.5 w-3.5" />
-              Nieuw Artikel
+              Nieuw Artikel (Sample)
             </Button>
           </div>
         </div>
@@ -140,25 +170,31 @@ export function InventoryLayout() {
             </Button>
             <div className="h-6 w-px bg-gray-200 mx-2" />
             <span className="text-sm text-gray-500 font-medium whitespace-nowrap">
-              Totaal: <span className="text-gray-900">{totalItems} res.</span>
+              Totaal: <span className="text-gray-900">{totalItems} artikelen</span>
             </span>
           </div>
         </div>
 
         {/* Content Area */}
         <div className="flex-1 overflow-auto bg-gray-50/30">
-          {activeTab === 'artikelen' && <ArticlesTable />}
-          {activeTab === 'boms' && <BOMTable />}
-          {activeTab !== 'artikelen' && activeTab !== 'boms' && (
-            <div className="flex items-center justify-center p-12 h-64">
-              <div className="text-center">
-                <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <PackageOpen className="h-5 w-5 text-gray-400" />
+          {isLoading ? (
+            <div className="p-20 text-center text-gray-400 animate-pulse">Laden van artikelen...</div>
+          ) : (
+            <>
+              {activeTab === 'artikelen' && <ArticlesTable items={items} />}
+              {activeTab === 'boms' && <BOMTable />}
+              {activeTab !== 'artikelen' && activeTab !== 'boms' && (
+                <div className="flex items-center justify-center p-12 h-64">
+                  <div className="text-center">
+                    <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <PackageOpen className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <h2 className="text-lg font-bold text-gray-900 mb-1">{tabs.find(t => t.id === activeTab)?.label} in aanbouw</h2>
+                    <p className="text-sm text-gray-500">Deze module wordt momenteel ontwikkeld in Firebase.</p>
+                  </div>
                 </div>
-                <h2 className="text-lg font-bold text-gray-900 mb-1">{tabs.find(t => t.id === activeTab)?.label} in aanbouw</h2>
-                <p className="text-sm text-gray-500">Deze module wordt momenteel ontwikkeld.</p>
-              </div>
-            </div>
+              )}
+            </>
           )}
         </div>
       </div>
