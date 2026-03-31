@@ -126,6 +126,9 @@ export interface TenantSettings {
 }
 
 export type PlanningStatus =
+  | 'Nieuwe lead'
+  | 'Adviesgesprek plannen(Schouw)'
+  | 'Adviesgesprek gepland (Schouw)'
   | 'Offerte maken'
   | 'Offerte verstuurd'
   | 'Geen opdracht'

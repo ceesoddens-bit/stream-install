@@ -24,18 +24,29 @@ import {
   FileText,
   Ticket,
   Clock,
-  BarChart3
+  BarChart3,
+  MessageSquare,
+  Sparkles
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { currentUser } from '@/data/mockData';
+import { AIChatPopup } from './AIChatPopup';
+import { formatSeconds } from '@/lib/timeUtils';
+import { Play, Square, X as XIcon } from 'lucide-react';
 
 interface SidebarProps {
   collapsed: boolean;
   setCollapsed: (collapsed: boolean) => void;
   activeView: string;
   onViewChange: (view: string) => void;
+  isChatOpen: boolean;
+  onChatOpenChange: (isOpen: boolean) => void;
+  timerSeconds: number;
+  isTimerRunning: boolean;
+  onToggleTimer: () => void;
+  onResetTimer: () => void;
 }
 
 type NavItem = {
@@ -137,7 +148,18 @@ const navItems: NavItem[] = [
   }
 ];
 
-export function Sidebar({ collapsed, setCollapsed, activeView, onViewChange }: SidebarProps) {
+export function Sidebar({ 
+  collapsed, 
+  setCollapsed, 
+  activeView, 
+  onViewChange,
+  isChatOpen,
+  onChatOpenChange,
+  timerSeconds,
+  isTimerRunning,
+  onToggleTimer,
+  onResetTimer
+}: SidebarProps) {
   const [expandedItems, setExpandedItems] = useState<string[]>([
     'mijn_omgeving', 
     'planning_parent', 
@@ -181,7 +203,7 @@ export function Sidebar({ collapsed, setCollapsed, activeView, onViewChange }: S
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
+      <div className="flex-1 overflow-y-auto py-4 px-3 space-y-1 relative">
         {navItems.map((item) => {
           const isExpanded = expandedItems.includes(item.id);
           const hasSubItems = item.subItems && item.subItems.length > 0;
@@ -284,9 +306,70 @@ export function Sidebar({ collapsed, setCollapsed, activeView, onViewChange }: S
             </div>
           );
         })}
+
+        {/* Sub-items list ends here */}
       </div>
 
-      <div className="p-4 border-t shrink-0 space-y-4">
+      <div className="p-4 border-t shrink-0 space-y-4 bg-white relative z-10">
+        {/* Chat met AI Button */}
+        <button 
+          onClick={() => onChatOpenChange(!isChatOpen)}
+          className={cn(
+            "flex items-center gap-3 w-full px-3 py-2.5 rounded-lg border border-emerald-100 hover:bg-emerald-50 transition-all text-left group shadow-sm bg-emerald-50/30",
+            collapsed && "justify-center px-0"
+          )}
+        >
+          <div className="p-1 px-1.5 bg-emerald-100/50 rounded-md ring-1 ring-emerald-200/50 group-hover:scale-110 transition-transform">
+            <Sparkles className="h-4 w-4 text-emerald-600 fill-emerald-100/30" />
+          </div>
+          {!collapsed && (
+            <span className="text-[13px] font-bold text-emerald-900 tracking-tight">Chat met AI</span>
+          )}
+        </button>
+
+        {/* Global Timer Widget (OpusFlow Style) */}
+        <div className={cn(
+          "bg-[#EBF7FF] rounded-lg p-2 flex items-center justify-between border border-[#CEE9FF] shadow-sm",
+          collapsed && "flex-col gap-2 py-3"
+        )}>
+          {!collapsed && (
+            <div className="flex items-center gap-2">
+              <Clock className={cn("h-4 w-4 text-blue-500", isTimerRunning && "animate-pulse")} />
+              <span className="text-sm font-mono font-bold text-blue-600 tracking-wider">
+                {formatSeconds(timerSeconds)}
+              </span>
+            </div>
+          )}
+          {collapsed && (
+            <div className="relative">
+              <Clock className={cn("h-5 w-5 text-blue-500", isTimerRunning && "animate-pulse")} />
+              {isTimerRunning && <span className="absolute -top-1 -right-1 w-2 h-2 bg-emerald-500 rounded-full border border-white"></span>}
+            </div>
+          )}
+          
+          <div className={cn("flex items-center gap-1.5", collapsed && "flex-col")}>
+            <button 
+              onClick={onToggleTimer}
+              className={cn(
+                "p-1.5 rounded shadow-sm transition-all border border-gray-100",
+                isTimerRunning 
+                  ? "bg-white text-orange-500 hover:bg-orange-50" 
+                  : "bg-white text-emerald-500 hover:bg-emerald-50"
+              )}
+            >
+              {isTimerRunning ? <Square className="h-3 w-3 fill-current" /> : <Play className="h-3 w-3 fill-current" />}
+            </button>
+            {timerSeconds > 0 && !isTimerRunning && (
+              <button 
+                onClick={onResetTimer}
+                className="p-1.5 bg-white rounded shadow-sm text-gray-400 hover:bg-gray-50 transition-colors border border-gray-100"
+              >
+                <XIcon className="h-3 w-3" />
+              </button>
+            )}
+          </div>
+        </div>
+
         <Button className={cn('w-full', collapsed && 'px-0')} variant="default">
           <PlayCircle className={cn('h-4 w-4', !collapsed && 'mr-2')} />
           {!collapsed && 'Start Timer'}

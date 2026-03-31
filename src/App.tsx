@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
 import { KanbanBoard } from '@/components/kanban/KanbanBoard';
@@ -25,26 +25,61 @@ import { CalendarLayout } from '@/components/calendar/CalendarLayout';
 import { HoursLayout } from '@/components/hours/HoursLayout';
 import { TeamsLayout } from '@/components/planning/TeamsLayout';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { AIChatPopup } from '@/components/layout/AIChatPopup';
 
 export default function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeView, setActiveView] = useState('dashboard');
+  const [isChatOpen, setIsChatOpen] = useState(false);
+
+  // Global Timer State
+  const [timerSeconds, setTimerSeconds] = useState(0);
+  const [isTimerRunning, setIsTimerRunning] = useState(false);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isTimerRunning) {
+      interval = setInterval(() => {
+        setTimerSeconds(prev => prev + 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isTimerRunning]);
+
+  const toggleTimer = () => setIsTimerRunning(!isTimerRunning);
+  const resetTimer = () => {
+    setIsTimerRunning(false);
+    setTimerSeconds(0);
+  };
 
   return (
     <TooltipProvider>
-      <div className="flex h-screen w-full bg-gray-50 overflow-hidden font-sans">
+      <div className="flex h-screen w-full bg-gray-50 overflow-hidden font-sans relative">
         <Sidebar 
           collapsed={sidebarCollapsed} 
           setCollapsed={setSidebarCollapsed} 
           activeView={activeView}
           onViewChange={setActiveView}
+          isChatOpen={isChatOpen}
+          onChatOpenChange={setIsChatOpen}
+          timerSeconds={timerSeconds}
+          isTimerRunning={isTimerRunning}
+          onToggleTimer={toggleTimer}
+          onResetTimer={resetTimer}
         />
         
         <div className="flex flex-col flex-1 min-w-0">
           <Header />
           
           <main className="flex-1 overflow-hidden p-6">
-            {activeView === 'dashboard' && <Dashboard />}
+            {activeView === 'dashboard' && (
+              <Dashboard 
+                timerSeconds={timerSeconds}
+                isTimerRunning={isTimerRunning}
+                onToggleTimer={toggleTimer}
+                onResetTimer={resetTimer}
+              />
+            )}
             {activeView === 'project_detail' && <ProjectDetail onBack={() => setActiveView('projects')} />}
             {(activeView === 'projects' || activeView === 'my_projects') && <KanbanBoard onViewProject={(id) => setActiveView('project_detail')} />}
             {activeView === 'planning' && <PlannerView />}
@@ -72,6 +107,9 @@ export default function App() {
             )}
           </main>
         </div>
+
+        {/* Global Chat Popup */}
+        <AIChatPopup isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
       </div>
     </TooltipProvider>
   );
