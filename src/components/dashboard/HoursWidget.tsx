@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Play, Square, Check, Plus, X, Clock, MapPin } from 'lucide-react';
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Play, Square, Check, Plus, X, Clock, MapPin, ExternalLink } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -98,6 +98,12 @@ export function HoursWidget({ timerSeconds, isTimerRunning, onToggleTimer, onRes
           </div>
           <button className="p-1 hover:bg-gray-50 rounded text-emerald-500 transition-colors">
             <ChevronRight className="h-4 w-4" />
+          </button>
+          
+          <div className="h-4 w-px bg-gray-200 mx-1" />
+          
+          <button className="h-8 w-8 rounded-md flex items-center justify-center text-gray-400 hover:text-emerald-700 hover:bg-emerald-50 transition-all duration-200" title="Mijn uren volledig bekijken">
+            <ExternalLink className="h-[18px] w-[18px]" />
           </button>
         </div>
       </CardHeader>

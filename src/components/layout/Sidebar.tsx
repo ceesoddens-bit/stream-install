@@ -26,15 +26,17 @@ import {
   Clock,
   BarChart3,
   MessageSquare,
-  Sparkles
+  Sparkles,
+  CheckCircle2,
+  Play,
+  Square,
+  X as XIcon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { currentUser } from '@/data/mockData';
-import { AIChatPopup } from './AIChatPopup';
 import { formatSeconds } from '@/lib/timeUtils';
-import { Play, Square, X as XIcon } from 'lucide-react';
 
 interface SidebarProps {
   collapsed: boolean;
@@ -306,8 +308,6 @@ export function Sidebar({
             </div>
           );
         })}
-
-        {/* Sub-items list ends here */}
       </div>
 
       <div className="p-4 border-t shrink-0 space-y-4 bg-white relative z-10">
@@ -357,7 +357,7 @@ export function Sidebar({
                   : "bg-white text-emerald-500 hover:bg-emerald-50"
               )}
             >
-              {isTimerRunning ? <Square className="h-3 w-3 fill-current" /> : <Play className="h-3 w-3 fill-current" />}
+              {isTimerRunning ? <Square className="h-3 w-3 fill-current text-white stroke-orange-500 fill-orange-500" /> : <Play className="h-3 w-3 fill-emerald-500 text-emerald-500" />}
             </button>
             {timerSeconds > 0 && !isTimerRunning && (
               <button 
@@ -385,6 +385,17 @@ export function Sidebar({
               <span className="text-sm font-medium truncate">{currentUser.name}</span>
               <span className="text-xs text-gray-500 truncate">{currentUser.role}</span>
             </div>
+          )}
+        </div>
+
+        {/* Operationeel Footer Bar */}
+        <div className={cn(
+          "pt-2 mt-2 border-t border-gray-100 flex items-center gap-2",
+          collapsed && "justify-center"
+        )}>
+          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 fill-emerald-50" />
+          {!collapsed && (
+            <span className="text-[11px] font-bold text-emerald-600 uppercase tracking-widest">Operationeel</span>
           )}
         </div>
       </div>

@@ -9,8 +9,8 @@ export function CalendarWidget() {
     <Card className="border border-gray-100 shadow-sm flex flex-col h-full bg-white overflow-hidden">
       <CardHeader className="py-3 px-4 border-b border-gray-50 flex flex-row items-center justify-between space-y-0 shrink-0">
         <CardTitle className="text-base font-bold text-gray-800">Kalender</CardTitle>
-        <button className="text-emerald-500 hover:text-emerald-600 transition-colors">
-          <ExternalLink className="h-4 w-4" />
+        <button className="h-8 w-8 rounded-md flex items-center justify-center text-gray-400 hover:text-emerald-700 hover:bg-emerald-50 transition-all duration-200" title="Kalender volledig bekijken">
+          <ExternalLink className="h-[18px] w-[18px]" />
         </button>
       </CardHeader>
       <CardContent className="p-0 flex-1 overflow-hidden flex flex-col">

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, Settings, Search, LayoutList, SlidersHorizontal, Columns, LayoutGrid, MapPin, User, Edit2, ChevronLeft } from 'lucide-react';
+import { Plus, Settings, Search, LayoutList, SlidersHorizontal, Columns, LayoutGrid, MapPin, User, Edit2, ChevronLeft, ExternalLink } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -16,9 +16,14 @@ export function ProjectsWidget() {
     <Card className="border border-gray-100 shadow-sm flex flex-col h-full bg-white overflow-hidden">
       <CardHeader className="py-2 px-4 border-b border-gray-50 flex flex-row items-center justify-between space-y-0 shrink-0">
         <CardTitle className="text-base font-bold text-gray-800">Uw projecten</CardTitle>
-        <button className="h-7 w-7 rounded-sm bg-emerald-50 text-emerald-600 flex items-center justify-center hover:bg-emerald-100 transition-colors">
-          <Plus className="h-5 w-5" />
-        </button>
+        <div className="flex items-center gap-1">
+          <button className="h-8 w-8 rounded-md bg-emerald-900 text-white flex items-center justify-center hover:bg-emerald-800 transition-all shadow-sm">
+            <Plus className="h-5 w-5" />
+          </button>
+          <button className="h-8 w-8 rounded-md flex items-center justify-center text-gray-400 hover:text-emerald-700 hover:bg-emerald-50 transition-all duration-200" title="Alle projecten bekijken">
+            <ExternalLink className="h-[18px] w-[18px]" />
+          </button>
+        </div>
       </CardHeader>
       <CardContent className="p-0 flex-1 overflow-hidden flex flex-col">
         {/* Top Mini Toolbar */}
