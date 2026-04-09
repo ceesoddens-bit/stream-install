@@ -1,9 +1,8 @@
 import { projectService, Project } from '@/lib/projectService';
-import { Plus, Settings, Search, LayoutList, SlidersHorizontal, Columns, LayoutGrid, MapPin, User, Edit2, ChevronLeft, ExternalLink, Trash2 } from 'lucide-react';
+import { Plus, Settings, Search, LayoutList, SlidersHorizontal, Columns, LayoutGrid, FileText, Link, Settings2, ExternalLink, ChevronLeft } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useEffect, useState } from 'react';
 
 export function ProjectsWidget() {
@@ -19,21 +18,21 @@ export function ProjectsWidget() {
   }, []);
 
   const handleAddSample = async () => {
+    const idx = projects.length + 1;
+    const base = `26002${(idx % 100).toString().padStart(2, '0')}`;
     await projectService.addProject({
-      name: `Project ${projects.length + 1}`,
+      name: `Project ${idx}`,
       client: "Installatiegroep Duurzaam",
+      customerType: idx % 2 === 0 ? 'Residentieel' : 'Commercieel',
+      reference: `${base}0`,
+      source: `${base}1`,
+      projectNumber: `${base}2`,
       status: 'Lopend',
       progress: 45,
       dueDate: "2026-04-15",
       team: ["Sven"],
       priority: projects.length % 2 === 0 ? 'High' : 'Medium'
     });
-  };
-
-  const handleDelete = async (id: string) => {
-    if (window.confirm("Project verwijderen?")) {
-      await projectService.deleteProject(id);
-    }
   };
 
   return (
@@ -91,46 +90,42 @@ export function ProjectsWidget() {
           <table className="w-full text-left text-[11px] border-collapse">
             <thead className="sticky top-0 bg-white z-10 shadow-sm border-b border-gray-100">
               <tr className="text-gray-400 font-bold uppercase tracking-tighter">
-                <th className="p-2 pl-4 w-10"><input type="checkbox" className="rounded-sm border-gray-300 text-emerald-600 focus:ring-emerald-500 h-3.5 w-3.5" /></th>
-                <th className="p-2 w-8"><MoreHorizontal className="h-4 w-4" /></th>
-                <th className="p-2 font-bold text-gray-800">Prioriteit</th>
-                <th className="p-2 font-bold text-gray-800">ID</th>
-                <th className="p-2 font-bold text-gray-800">Status</th>
-                <th className="p-2 font-bold text-gray-800">Projectnaam</th>
-                <th className="p-2 text-gray-800">Acties</th>
+                <th className="p-2 pl-4 font-bold text-gray-800">Klanttype</th>
+                <th className="p-2 font-bold text-gray-800">Referentie</th>
+                <th className="p-2 font-bold text-gray-800">Bron</th>
+                <th className="p-2 font-bold text-gray-800">Projectnr</th>
+                <th className="p-2 w-[96px]" />
               </tr>
             </thead>
             <tbody>
               {isLoading ? (
-                <tr><td colSpan={7} className="p-10 text-center text-gray-400 italic">Projecten laden...</td></tr>
+                <tr><td colSpan={5} className="p-10 text-center text-gray-400 italic">Projecten laden...</td></tr>
               ) : projects.length === 0 ? (
-                <tr><td colSpan={7} className="p-10 text-center text-gray-400 italic">Geen projecten. Klik op + om er één te maken.</td></tr>
+                <tr><td colSpan={5} className="p-10 text-center text-gray-400 italic">Geen projecten. Klik op + om er één te maken.</td></tr>
               ) : projects.map((project) => (
                 <tr key={project.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors group cursor-pointer">
-                  <td className="p-2 pl-4"><input type="checkbox" className="rounded-sm border-gray-300 text-emerald-600 focus:ring-emerald-500 h-3.5 w-3.5" /></td>
-                  <td className="p-2"><ChevronLeft className="h-3 w-3 text-gray-400" /></td>
                   <td className="p-2">
                     <Badge variant="secondary" className={cn(
-                      "text-[9px] px-1.5 py-0 rounded uppercase font-bold border-0 h-4 flex items-center w-fit tracking-tighter",
-                      project.priority === 'High' ? "bg-red-50 text-red-600" : "bg-emerald-50 text-emerald-700"
+                      "text-[10px] px-2 py-0.5 rounded uppercase font-bold border-0 h-5 flex items-center w-fit shadow-sm",
+                      "bg-emerald-50 text-emerald-700"
                     )}>
-                      {project.priority}
+                      {project.customerType ?? 'Commercieel'}
                     </Badge>
                   </td>
-                  <td className="p-2 font-mono text-gray-500 truncate max-w-[50px]">{project.id?.slice(-4)}</td>
-                  <td className="p-2 text-gray-500">{project.status}</td>
-                  <td className="p-2 font-bold text-emerald-800 truncate max-w-[120px]">{project.name}</td>
+                  <td className="p-2 font-bold text-gray-700 truncate">{project.reference ?? project.id?.slice(-7) ?? '-'}</td>
+                  <td className="p-2 text-gray-500">{project.source ?? '-'}</td>
+                  <td className="p-2 font-bold text-emerald-800">{project.projectNumber ?? '-'}</td>
                   <td className="p-2">
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button className="p-1 rounded hover:bg-white text-emerald-500 border border-transparent hover:border-gray-100 transition-all">
-                            <Edit2 className="h-3 w-3" />
-                        </button>
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); handleDelete(project.id!); }}
-                          className="p-1 rounded hover:bg-white text-red-300 hover:text-red-500 border border-transparent transition-all"
-                        >
-                            <Trash2 className="h-3 w-3" />
-                        </button>
+                    <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button className="p-1 rounded hover:bg-white text-emerald-600 border border-transparent hover:border-gray-100 transition-all">
+                        <FileText className="h-3 w-3" />
+                      </button>
+                      <button className="p-1 rounded hover:bg-white text-emerald-600 border border-transparent hover:border-gray-100 transition-all">
+                        <Link className="h-3 w-3" />
+                      </button>
+                      <button className="p-1 rounded hover:bg-white text-emerald-600 border border-transparent hover:border-gray-100 transition-all">
+                        <Settings2 className="h-3 w-3" />
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -140,12 +135,6 @@ export function ProjectsWidget() {
         </div>
       </CardContent>
     </Card>
-  );
-}
-
-function MoreHorizontal({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
   );
 }
 

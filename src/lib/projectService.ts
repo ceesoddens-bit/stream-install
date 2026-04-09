@@ -5,6 +5,10 @@ export interface Project {
   id?: string;
   name: string;
   client: string;
+  customerType?: 'Commercieel' | 'Residentieel';
+  reference?: string;
+  source?: string;
+  projectNumber?: string;
   status: 'In Planning' | 'Lopend' | 'Afgerond' | 'Wachtend';
   progress: number;
   dueDate: string;

@@ -25,6 +25,7 @@ export function TicketsWidget() {
       date: "vandaag",
       type: "To-do",
       status: "Nieuw",
+      priority: "Low",
       userId: users[Math.floor(Math.random() * users.length)],
       userImage: `https://i.pravatar.cc/150?u=${users[Math.floor(Math.random() * users.length)]}`
     });
