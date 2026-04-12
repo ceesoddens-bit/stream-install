@@ -8,13 +8,13 @@ export function SalesLayout() {
   ];
 
   const perOfferteData = [
-    { manager: 'Installatiegroep...', marge: '€ 1.089,00', marginPerc: '58.52', verkoopmarge: '36.92', inkoopprijs: '€ 1.861,00', verkoopprijs: '€ 2.950,00', datum: '03-03-2026' },
-    { manager: 'Sandra Brader', marge: '€ 1.612,00', marginPerc: '76.91', verkoopmarge: '43.47', inkoopprijs: '€ 2.096,00', verkoopprijs: '€ 3.708,00', datum: '12-03-2026' },
-    { manager: 'Installatiegroep...', marge: '€ 1.089,00', marginPerc: '58.52', verkoopmarge: '36.92', inkoopprijs: '€ 1.861,00', verkoopprijs: '€ 2.950,00', datum: '27-02-2026' },
-    { manager: 'Installatiegroep...', marge: '€ 1.089,00', marginPerc: '58.52', verkoopmarge: '36.92', inkoopprijs: '€ 1.861,00', verkoopprijs: '€ 2.950,00', datum: '25-03-2026' },
-    { manager: 'Installatiegroep...', marge: '€ 545,00', marginPerc: '54500', verkoopmarge: '100', inkoopprijs: '€ 0,00', verkoopprijs: '€ 545,00', datum: '05-03-2026' },
-    { manager: 'Installatiegroep...', marge: '€ 846,78', marginPerc: '68.29', verkoopmarge: '40.58', inkoopprijs: '€ 1.240,00', verkoopprijs: '€ 2.086,78', datum: '03-03-2026' },
-    { manager: 'Installatiegroep...', marge: '€ 1.089,00', marginPerc: '58.52', verkoopmarge: '36.92', inkoopprijs: '€ 1.861,00', verkoopprijs: '€ 2.950,00', datum: '05-03-2026' },
+    { id: 498, project: '2600145-Centrad-1', manager: 'Sven | Installatiegroep', marge: '€ 1.089,00', marginPerc: '58.52', verkoopmarge: '36.92', inkoopprijs: '€ 1.861,00', verkoopprijs: '€ 2.950,00', datum: '03-03-2026' },
+    { id: 508, project: '2600160-Centrad-1', manager: 'Sandra Brader', marge: '€ 1.612,00', marginPerc: '76.91', verkoopmarge: '43.47', inkoopprijs: '€ 2.096,00', verkoopprijs: '€ 3.708,00', datum: '12-03-2026' },
+    { id: 496, project: '2600136-Centrad-1', manager: 'Sven | Installatiegroep', marge: '€ 1.089,00', marginPerc: '58.52', verkoopmarge: '36.92', inkoopprijs: '€ 1.861,00', verkoopprijs: '€ 2.950,00', datum: '27-02-2026' },
+    { id: 526, project: '2600210-Centrad-1', manager: 'Sven | Installatiegroep', marge: '€ 1.089,00', marginPerc: '58.52', verkoopmarge: '36.92', inkoopprijs: '€ 1.861,00', verkoopprijs: '€ 2.950,00', datum: '25-03-2026' },
+    { id: 503, project: '2600157-Edwin Hols', manager: 'Sven | Installatiegroep', marge: '€ 545,00', marginPerc: '54500', verkoopmarge: '100', inkoopprijs: '€ 0,00', verkoopprijs: '€ 545,00', datum: '05-03-2026' },
+    { id: 499, project: '2600117-Nathalie Ba', manager: 'Sven | Installatiegroep', marge: '€ 846,78', marginPerc: '68.29', verkoopmarge: '40.58', inkoopprijs: '€ 1.240,00', verkoopprijs: '€ 2.086,78', datum: '03-03-2026' },
+    { id: 501, project: '2600153-Centrad-1', manager: 'Sven | Installatiegroep', marge: '€ 1.089,00', marginPerc: '58.52', verkoopmarge: '36.92', inkoopprijs: '€ 1.861,00', verkoopprijs: '€ 2.950,00', datum: '05-03-2026' },
   ];
 
   return (
@@ -121,10 +121,12 @@ export function SalesLayout() {
           </div>
 
           <div className="overflow-x-auto flex-1 h-[400px]">
-            <table className="w-full text-left text-sm border-collapse min-w-[800px]">
+            <table className="w-full text-left text-sm border-collapse min-w-[940px]">
               <thead className="sticky top-0 bg-white">
                 <tr className="border-b border-gray-100">
-                  <th className="p-3 font-semibold text-gray-700">Account manager</th>
+                  <th className="p-3 font-semibold text-gray-700 w-[60px]">Id</th>
+                  <th className="p-3 font-semibold text-gray-700">Project</th>
+                  <th className="p-3 font-semibold text-gray-700">Accountmanager</th>
                   <th className="p-3 font-semibold text-gray-700 text-right">Marge</th>
                   <th className="p-3 font-semibold text-gray-700 text-right whitespace-nowrap">Margin %</th>
                   <th className="p-3 font-semibold text-gray-700 text-right whitespace-nowrap">Verkoopmar...</th>
@@ -136,6 +138,10 @@ export function SalesLayout() {
               <tbody>
                 {perOfferteData.map((row, i) => (
                   <tr key={i} className="border-b border-gray-50 hover:bg-gray-50/50">
+                    <td className="p-3 text-emerald-700 font-bold">{row.id}</td>
+                    <td className="p-3">
+                      <span className="text-emerald-700 font-semibold hover:underline cursor-pointer">{row.project}</span>
+                    </td>
                     <td className="p-3 text-gray-600">{row.manager}</td>
                     <td className="p-3 text-gray-600 text-right">{row.marge}</td>
                     <td className="p-3 text-gray-600 text-right">{row.marginPerc}</td>

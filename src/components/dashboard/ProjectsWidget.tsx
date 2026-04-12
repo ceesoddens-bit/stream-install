@@ -1,13 +1,14 @@
 import { projectService, Project } from '@/lib/projectService';
-import { Plus, Settings, Search, LayoutList, SlidersHorizontal, Columns, LayoutGrid, FileText, Link, Settings2, ExternalLink, ChevronLeft } from 'lucide-react';
+import { Plus, Settings, Search, LayoutList, SlidersHorizontal, Columns, LayoutGrid, Edit2, Link, Settings2, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 
 export function ProjectsWidget() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [expandedProjectIds, setExpandedProjectIds] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     const unsubscribe = projectService.subscribeToProjects((fetched) => {
@@ -90,7 +91,8 @@ export function ProjectsWidget() {
           <table className="w-full text-left text-[11px] border-collapse">
             <thead className="sticky top-0 bg-white z-10 shadow-sm border-b border-gray-100">
               <tr className="text-gray-400 font-bold uppercase tracking-tighter">
-                <th className="p-2 pl-4 font-bold text-gray-800">Klanttype</th>
+                <th className="p-2 pl-4 w-8" />
+                <th className="p-2 font-bold text-gray-800">Klanttype</th>
                 <th className="p-2 font-bold text-gray-800">Referentie</th>
                 <th className="p-2 font-bold text-gray-800">Bron</th>
                 <th className="p-2 font-bold text-gray-800">Projectnr</th>
@@ -99,37 +101,87 @@ export function ProjectsWidget() {
             </thead>
             <tbody>
               {isLoading ? (
-                <tr><td colSpan={5} className="p-10 text-center text-gray-400 italic">Projecten laden...</td></tr>
+                <tr><td colSpan={6} className="p-10 text-center text-gray-400 italic">Projecten laden...</td></tr>
               ) : projects.length === 0 ? (
-                <tr><td colSpan={5} className="p-10 text-center text-gray-400 italic">Geen projecten. Klik op + om er één te maken.</td></tr>
-              ) : projects.map((project) => (
-                <tr key={project.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors group cursor-pointer">
-                  <td className="p-2">
-                    <Badge variant="secondary" className={cn(
-                      "text-[10px] px-2 py-0.5 rounded uppercase font-bold border-0 h-5 flex items-center w-fit shadow-sm",
-                      "bg-emerald-50 text-emerald-700"
-                    )}>
-                      {project.customerType ?? 'Commercieel'}
-                    </Badge>
-                  </td>
-                  <td className="p-2 font-bold text-gray-700 truncate">{project.reference ?? project.id?.slice(-7) ?? '-'}</td>
-                  <td className="p-2 text-gray-500">{project.source ?? '-'}</td>
-                  <td className="p-2 font-bold text-emerald-800">{project.projectNumber ?? '-'}</td>
-                  <td className="p-2">
-                    <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button className="p-1 rounded hover:bg-white text-emerald-600 border border-transparent hover:border-gray-100 transition-all">
-                        <FileText className="h-3 w-3" />
-                      </button>
-                      <button className="p-1 rounded hover:bg-white text-emerald-600 border border-transparent hover:border-gray-100 transition-all">
-                        <Link className="h-3 w-3" />
-                      </button>
-                      <button className="p-1 rounded hover:bg-white text-emerald-600 border border-transparent hover:border-gray-100 transition-all">
-                        <Settings2 className="h-3 w-3" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                <tr><td colSpan={6} className="p-10 text-center text-gray-400 italic">Geen projecten. Klik op + om er één te maken.</td></tr>
+              ) : projects.map((project, index) => {
+                const rowId = project.id ?? project.reference ?? String(index);
+                const isExpanded = !!expandedProjectIds[rowId];
+                return (
+                  <Fragment key={rowId}>
+                    <tr className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors group cursor-pointer">
+                      <td className="p-2 pl-4">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setExpandedProjectIds((prev) => ({ ...prev, [rowId]: !prev[rowId] }));
+                          }}
+                          className="h-5 w-5 rounded flex items-center justify-center text-gray-400 hover:text-emerald-700 hover:bg-emerald-50 transition-colors"
+                          aria-label={isExpanded ? "Inklappen" : "Uitklappen"}
+                        >
+                          <ChevronRight className={cn("h-3.5 w-3.5 transition-transform", isExpanded && "rotate-90")} />
+                        </button>
+                      </td>
+                      <td className="p-2">
+                        <Badge variant="secondary" className={cn(
+                          "text-[10px] px-2 py-0.5 rounded uppercase font-bold border-0 h-5 flex items-center w-fit shadow-sm",
+                          "bg-emerald-50 text-emerald-700"
+                        )}>
+                          {project.customerType ?? 'Commercieel'}
+                        </Badge>
+                      </td>
+                      <td className="p-2 font-bold text-gray-700 truncate">{project.reference ?? project.id?.slice(-7) ?? '-'}</td>
+                      <td className="p-2 text-gray-500">{project.source ?? '-'}</td>
+                      <td className="p-2 font-bold text-emerald-800">{project.projectNumber ?? '-'}</td>
+                      <td className="p-2">
+                        <div className="flex items-center justify-end gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
+                          <button
+                            type="button"
+                            onClick={(e) => e.stopPropagation()}
+                            className="p-1 rounded hover:bg-white text-emerald-600 border border-transparent hover:border-gray-100 transition-all"
+                            aria-label="Bewerken"
+                          >
+                            <Edit2 className="h-3 w-3" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => e.stopPropagation()}
+                            className="p-1 rounded hover:bg-white text-emerald-600 border border-transparent hover:border-gray-100 transition-all"
+                            aria-label="Link"
+                          >
+                            <Link className="h-3 w-3" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => e.stopPropagation()}
+                            className="p-1 rounded hover:bg-white text-emerald-600 border border-transparent hover:border-gray-100 transition-all"
+                            aria-label="Instellingen"
+                          >
+                            <Settings2 className="h-3 w-3" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                    {isExpanded && (
+                      <tr className="border-b border-gray-50 bg-emerald-50/20">
+                        <td colSpan={6} className="px-4 py-3">
+                          <div className="flex items-center justify-between gap-4">
+                            <div className="min-w-0">
+                              <div className="text-[12px] font-bold text-gray-800 truncate">{project.name}</div>
+                              <div className="text-[11px] text-gray-500 truncate">{project.client}</div>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">{project.status}</span>
+                              <span className="text-[10px] font-bold text-gray-500">{project.dueDate}</span>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                );
+              })}
             </tbody>
           </table>
         </div>

@@ -18,6 +18,10 @@ export interface Company {
   phone: string;
   kvkNumber: string;
   address: string;
+  tags?: string[];
+  projectsCount?: number;
+  parentCompany?: string;
+  vatNumber?: string;
 }
 
 export interface Contact {
@@ -179,6 +183,7 @@ export type FormStatus = 'PUBLISHED' | 'DRAFT';
 
 export interface FormItem {
   id: string;
+  name: string;
   status: FormStatus;
   project: string;
   planningsregel: string;
@@ -187,4 +192,3 @@ export interface FormItem {
   updatedAt: string;
   updatedBy: string;
 }
-

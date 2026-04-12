@@ -14,6 +14,8 @@ export function PlannerView() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [entries, setEntries] = useState<PlanningEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [dateLabel, setDateLabel] = useState('vandaag');
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     const unsubProjects = projectService.subscribeToProjects(setProjects);
@@ -127,13 +129,32 @@ export function PlannerView() {
 
           <div className="flex items-center gap-4 text-gray-800 font-bold">
             <button className="p-1 hover:bg-gray-100 rounded text-emerald-600"><ChevronLeft className="h-5 w-5" /></button>
-            <span>vandaag</span>
+            <span>{dateLabel}</span>
             <button className="p-1 hover:bg-gray-100 rounded text-emerald-600"><ChevronRight className="h-5 w-5" /></button>
           </div>
 
           <div className="flex gap-2">
-            <button className="px-4 py-1.5 bg-emerald-800 text-white font-semibold text-sm rounded-md shadow-sm">
-              Vernieuwen
+            <button
+              onClick={() => {
+                try {
+                  const url = window.location.href;
+                  if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(url).then(() => {
+                      setCopied(true);
+                      setTimeout(() => setCopied(false), 1500);
+                    });
+                  }
+                } catch {}
+              }}
+              className="px-4 py-2 bg-emerald-800 hover:bg-emerald-900 text-white font-semibold text-sm rounded-md shadow-sm transition-colors"
+            >
+              {copied ? 'Gekopieerd' : 'Exporteren Als URL'}
+            </button>
+            <button
+              onClick={() => setDateLabel('vandaag')}
+              className="px-4 py-2 bg-emerald-800 hover:bg-emerald-900 text-white font-semibold text-sm rounded-md shadow-sm transition-colors"
+            >
+              Vandaag
             </button>
           </div>
         </div>

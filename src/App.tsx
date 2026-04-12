@@ -24,8 +24,10 @@ import { AIChatPopup } from '@/components/layout/AIChatPopup';
 import { Target } from 'lucide-react';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
-import { LoginPage } from '@/components/auth/LoginPage';
 import { stateService, TimerState } from '@/lib/stateService';
+import { LandingPage } from '@/components/marketing/LandingPage';
+import { AdministrationLayout } from '@/components/administration/AdministrationLayout';
+import { ManagementLayout } from '@/components/management/ManagementLayout';
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -84,9 +86,40 @@ export default function App() {
 
   const isTimerRunning = timerDoc.isRunning;
 
+  const isAdministrationView = ['administratie_offertes', 'administratie_facturen', 'administratie_urenregistratie'].includes(activeView);
+  const isTicketsView = ['tickets_all', 'tickets_my'].includes(activeView);
+  const isManagementView = activeView.startsWith('management_');
+  const knownViews = new Set([
+    'dashboard',
+    'project_detail',
+    'projects',
+    'my_projects',
+    'planning',
+    'planning_list',
+    'teams',
+    'inventory',
+    'inventory_overview',
+    'inventory_mutaties',
+    'inventory_magazijnen',
+    'inventory_inkooporders',
+    'inventory_leveranciers',
+    'inventory_boms',
+    'finance',
+    'quotes',
+    'settings',
+    'crm',
+    'crm_companies',
+    'forms',
+    'sales',
+    'tasks',
+    'calendar',
+    'hours',
+  ]);
+  const isKnownView = knownViews.has(activeView) || isAdministrationView || isTicketsView || isManagementView;
+
   if (authLoading) {
     return (
-      <div className="h-screen w-full flex flex-col items-center justify-center bg-gray-50">
+      <div className="h-screen w-full flex flex-col items-center justify-center bg-background">
         <div className="relative">
           <div className="h-16 w-16 border-4 border-emerald-100 border-t-emerald-600 rounded-full animate-spin" />
           <Target className="h-6 w-6 text-emerald-600 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
@@ -97,12 +130,12 @@ export default function App() {
   }
 
   if (!user) {
-    return <LoginPage />;
+    return <LandingPage />;
   }
 
   return (
     <TooltipProvider>
-      <div className="flex h-screen w-full bg-gray-50 overflow-hidden font-sans relative">
+      <div className="flex h-screen w-full bg-background overflow-hidden font-sans relative">
         <Sidebar 
           collapsed={sidebarCollapsed} 
           setCollapsed={setSidebarCollapsed} 
@@ -128,13 +161,35 @@ export default function App() {
                 onResetTimer={resetTimer}
               />
             )}
+            {activeView === 'management_dashboard' && (
+              <Dashboard 
+                timerSeconds={timerSeconds}
+                isTimerRunning={isTimerRunning}
+                onToggleTimer={toggleTimer}
+                onResetTimer={resetTimer}
+              />
+            )}
             {activeView === 'project_detail' && <ProjectDetail onBack={() => setActiveView('projects')} />}
-            {(activeView === 'projects' || activeView === 'my_projects') && <KanbanBoard onViewProject={(id) => setActiveView('project_detail')} />}
+            {(activeView === 'projects' || activeView === 'my_projects') && (
+              <KanbanBoard
+                scope={activeView === 'my_projects' ? 'mine' : 'all'}
+                onViewProject={(id) => setActiveView('project_detail')}
+              />
+            )}
             {activeView === 'planning' && <PlannerView />}
             {activeView === 'planning_list' && <PlanningListLayout />}
-            {activeView === 'inventory' && <InventoryLayout />}
+            {activeView === 'inventory' && <InventoryLayout initialTab="artikelen" />}
+            {activeView === 'inventory_overview' && <InventoryLayout initialTab="overzicht" />}
+            {activeView === 'inventory_mutaties' && <InventoryLayout initialTab="mutaties" />}
+            {activeView === 'inventory_magazijnen' && <InventoryLayout initialTab="magazijnen" />}
+            {activeView === 'inventory_inkooporders' && <InventoryLayout initialTab="inkooporders" />}
+            {activeView === 'inventory_leveranciers' && <InventoryLayout initialTab="leveranciers" />}
+            {activeView === 'inventory_boms' && <InventoryLayout initialTab="boms" />}
             {activeView === 'finance' && <FinanceLayout />}
             {activeView === 'quotes' && <QuotesLayout />}
+            {isAdministrationView && (
+              <AdministrationLayout activeView={activeView} onViewChange={setActiveView} />
+            )}
             {activeView === 'settings' && <SettingsLayout />}
             {activeView === 'crm' && <ContactsLayout />}
             {activeView === 'crm_companies' && <CompaniesLayout />}
@@ -144,8 +199,11 @@ export default function App() {
             {activeView === 'calendar' && <CalendarLayout />}
             {activeView === 'hours' && <HoursLayout />}
             {activeView === 'teams' && <TeamsLayout />}
-            {['tickets_all', 'tickets_my'].includes(activeView) && <TicketsLayout />}
-            {activeView !== 'project_detail' && activeView !== 'dashboard' && activeView !== 'projects' && activeView !== 'my_projects' && activeView !== 'planning' && activeView !== 'planning_list' && activeView !== 'teams' && activeView !== 'inventory' && activeView !== 'finance' && activeView !== 'quotes' && activeView !== 'settings' && activeView !== 'crm' && activeView !== 'crm_companies' && activeView !== 'forms' && activeView !== 'sales' && activeView !== 'tasks' && activeView !== 'calendar' && activeView !== 'hours' && activeView !== 'tickets_all' && activeView !== 'tickets_my' && (
+            {isTicketsView && <TicketsLayout />}
+            {isManagementView && activeView !== 'management_dashboard' && (
+              <ManagementLayout activeView={activeView} />
+            )}
+            {!isKnownView && (
               <div className="flex items-center justify-center h-full text-gray-500">
                 <div className="text-center">
                   <h2 className="text-2xl font-bold mb-2 capitalize">{activeView.replace('_', ' ')}</h2>

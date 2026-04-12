@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { 
   Layers, Settings, Columns3, SlidersHorizontal, AlignJustify, Maximize2, Download, Search, Plus, Archive, Edit, Info, ChevronDown, MoreHorizontal, CheckCircle2, FileText, Send, CheckSquare, MessageSquare, Check, X, UserCircle2
 } from 'lucide-react';
@@ -24,8 +24,80 @@ const quotesData = [
   { id: 512, naam: 'Nieuwe offerte', status: 'Afgerond', statusColor: 'bg-green-100 text-green-800', geaccept: 'pending', projStatus: 'Offerte verstuurd', projColor: 'bg-green-200 text-green-900', project: '2600186-Almira Kalk...', contact: 'Almira Kalkhoven', inbeh: '0%', gefac: '0%', totaal: '1.8...', mail: 'check', verstuurd: '18-03-26 11:09', geopend: '18-03-26 11:19', keren: '1', reden: '', gemaakt_op: '18-03-2026 11:04', gemaakt_door: 'Sven | Ins...' },
 ];
 
+type QuotesColumnKey =
+  | 'select'
+  | 'expand'
+  | 'id'
+  | 'naam'
+  | 'status'
+  | 'geaccepteerd'
+  | 'projectStatus'
+  | 'project'
+  | 'contact'
+  | 'inBehandeling'
+  | 'gefactureerd'
+  | 'totaal'
+  | 'ondertekeningDatum'
+  | 'mail'
+  | 'verstuurdOp'
+  | 'geopendDoorKlant'
+  | 'kerenGeopendDoorKlant'
+  | 'reden'
+  | 'gemaaktOp'
+  | 'gemaaktDoor'
+  | 'actions';
+
+type QuotesColumnDef = {
+  key: QuotesColumnKey;
+  label?: string;
+  width: number;
+  minWidth: number;
+  resizable: boolean;
+  thClassName?: string;
+};
+
+const quotesColumns: QuotesColumnDef[] = [
+  { key: 'select', width: 52, minWidth: 44, resizable: false, thClassName: 'p-3 pl-4 text-center' },
+  { key: 'expand', width: 40, minWidth: 36, resizable: false, thClassName: 'p-3 text-center' },
+  { key: 'id', label: 'id', width: 70, minWidth: 60, resizable: true, thClassName: 'p-3 font-semibold text-gray-800' },
+  { key: 'naam', label: 'Naam', width: 170, minWidth: 120, resizable: true, thClassName: 'p-3 font-semibold text-gray-800' },
+  { key: 'status', label: 'Status', width: 140, minWidth: 110, resizable: true, thClassName: 'p-3 font-semibold text-gray-800' },
+  { key: 'geaccepteerd', label: 'Geaccepteerd', width: 130, minWidth: 110, resizable: true, thClassName: 'p-3 font-semibold text-gray-800 text-center' },
+  { key: 'projectStatus', label: 'Project status', width: 170, minWidth: 140, resizable: true, thClassName: 'p-3 font-semibold text-gray-800' },
+  { key: 'project', label: 'Project', width: 220, minWidth: 150, resizable: true, thClassName: 'p-3 font-semibold text-gray-800' },
+  { key: 'contact', label: 'Contact', width: 190, minWidth: 140, resizable: true, thClassName: 'p-3 font-semibold text-gray-800' },
+  { key: 'inBehandeling', label: 'In behandeling', width: 150, minWidth: 130, resizable: true, thClassName: 'p-3 font-semibold text-gray-800' },
+  { key: 'gefactureerd', label: 'Gefactureerd', width: 130, minWidth: 120, resizable: true, thClassName: 'p-3 font-semibold text-gray-800' },
+  { key: 'totaal', label: 'Totaal', width: 120, minWidth: 100, resizable: true, thClassName: 'p-3 font-semibold text-gray-800' },
+  { key: 'ondertekeningDatum', label: 'Ondertekening datum', width: 170, minWidth: 140, resizable: true, thClassName: 'p-3 font-semibold text-gray-800' },
+  { key: 'mail', label: 'Mail', width: 80, minWidth: 70, resizable: true, thClassName: 'p-3 font-semibold text-gray-800' },
+  { key: 'verstuurdOp', label: 'Verstuurd op', width: 150, minWidth: 130, resizable: true, thClassName: 'p-3 font-semibold text-gray-800' },
+  { key: 'geopendDoorKlant', label: 'Geopend door klant', width: 180, minWidth: 150, resizable: true, thClassName: 'p-3 font-semibold text-gray-800' },
+  { key: 'kerenGeopendDoorKlant', label: 'Keren geopend door klant', width: 210, minWidth: 170, resizable: true, thClassName: 'p-3 font-semibold text-gray-800' },
+  { key: 'reden', label: 'Reden', width: 120, minWidth: 100, resizable: true, thClassName: 'p-3 font-semibold text-gray-800' },
+  { key: 'gemaaktOp', label: 'Gemaakt op', width: 170, minWidth: 140, resizable: true, thClassName: 'p-3 font-semibold text-gray-800' },
+  { key: 'gemaaktDoor', label: 'Gemaakt door', width: 190, minWidth: 150, resizable: true, thClassName: 'p-3 font-semibold text-gray-800' },
+  { key: 'actions', width: 160, minWidth: 140, resizable: false, thClassName: 'p-3 sticky right-0 bg-white shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)]' },
+];
+
 export function QuotesLayout() {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [columnWidths, setColumnWidths] = useState<Record<QuotesColumnKey, number>>(() => {
+    return quotesColumns.reduce((acc, col) => {
+      acc[col.key] = col.width;
+      return acc;
+    }, {} as Record<QuotesColumnKey, number>);
+  });
+  const resizingRef = useRef<{
+    key: QuotesColumnKey;
+    startX: number;
+    startWidth: number;
+    minWidth: number;
+  } | null>(null);
+
+  const tableMinWidth = useMemo(() => {
+    return quotesColumns.reduce((total, col) => total + (columnWidths[col.key] ?? col.width), 0);
+  }, [columnWidths]);
 
   const toggleSelect = (id: number) => {
     if (selectedIds.includes(id)) {
@@ -33,6 +105,34 @@ export function QuotesLayout() {
     } else {
       setSelectedIds([...selectedIds, id]);
     }
+  };
+
+  const startResize = (key: QuotesColumnKey) => (e: React.PointerEvent) => {
+    const col = quotesColumns.find(c => c.key === key);
+    if (!col || !col.resizable) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const startX = e.clientX;
+    const startWidth = columnWidths[key] ?? col.width;
+    const minWidth = col.minWidth;
+    resizingRef.current = { key, startX, startWidth, minWidth };
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+
+    const onPointerMove = (evt: PointerEvent) => {
+      const nextWidth = Math.max(minWidth, startWidth + (evt.clientX - startX));
+      setColumnWidths(prev => ({ ...prev, [key]: nextWidth }));
+    };
+
+    const onPointerUp = () => {
+      resizingRef.current = null;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      window.removeEventListener('pointermove', onPointerMove);
+    };
+
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp, { once: true });
   };
 
   return (
@@ -100,32 +200,49 @@ export function QuotesLayout() {
 
         {/* Data Table */}
         <div className="overflow-auto flex-1">
-          <table className="w-full text-left text-sm border-collapse min-w-[1300px]">
+          <table
+            className="w-full text-left text-sm border-collapse table-fixed"
+            style={{ minWidth: tableMinWidth }}
+          >
+            <colgroup>
+              {quotesColumns.map(col => (
+                <col key={col.key} style={{ width: columnWidths[col.key] }} />
+              ))}
+            </colgroup>
             <thead className="sticky top-0 bg-white z-10 shadow-sm shadow-gray-100/50">
               <tr className="border-b border-gray-200">
-                <th className="p-3 pl-4 w-10 text-center">
-                  <input type="checkbox" className="rounded border-gray-300 text-green-600 focus:ring-green-500 h-4 w-4" />
-                </th>
-                <th className="p-3 w-8"></th>
-                <th className="p-3 font-semibold text-gray-800">id</th>
-                <th className="p-3 font-semibold text-gray-800">Naam</th>
-                <th className="p-3 font-semibold text-gray-800">Status</th>
-                <th className="p-3 font-semibold text-gray-800">Geaccept...</th>
-                <th className="p-3 font-semibold text-gray-800">Project status</th>
-                <th className="p-3 font-semibold text-gray-800">Project</th>
-                <th className="p-3 font-semibold text-gray-800">Contact</th>
-                <th className="p-3 font-semibold text-gray-800">In beh...</th>
-                <th className="p-3 font-semibold text-gray-800">Gefac...</th>
-                <th className="p-3 font-semibold text-gray-800">Totaal</th>
-                <th className="p-3 font-semibold text-gray-800">ndtekening d...</th>
-                <th className="p-3 font-semibold text-gray-800">Mail</th>
-                <th className="p-3 font-semibold text-gray-800">Verstuurd op</th>
-                <th className="p-3 font-semibold text-gray-800">Geopend door kla...</th>
-                <th className="p-3 font-semibold text-gray-800">Keren geopend door ...</th>
-                <th className="p-3 font-semibold text-gray-800">Reden</th>
-                <th className="p-3 font-semibold text-gray-800 flex items-center gap-1 cursor-pointer">Gemaakt op <ChevronDown className="h-3.5 w-3.5" /></th>
-                <th className="p-3 font-semibold text-gray-800">Gemaakt door</th>
-                <th className="p-3 w-40 sticky right-0 bg-white shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)]"></th>
+                {quotesColumns.map(col => (
+                  <th
+                    key={col.key}
+                    className={cn(
+                      'relative select-none overflow-hidden whitespace-nowrap',
+                      col.thClassName
+                    )}
+                  >
+                    {col.key === 'select' ? (
+                      <input type="checkbox" className="rounded border-gray-300 text-green-600 focus:ring-green-500 h-4 w-4" />
+                    ) : col.key === 'expand' ? null : col.key === 'actions' ? null : col.key === 'gemaaktOp' ? (
+                      <button className="w-full flex items-center gap-1 cursor-pointer">
+                        <span className="truncate">{col.label}</span>
+                        <ChevronDown className="h-3.5 w-3.5 shrink-0" />
+                      </button>
+                    ) : (
+                      <span className="truncate block">{col.label}</span>
+                    )}
+
+                    {col.resizable ? (
+                      <div
+                        onPointerDown={startResize(col.key)}
+                        className="absolute right-0 top-0 h-full w-2 cursor-col-resize group"
+                        role="separator"
+                        aria-orientation="vertical"
+                        aria-label={`Resize column ${col.label ?? col.key}`}
+                      >
+                        <div className="absolute right-0 top-0 h-full w-px bg-transparent group-hover:bg-gray-300" />
+                      </div>
+                    ) : null}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
@@ -144,7 +261,7 @@ export function QuotesLayout() {
                   <td className="p-3 text-[13px] font-semibold text-emerald-600 hover:underline cursor-pointer">
                     {row.id}
                   </td>
-                  <td className="p-3 text-[13px] font-semibold text-emerald-600 hover:underline cursor-pointer truncate max-w-[150px]">
+                  <td className="p-3 text-[13px] font-semibold text-emerald-600 hover:underline cursor-pointer truncate">
                     {row.naam}
                   </td>
                   <td className="p-3 text-[13px] text-gray-700">
@@ -170,10 +287,10 @@ export function QuotesLayout() {
                        '-' 
                     )}
                   </td>
-                  <td className="p-3 text-[13px] font-semibold text-emerald-600 hover:underline cursor-pointer truncate max-w-[170px]" title={row.project}>
+                  <td className="p-3 text-[13px] font-semibold text-emerald-600 hover:underline cursor-pointer truncate" title={row.project}>
                     {row.project}
                   </td>
-                  <td className="p-3 text-[13px] font-semibold text-emerald-600 hover:underline cursor-pointer truncate max-w-[150px]" title={row.contact}>
+                  <td className="p-3 text-[13px] font-semibold text-emerald-600 hover:underline cursor-pointer truncate" title={row.contact}>
                     {row.contact}
                   </td>
                   <td className="p-3 text-[13px] text-gray-600">
@@ -213,7 +330,7 @@ export function QuotesLayout() {
                     {row.gemaakt_op}
                   </td>
                   <td className="p-3 text-[13px] text-gray-600">
-                    <div className="flex items-center gap-2 max-w-[120px]">
+                    <div className="flex items-center gap-2 min-w-0">
                       <UserCircle2 className="h-4 w-4 text-gray-400 shrink-0" />
                       <span className="truncate" title={row.gemaakt_door}>{row.gemaakt_door}</span>
                     </div>
@@ -231,7 +348,7 @@ export function QuotesLayout() {
                 </tr>
               ))}
               <tr className="h-auto">
-                <td colSpan={13}></td>
+                <td colSpan={quotesColumns.length}></td>
               </tr>
             </tbody>
           </table>

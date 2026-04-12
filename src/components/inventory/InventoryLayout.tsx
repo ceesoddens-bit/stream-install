@@ -9,18 +9,32 @@ import { Card, CardContent } from '@/components/ui/card';
 import { inventoryService, InventoryItem } from '@/lib/inventoryService';
 
 const tabs = [
-  { id: 'artikelen', label: 'Alle Artikelen' },
-  { id: 'magazijnen', label: 'Magazijnen & Locaties' },
+  { id: 'overzicht', label: 'Overzicht' },
+  { id: 'mutaties', label: 'Mutaties' },
+  { id: 'magazijnen', label: 'Magazijnen' },
+  { id: 'artikelen', label: 'Artikelen' },
   { id: 'inkooporders', label: 'Inkooporders' },
   { id: 'leveranciers', label: 'Leveranciers' },
-  { id: 'mutaties', label: 'Voorraadmutaties' },
-  { id: 'boms', label: 'BOM / Stuklijsten' },
+  { id: 'boms', label: 'BOMs' },
 ];
 
-export function InventoryLayout() {
-  const [activeTab, setActiveTab] = useState('artikelen');
+type InventoryLayoutProps = {
+  initialTab?: string;
+};
+
+export function InventoryLayout({ initialTab }: InventoryLayoutProps) {
+  const [activeTab, setActiveTab] = useState(() => {
+    if (initialTab && tabs.some((t) => t.id === initialTab)) return initialTab;
+    return 'artikelen';
+  });
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (!initialTab) return;
+    if (!tabs.some((t) => t.id === initialTab)) return;
+    setActiveTab(initialTab);
+  }, [initialTab]);
 
   useEffect(() => {
     const unsubscribe = inventoryService.subscribeToInventory((fetched) => {

@@ -27,6 +27,7 @@ import {
   BarChart3,
   MessageSquare,
   Sparkles,
+  Globe,
   CheckCircle2,
   Play,
   Square,
@@ -129,7 +130,9 @@ const navItems: NavItem[] = [
     label: 'ADMINISTRATIE',
     id: 'finance_parent',
     subItems: [
-      { label: 'Offertes', id: 'quotes', icon: FileText }
+      { label: 'Offertes', id: 'administratie_offertes', icon: FileText },
+      { label: 'Facturen', id: 'administratie_facturen', icon: CreditCard },
+      { label: 'Urenregistratie', id: 'administratie_urenregistratie', icon: Clock }
     ]
   },
   {
@@ -137,7 +140,45 @@ const navItems: NavItem[] = [
     label: 'VOORRAAD',
     id: 'logistiek_parent',
     subItems: [
+      { label: 'Overzicht', id: 'inventory_overview', icon: LayoutDashboard },
+      { label: 'Mutaties', id: 'inventory_mutaties', icon: List },
+      { label: 'Magazijnen', id: 'inventory_magazijnen', icon: Building2 },
       { label: 'Artikelen', id: 'inventory', icon: Box },
+      { label: 'Inkooporders', id: 'inventory_inkooporders', icon: FileText },
+      { label: 'Leveranciers', id: 'inventory_leveranciers', icon: Users },
+      { label: 'BOMs', id: 'inventory_boms', icon: Package },
+    ]
+  },
+  {
+    icon: BarChart3,
+    label: 'MANAGEMENT',
+    id: 'management_parent',
+    subItems: [
+      { label: 'Dashboard', id: 'management_dashboard', icon: LayoutDashboard },
+      { label: 'Gebruikers', id: 'management_users', icon: Users },
+      { label: 'Klanten', id: 'management_customers', icon: Building2 },
+      {
+        label: 'Automation',
+        id: 'management_automation_parent',
+        icon: Sparkles,
+        subItems: [
+          { label: 'Overzicht', id: 'management_automation_overview' },
+          { label: 'Integraties', id: 'management_automation_integrations' }
+        ]
+      },
+      { label: 'PV-Designer', id: 'management_pv_designer', icon: Map },
+      {
+        label: 'Sjablonen',
+        id: 'management_templates_parent',
+        icon: FileText,
+        subItems: [
+          { label: 'Documenten', id: 'management_templates_documents' },
+          { label: "E-mails", id: 'management_templates_emails' }
+        ]
+      },
+      { label: 'Projecten', id: 'management_projects', icon: ListTodo },
+      { label: 'Customer Portal', id: 'management_customer_portal', icon: Globe },
+      { label: 'Instellingen', id: 'management_settings', icon: Settings },
     ]
   },
   {
@@ -170,6 +211,7 @@ export function Sidebar({
     'formulieren_parent',
     'finance_parent',
     'logistiek_parent',
+    'management_parent',
     'settings_parent',
     'tickets_parent'
   ]);
@@ -183,20 +225,20 @@ export function Sidebar({
   return (
     <div
       className={cn(
-        'flex flex-col h-screen border-r bg-white transition-all duration-300 relative',
+        'flex flex-col h-screen border-r border-white/10 bg-[var(--sidebar)] text-[var(--sidebar-foreground)] transition-all duration-300 relative shadow-[2px_0_24px_rgba(0,0,0,0.12)]',
         collapsed ? 'w-20' : 'w-64'
       )}
     >
       <Button
         variant="outline"
         size="icon"
-        className="absolute -right-4 top-6 h-8 w-8 rounded-full z-10 bg-white"
+        className="absolute -right-4 top-6 h-8 w-8 rounded-full z-10 bg-[var(--sidebar)] border-white/15 text-[var(--sidebar-foreground)] hover:bg-[var(--sidebar-accent)] hover:text-white"
         onClick={() => setCollapsed(!collapsed)}
       >
         {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
       </Button>
 
-      <div className="flex items-center h-16 px-4 border-b shrink-0">
+      <div className="flex items-center h-16 px-4 border-b border-white/10 shrink-0">
         <div className="flex items-center gap-2 overflow-hidden">
           <div className="bg-blue-600 p-1.5 rounded-lg shrink-0">
             <Zap className="h-5 w-5 text-white" />
@@ -224,18 +266,18 @@ export function Sidebar({
                 className={cn(
                   'flex items-center justify-between w-full rounded-md px-3 py-2 text-sm font-medium transition-colors',
                   isActive && !hasSubItems
-                    ? 'bg-blue-50 text-blue-700'
-                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900',
+                    ? 'bg-white/10 text-white'
+                    : 'text-white/70 hover:bg-white/5 hover:text-white',
                   collapsed && 'justify-center px-0'
                 )}
                 title={collapsed ? item.label : undefined}
               >
                 <div className="flex items-center gap-3">
-                  <item.icon className={cn('h-5 w-5 shrink-0', isActive ? 'text-blue-700' : 'text-gray-500')} />
-                  {!collapsed && <span className={cn(isActive && hasSubItems ? 'text-blue-700 font-semibold' : '')}>{item.label}</span>}
+                  <item.icon className={cn('h-5 w-5 shrink-0', isActive ? 'text-white' : 'text-white/55')} />
+                  {!collapsed && <span className={cn(isActive && hasSubItems ? 'text-white font-semibold' : '')}>{item.label}</span>}
                 </div>
                 {!collapsed && hasSubItems && (
-                  <ChevronDown className={cn('h-4 w-4 text-gray-400 transition-transform', isExpanded && 'rotate-180')} />
+                  <ChevronDown className={cn('h-4 w-4 text-white/45 transition-transform', isExpanded && 'rotate-180')} />
                 )}
               </button>
               
@@ -259,23 +301,23 @@ export function Sidebar({
                           className={cn(
                             'flex items-center justify-between w-full rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
                             !hasSubSubItems && isSubActive
-                              ? 'bg-blue-50 text-blue-700'
-                              : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900',
+                              ? 'bg-white/10 text-white'
+                              : 'text-white/65 hover:bg-white/5 hover:text-white',
                           )}
                         >
                           <div className="flex items-center gap-2 flex-1 min-w-0">
-                            {subItem.icon && <subItem.icon className={cn('h-4 w-4 shrink-0', (isSubActive && !hasSubSubItems) ? 'text-blue-700' : 'text-gray-400')} />}
-                            <span className={cn("truncate", hasSubSubItems && isSubActive ? "text-blue-700 font-semibold" : "")}>{subItem.label}</span>
+                            {subItem.icon && <subItem.icon className={cn('h-4 w-4 shrink-0', (isSubActive && !hasSubSubItems) ? 'text-white' : 'text-white/45')} />}
+                            <span className={cn("truncate", hasSubSubItems && isSubActive ? "text-white font-semibold" : "")}>{subItem.label}</span>
                           </div>
                           
                           <div className="flex items-center gap-2">
                             {subItem.badge && (
-                              <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] px-1.5 py-0.5 rounded font-bold shrink-0">
+                              <span className="bg-white/10 text-white border border-white/15 text-[10px] px-1.5 py-0.5 rounded font-bold shrink-0">
                                 {subItem.badge}
                               </span>
                             )}
                             {hasSubSubItems && (
-                              <ChevronDown className={cn('h-3.5 w-3.5 text-gray-400 transition-transform', isSubExpanded && 'rotate-180')} />
+                              <ChevronDown className={cn('h-3.5 w-3.5 text-white/45 transition-transform', isSubExpanded && 'rotate-180')} />
                             )}
                           </div>
                         </button>
@@ -290,11 +332,11 @@ export function Sidebar({
                                 className={cn(
                                   'flex items-center gap-2 text-left w-full rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
                                   activeView === subSubItem.id
-                                    ? 'text-blue-700 bg-blue-50/50'
-                                    : 'text-gray-500 hover:text-gray-900'
+                                    ? 'text-white bg-white/10'
+                                    : 'text-white/55 hover:text-white'
                                 )}
                               >
-                                <div className={cn("h-1 w-1 rounded-full shrink-0", activeView === subSubItem.id ? "bg-blue-600" : "bg-gray-400")} />
+                                <div className={cn("h-1 w-1 rounded-full shrink-0", activeView === subSubItem.id ? "bg-white" : "bg-white/35")} />
                                 <span className="truncate">{subSubItem.label}</span>
                               </button>
                             ))}
@@ -310,40 +352,39 @@ export function Sidebar({
         })}
       </div>
 
-      <div className="p-4 border-t shrink-0 space-y-4 bg-white relative z-10">
-        {/* Chat met AI Button */}
+      <div className="p-4 border-t border-white/10 shrink-0 space-y-4 bg-[var(--sidebar)] relative z-10">
         <button 
           onClick={() => onChatOpenChange(!isChatOpen)}
           className={cn(
-            "flex items-center gap-3 w-full px-3 py-2.5 rounded-lg border border-emerald-100 hover:bg-emerald-50 transition-all text-left group shadow-sm bg-emerald-50/30",
+            "flex items-center gap-3 w-full px-3 py-2.5 rounded-lg border border-white/10 hover:bg-white/5 transition-all text-left group shadow-sm bg-white/5",
             collapsed && "justify-center px-0"
           )}
         >
-          <div className="p-1 px-1.5 bg-emerald-100/50 rounded-md ring-1 ring-emerald-200/50 group-hover:scale-110 transition-transform">
-            <Sparkles className="h-4 w-4 text-emerald-600 fill-emerald-100/30" />
+          <div className="p-1 px-1.5 bg-white/10 rounded-md ring-1 ring-white/15 group-hover:scale-110 transition-transform">
+            <Sparkles className="h-4 w-4 text-white/80" />
           </div>
           {!collapsed && (
-            <span className="text-[13px] font-bold text-emerald-900 tracking-tight">Chat met AI</span>
+            <span className="text-[13px] font-bold text-white tracking-tight">Chat met AI</span>
           )}
         </button>
 
         {/* Global Timer Widget (OpusFlow Style) */}
         <div className={cn(
-          "bg-[#EBF7FF] rounded-lg p-2 flex items-center justify-between border border-[#CEE9FF] shadow-sm",
+          "bg-white/5 rounded-lg p-2 flex items-center justify-between border border-white/10 shadow-sm",
           collapsed && "flex-col gap-2 py-3"
         )}>
           {!collapsed && (
             <div className="flex items-center gap-2">
-              <Clock className={cn("h-4 w-4 text-blue-500", isTimerRunning && "animate-pulse")} />
-              <span className="text-sm font-mono font-bold text-blue-600 tracking-wider">
+              <Clock className={cn("h-4 w-4 text-sky-300", isTimerRunning && "animate-pulse")} />
+              <span className="text-sm font-mono font-bold text-white tracking-wider">
                 {formatSeconds(timerSeconds)}
               </span>
             </div>
           )}
           {collapsed && (
             <div className="relative">
-              <Clock className={cn("h-5 w-5 text-blue-500", isTimerRunning && "animate-pulse")} />
-              {isTimerRunning && <span className="absolute -top-1 -right-1 w-2 h-2 bg-emerald-500 rounded-full border border-white"></span>}
+              <Clock className={cn("h-5 w-5 text-sky-300", isTimerRunning && "animate-pulse")} />
+              {isTimerRunning && <span className="absolute -top-1 -right-1 w-2 h-2 bg-emerald-400 rounded-full border border-[var(--sidebar)]"></span>}
             </div>
           )}
           
@@ -351,18 +392,18 @@ export function Sidebar({
             <button 
               onClick={onToggleTimer}
               className={cn(
-                "p-1.5 rounded shadow-sm transition-all border border-gray-100",
+                "p-1.5 rounded shadow-sm transition-all border border-white/10 bg-white/10 hover:bg-white/15",
                 isTimerRunning 
-                  ? "bg-white text-orange-500 hover:bg-orange-50" 
-                  : "bg-white text-emerald-500 hover:bg-emerald-50"
+                  ? "text-orange-300" 
+                  : "text-emerald-300"
               )}
             >
-              {isTimerRunning ? <Square className="h-3 w-3 fill-current text-white stroke-orange-500 fill-orange-500" /> : <Play className="h-3 w-3 fill-emerald-500 text-emerald-500" />}
+              {isTimerRunning ? <Square className="h-3 w-3 fill-current" /> : <Play className="h-3 w-3 fill-current" />}
             </button>
             {timerSeconds > 0 && !isTimerRunning && (
               <button 
                 onClick={onResetTimer}
-                className="p-1.5 bg-white rounded shadow-sm text-gray-400 hover:bg-gray-50 transition-colors border border-gray-100"
+                className="p-1.5 bg-white/10 rounded shadow-sm text-white/60 hover:bg-white/15 transition-colors border border-white/10"
               >
                 <XIcon className="h-3 w-3" />
               </button>
@@ -370,7 +411,7 @@ export function Sidebar({
           </div>
         </div>
 
-        <Button className={cn('w-full', collapsed && 'px-0')} variant="default">
+        <Button className={cn('w-full bg-white/10 hover:bg-white/15 text-white border border-white/10 shadow-sm', collapsed && 'px-0')} variant="default">
           <PlayCircle className={cn('h-4 w-4', !collapsed && 'mr-2')} />
           {!collapsed && 'Start Timer'}
         </Button>
@@ -382,20 +423,20 @@ export function Sidebar({
           </Avatar>
           {!collapsed && (
             <div className="flex flex-col overflow-hidden">
-              <span className="text-sm font-medium truncate">{currentUser.name}</span>
-              <span className="text-xs text-gray-500 truncate">{currentUser.role}</span>
+              <span className="text-sm font-medium truncate text-white">{currentUser.name}</span>
+              <span className="text-xs text-white/55 truncate">{currentUser.role}</span>
             </div>
           )}
         </div>
 
         {/* Operationeel Footer Bar */}
         <div className={cn(
-          "pt-2 mt-2 border-t border-gray-100 flex items-center gap-2",
+          "pt-2 mt-2 border-t border-white/10 flex items-center gap-2",
           collapsed && "justify-center"
         )}>
-          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 fill-emerald-50" />
+          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-300 fill-emerald-300/20" />
           {!collapsed && (
-            <span className="text-[11px] font-bold text-emerald-600 uppercase tracking-widest">Operationeel</span>
+            <span className="text-[11px] font-bold text-emerald-200 uppercase tracking-widest">Operationeel</span>
           )}
         </div>
       </div>

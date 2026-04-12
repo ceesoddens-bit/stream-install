@@ -5,7 +5,10 @@ export interface PlanningEntry {
   id?: string;
   projectId: string;
   projectName: string;
+  accountManager?: string;
   client: string;
+  contactMobile?: string;
+  createdBy?: string;
   technician: string;
   startTime: string;
   endTime: string;

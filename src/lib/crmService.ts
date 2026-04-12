@@ -4,23 +4,41 @@ import { db } from './firebase';
 export interface Company {
   id?: string;
   name: string;
-  email: string;
-  phone: string;
-  status: string;
-  type: string;
-  address: string;
-  city: string;
+  referenceNumber?: string;
+  tags?: string[];
+  projectsCount?: number;
+  phone?: string;
+  kvkNumber?: string;
+  primaryContactPerson?: string;
+  parentCompany?: string;
+  address?: string;
+  city?: string;
+  vatNumber?: string;
+
+  email?: string;
+  status?: string;
+  type?: string;
   createdAt?: Timestamp;
 }
 
 export interface Contact {
   id?: string;
   name: string;
-  email: string;
-  phone: string;
-  company: string;
-  role: string;
-  status: string;
+  firstName?: string;
+  lastName?: string;
+  tags?: string[];
+  priority?: number;
+  address?: string;
+  mobile?: string;
+  telephone?: string;
+  email?: string;
+  phone?: string;
+  company?: string;
+  role?: string;
+  status?: string;
+  createdByName?: string;
+  updatedByName?: string;
+  updatedAt?: Timestamp;
   createdAt?: Timestamp;
 }
 

@@ -5,14 +5,14 @@ export const planningCards: PlanningCard[] = [
   {
     id: 'pc1', projectRef: '2500112-Fam. Jautze-Installatie', clientName: 'Fam. Jautze',
     address: 'Galjoen 10 16, 8243MH Lelystad', amount: 3355, status: 'Offerte maken',
-    projectType: 'Installatie', clientType: 'Residentieel', accountManager: 'Sven',
+    projectType: 'Installatie', clientType: 'Residentieel', accountManager: 'Cees Oddens',
     installGroup: 'Installatiegroep Duurzaam', productTags: ['Zonnepanelen'],
     imageUrl: 'https://picsum.photos/seed/jautze/80/60',
   },
   {
     id: 'pc2', projectRef: '2600038-Ruud Steelwinder-Installatie', clientName: 'Ruud Steelwinder',
     address: 'Saerdam 55, 8242JC Lelystad', amount: 0, status: 'Offerte maken',
-    projectType: 'Installatie', clientType: 'Residentieel', accountManager: 'Sven',
+    projectType: 'Installatie', clientType: 'Residentieel', accountManager: 'Cees Oddens',
     installGroup: 'Installatiegroep Duurzaam', productTags: ['Onbekend'],
   },
   {
@@ -25,7 +25,7 @@ export const planningCards: PlanningCard[] = [
   {
     id: 'pc4', projectRef: '2600196-Mark MCT-Installatie', clientName: 'Mark MCT',
     address: 'Weerribben 55, 8244EC Lelystad', amount: 3865, status: 'Offerte verstuurd',
-    projectType: 'Installatie', clientType: 'Residentieel', accountManager: 'Sven',
+    projectType: 'Installatie', clientType: 'Residentieel', accountManager: 'Cees Oddens',
     installGroup: 'Installatiegroep Duurzaam', productTags: ['Zonnepanelen'],
     imageUrl: 'https://picsum.photos/seed/mct/80/60',
   },
@@ -53,7 +53,7 @@ export const planningCards: PlanningCard[] = [
   {
     id: 'pc8', projectRef: '2500247-Fam. Jautze-Installatie', clientName: 'Fam. Jautze',
     address: 'Galjoen 10 16, 8243MH Lelystad', amount: 89694.92, status: 'Parkeren',
-    projectType: 'Installatie', clientType: 'Residentieel', accountManager: 'Sven',
+    projectType: 'Installatie', clientType: 'Residentieel', accountManager: 'Cees Oddens',
     installGroup: 'Installatiegroep Duurzaam', productTags: ['Airco'],
   },
   {
@@ -86,7 +86,7 @@ export const planningCards: PlanningCard[] = [
   {
     id: 'pc13', projectRef: '2500154-Energy Bridge-Installatie', clientName: 'Energy Bridge',
     address: 'Bremenstraat 24, 8232RW Lelystad', amount: 13529.35, status: 'Montage gepland',
-    projectType: 'Installatie', clientType: 'Commercieel', accountManager: 'Sven',
+    projectType: 'Installatie', clientType: 'Commercieel', accountManager: 'Cees Oddens',
     installGroup: 'Installatiegroep Duurzaam', productTags: ['Zonnepanelen'],
     imageUrl: 'https://picsum.photos/seed/bridge/80/60',
   },
@@ -106,7 +106,7 @@ export const planningCards: PlanningCard[] = [
   {
     id: 'pc16', projectRef: '2500153-Energiewacht BV-Installatie', clientName: 'Energiewacht BV',
     address: 'Jol 35 39, 8243HG Lelystad', amount: 2238.50, status: 'Restpunt plannen',
-    projectType: 'Installatie', clientType: 'Commercieel', accountManager: 'Sven',
+    projectType: 'Installatie', clientType: 'Commercieel', accountManager: 'Cees Oddens',
     installGroup: 'Installatiegroep Duurzaam', productTags: ['CV-ketel'],
   },
   {
@@ -125,7 +125,7 @@ export const planningCards: PlanningCard[] = [
   {
     id: 'pc19', projectRef: '2600313-Ricardo Zoon-Installatie', clientName: 'Ricardo Zoon',
     address: 'Ganzerik 29, 8255KD Swifterbant', amount: 7990, status: 'Restpunt gepland',
-    projectType: 'Installatie', clientType: 'Residentieel', accountManager: 'Sven',
+    projectType: 'Installatie', clientType: 'Residentieel', accountManager: 'Cees Oddens',
     installGroup: 'Installatiegroep Duurzaam', productTags: ['Energie opslag'],
   },
   {
@@ -138,7 +138,7 @@ export const planningCards: PlanningCard[] = [
   {
     id: 'pc21', projectRef: '2600210-Centrada-Installatie', clientName: 'Centrada',
     address: 'Kustrif 43, 8224BC Lelystad', amount: 3069.70, status: 'Oplevering controleren & Factureren',
-    projectType: 'Installatie', clientType: 'Commercieel', accountManager: 'Sven',
+    projectType: 'Installatie', clientType: 'Commercieel', accountManager: 'Cees Oddens',
     installGroup: 'Installatiegroep Duurzaam', productTags: ['Zonnepanelen'],
   },
   // Project afgerond
@@ -171,7 +171,7 @@ export const planningCards: PlanningCard[] = [
   {
     id: 'pc26', projectRef: '2600199-Hans Van Rath-Installatie', clientName: 'Hans Van Rath',
     address: 'Jol 30 7, 8243HA Lelystad', amount: 0, status: 'Service gepland',
-    projectType: 'Service', clientType: 'Residentieel', accountManager: 'Sven',
+    projectType: 'Service', clientType: 'Residentieel', accountManager: 'Cees Oddens',
     installGroup: 'Installatiegroep Duurzaam', productTags: ['Zonnepanelen'],
   },
   // Service in afwachting
@@ -333,7 +333,10 @@ export const companies: Company[] = [
     referenceNumber: 'REL-001',
     phone: '06 12345678',
     kvkNumber: '12345678',
-    address: 'Hoofdstraat 1, 1234 AB Lelystad'
+    address: 'Hoofdstraat 1, 1234 AB Lelystad',
+    tags: ['Lead'],
+    projectsCount: 2,
+    vatNumber: 'NL86132981B01'
   },
   { 
     id: 'c2', 
@@ -343,7 +346,10 @@ export const companies: Company[] = [
     referenceNumber: 'REL-002',
     phone: '06 87654321',
     kvkNumber: '87654321',
-    address: 'Business Park 10, 5678 CD Almere'
+    address: 'Business Park 10, 5678 CD Almere',
+    tags: ['Klant', 'Partner'],
+    projectsCount: 2,
+    parentCompany: 'OpusFlow'
   },
   { 
     id: 'c3', 
@@ -353,7 +359,9 @@ export const companies: Company[] = [
     referenceNumber: 'REL-003',
     phone: '06 11223344',
     kvkNumber: '11223344',
-    address: 'Bakkersteeg 5, 9012 EF Dronten'
+    address: 'Bakkersteeg 5, 9012 EF Dronten',
+    tags: [],
+    projectsCount: 1
   },
   { 
     id: 'c4', 
@@ -363,7 +371,9 @@ export const companies: Company[] = [
     referenceNumber: 'REL-004',
     phone: '06 55667788',
     kvkNumber: '55667788',
-    address: 'Waterkant 12, 3456 GH Zeewolde'
+    address: 'Waterkant 12, 3456 GH Zeewolde',
+    tags: ['Service'],
+    projectsCount: 2
   },
 ];
 
@@ -429,6 +439,7 @@ export const projects: Project[] = [
 export const formItems: FormItem[] = [
   {
     id: 'f1',
+    name: 'Installatie zonnepanelen',
     status: 'PUBLISHED',
     project: '-',
     planningsregel: '25-03 11:00 - 25-03 15:00 - 260021',
@@ -439,6 +450,7 @@ export const formItems: FormItem[] = [
   },
   {
     id: 'f2',
+    name: '2600201-Energiewacht B.V.-Installatie',
     status: 'PUBLISHED',
     project: '2600201-Energiewacht B.V.-Installatie',
     planningsregel: '-',
@@ -449,6 +461,7 @@ export const formItems: FormItem[] = [
   },
   {
     id: 'f3',
+    name: '2600181-Energiewacht B.V.-Installatie',
     status: 'PUBLISHED',
     project: '2600181-Energiewacht B.V.-Installatie',
     planningsregel: '-',
@@ -459,6 +472,7 @@ export const formItems: FormItem[] = [
   },
   {
     id: 'f4',
+    name: '2600180-Energiewacht B.V.-Installatie',
     status: 'PUBLISHED',
     project: '2600180-Energiewacht B.V.-Installatie',
     planningsregel: '-',
@@ -469,6 +483,7 @@ export const formItems: FormItem[] = [
   },
   {
     id: 'f5',
+    name: '2600172-Energiewacht B.V.-Installatie',
     status: 'PUBLISHED',
     project: '2600172-Energiewacht B.V.-Installatie',
     planningsregel: '-',
@@ -479,6 +494,7 @@ export const formItems: FormItem[] = [
   },
   {
     id: 'f6',
+    name: 'Restpunt algemeen',
     status: 'PUBLISHED',
     project: '-',
     planningsregel: '12-03 09:00 - 12-03 12:00 - 260006',
@@ -489,6 +505,7 @@ export const formItems: FormItem[] = [
   },
   {
     id: 'f7',
+    name: 'Installatie zonnepanelen',
     status: 'PUBLISHED',
     project: '-',
     planningsregel: '12-03 08:00 - 12-03 12:00 - 260016',
@@ -499,6 +516,7 @@ export const formItems: FormItem[] = [
   },
   {
     id: 'f8',
+    name: '2600151-Binnema Vastgoedonderhoud',
     status: 'PUBLISHED',
     project: '2600151-Binnema Vastgoedonderhoud',
     planningsregel: '-',
@@ -509,6 +527,7 @@ export const formItems: FormItem[] = [
   },
   {
     id: 'f9',
+    name: 'Installatie zonnepanelen',
     status: 'PUBLISHED',
     project: '-',
     planningsregel: '10-03 13:00 - 10-03 16:00 - 260016',
@@ -519,6 +538,7 @@ export const formItems: FormItem[] = [
   },
   {
     id: 'f10',
+    name: 'Installatie zonnepanelen',
     status: 'PUBLISHED',
     project: '-',
     planningsregel: '06-03 12:00 - 06-03 15:00 - 260014',
@@ -529,6 +549,7 @@ export const formItems: FormItem[] = [
   },
   {
     id: 'f11',
+    name: '2600091-Energiewacht B.V.-Installatie',
     status: 'PUBLISHED',
     project: '2600091-Energiewacht B.V.-Installatie',
     planningsregel: '-',
@@ -539,6 +560,7 @@ export const formItems: FormItem[] = [
   },
   {
     id: 'f12',
+    name: 'Installatie zonnepanelen',
     status: 'PUBLISHED',
     project: '-',
     planningsregel: '05-03 13:00 - 05-03 16:00 - 260015',
@@ -549,6 +571,7 @@ export const formItems: FormItem[] = [
   },
   {
     id: 'f13',
+    name: '2600148-Centrada-Installatie',
     status: 'PUBLISHED',
     project: '2600148-Centrada-Installatie',
     planningsregel: '-',
@@ -559,6 +582,7 @@ export const formItems: FormItem[] = [
   },
   {
     id: 'f14',
+    name: '2600149-Centrada-Installatie',
     status: 'PUBLISHED',
     project: '2600149-Centrada-Installatie',
     planningsregel: '-',
@@ -569,6 +593,7 @@ export const formItems: FormItem[] = [
   },
   {
     id: 'f15',
+    name: '2600149-Centrada-Installatie',
     status: 'PUBLISHED',
     project: '2600149-Centrada-Installatie',
     planningsregel: '-',
@@ -579,6 +604,7 @@ export const formItems: FormItem[] = [
   },
   {
     id: 'f16',
+    name: 'Installatie zonnepanelen',
     status: 'PUBLISHED',
     project: '-',
     planningsregel: '04-03 12:00 - 04-03 16:30 - 260014',
@@ -589,6 +615,7 @@ export const formItems: FormItem[] = [
   },
   {
     id: 'f17',
+    name: 'Installatie CV-ketel',
     status: 'DRAFT',
     project: '-',
     planningsregel: '16-03 08:00 - 16-03 14:00 - 260011',
@@ -599,6 +626,7 @@ export const formItems: FormItem[] = [
   },
   {
     id: 'f18',
+    name: 'Service Algemeen',
     status: 'DRAFT',
     project: '-',
     planningsregel: '03-03 15:00 - 03-03 16:00 - 260013',
@@ -609,6 +637,7 @@ export const formItems: FormItem[] = [
   },
   {
     id: 'f19',
+    name: 'Installatie zonnepanelen',
     status: 'PUBLISHED',
     project: '-',
     planningsregel: '03-03 13:00 - 03-03 15:00 - 260014',

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { planningCards } from '@/data/mockData';
+import { planningCards, currentUser } from '@/data/mockData';
 import { PlanningCard, PlanningStatus } from '@/types';
 import { ProjectCard } from './ProjectCard';
 import { cn } from '@/lib/utils';
@@ -120,12 +120,17 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({ config, cards, onViewProjec
 }
 
 interface KanbanBoardProps {
+  scope?: 'all' | 'mine';
   onViewProject?: (id: string) => void;
 }
 
-export function KanbanBoard({ onViewProject }: KanbanBoardProps) {
+export function KanbanBoard({ scope = 'all', onViewProject }: KanbanBoardProps) {
   const [activeTab, setActiveTab] = useState<'Alles' | 'Installatie' | 'Service'>('Alles');
   const [typeFilter, setTypeFilter] = useState<'Installatie' | 'Service' | 'both'>('both');
+
+  const scopedCards = scope === 'mine'
+    ? planningCards.filter((c) => c.accountManager === currentUser.name)
+    : planningCards;
 
   const getColumns = () => {
     if (typeFilter === 'Installatie') return INSTALLATION_COLUMNS;
@@ -134,7 +139,7 @@ export function KanbanBoard({ onViewProject }: KanbanBoardProps) {
   };
 
   const getCardsForColumn = (colId: PlanningStatus): PlanningCard[] =>
-    planningCards.filter(c => c.status === colId);
+    scopedCards.filter(c => c.status === colId);
 
   const columns = getColumns();
 
@@ -173,7 +178,7 @@ export function KanbanBoard({ onViewProject }: KanbanBoardProps) {
               Installatie
             </button>
             <span className="bg-green-500 text-white text-[10px] font-bold px-2 py-1 min-w-[24px] text-center">
-              {planningCards.filter(c => c.projectType === 'Installatie').length}
+              {scopedCards.filter(c => c.projectType === 'Installatie').length}
             </span>
           </div>
 
@@ -188,7 +193,7 @@ export function KanbanBoard({ onViewProject }: KanbanBoardProps) {
               Service
             </button>
             <span className="bg-gray-300 text-gray-700 text-[10px] font-bold px-2 py-1 min-w-[24px] text-center">
-              {planningCards.filter(c => c.projectType === 'Service').length}
+              {scopedCards.filter(c => c.projectType === 'Service').length}
             </span>
           </div>
 

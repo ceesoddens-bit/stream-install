@@ -1,78 +1,204 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
-import { bomItems } from '@/data/mockData';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { bomItems, articles } from '@/data/mockData';
 import { cn } from '@/lib/utils';
-import { Calendar, ClipboardList } from 'lucide-react';
+import {
+  Columns3,
+  Download,
+  Filter,
+  Settings,
+  SlidersHorizontal,
+  ZoomIn,
+  Leaf
+} from 'lucide-react';
 
-const getStatusBadge = (status: string) => {
-  switch (status) {
-    case 'In_Progress': return 'bg-purple-50 text-purple-700 border-purple-100';
-    case 'Scheduled': return 'bg-blue-50 text-blue-700 border-blue-100';
-    case 'Quoted': return 'bg-orange-50 text-orange-700 border-orange-100';
-    default: return 'bg-gray-50 text-gray-700 border-gray-100';
-  }
+type BomRow = {
+  id: string;
+  offerteNaam: string;
+  projectCode: string;
+  projectStatusLabel: string;
+  planningBadgeLabel: string;
+  planningDate1: string;
+  planningDate2: string;
+  planningDate3: string;
+  artikel: string;
+  sku: string;
+  definitie: number;
+  verkoopprijs: number;
+  aankoopprijs: number;
 };
 
-const getPlanningBadge = (status: string) => {
-  switch (status) {
-    case 'Planned': return 'bg-green-50 text-green-700 border-green-100';
-    case 'Confirmed': return 'bg-emerald-50 text-emerald-700 border-emerald-100';
-    case 'Draft': return 'bg-amber-50 text-amber-700 border-amber-100';
-    default: return 'bg-gray-50 text-gray-700 border-gray-100';
-  }
-};
+const projectStatusBadgeClass = 'bg-purple-600 text-white border-purple-600';
+const planningBadgeClass = 'bg-emerald-500 text-white border-emerald-500';
+
+const formatNumberNl = (value: number) => new Intl.NumberFormat('nl-NL').format(value);
 
 export function BOMTable() {
+  const [query, setQuery] = useState('');
+  const totalCount = 643;
+
+  const rows: BomRow[] = useMemo(() => {
+    return bomItems.map((item, idx) => {
+      const article = articles.find((a) => a.sku === item.sku);
+      const verkoopprijs = article?.salePrice ?? 0;
+      const aankoopprijs = article?.purchasePrice ?? 0;
+
+      return {
+        id: item.id,
+        offerteNaam: 'naam',
+        projectCode: `250000${2 + (idx % 3)}-Cer`,
+        projectStatusLabel: 'Projectafg',
+        planningBadgeLabel: `Installatie ${2 + (idx % 2)}`,
+        planningDate1: item.plannedDate,
+        planningDate2: item.plannedDate,
+        planningDate3: item.plannedDate,
+        artikel: item.articleName,
+        sku: item.sku || '-',
+        definitie: item.requiredQuantity,
+        verkoopprijs,
+        aankoopprijs,
+      };
+    });
+  }, []);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return rows;
+    return rows.filter((r) => {
+      return (
+        r.offerteNaam.toLowerCase().includes(q) ||
+        r.projectCode.toLowerCase().includes(q) ||
+        r.artikel.toLowerCase().includes(q) ||
+        r.sku.toLowerCase().includes(q)
+      );
+    });
+  }, [query, rows]);
+
   return (
-    <div className="bg-white border rounded-xl overflow-hidden shadow-sm">
-      <table className="w-full text-left border-collapse">
-        <thead>
-          <tr className="bg-gray-50/50 border-b">
-            <th className="p-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Project</th>
-            <th className="p-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
-            <th className="p-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Planning</th>
-            <th className="p-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Datum</th>
-            <th className="p-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Artikel</th>
-            <th className="p-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">SKU</th>
-            <th className="p-3 text-xs font-semibold text-gray-500 uppercase tracking-wider text-center">Aantal</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y">
-          {bomItems.map((item) => (
-            <tr key={item.id} className="hover:bg-gray-50/50 transition-colors group">
-              <td className="p-3">
-                <div className="flex items-center gap-2">
-                  <ClipboardList className="h-4 w-4 text-gray-400" />
-                  <span className="text-sm font-medium text-gray-900">{item.projectName}</span>
-                </div>
-              </td>
-              <td className="p-3">
-                <Badge variant="outline" className={cn("text-[10px] font-medium px-2 py-0", getStatusBadge(item.projectStatus))}>
-                  {item.projectStatus.replace('_', ' ')}
-                </Badge>
-              </td>
-              <td className="p-3">
-                <Badge variant="outline" className={cn("text-[10px] font-medium px-2 py-0", getPlanningBadge(item.planningStatus))}>
-                  {item.planningStatus}
-                </Badge>
-              </td>
-              <td className="p-3">
-                <div className="flex items-center gap-1.5 text-xs text-gray-500">
-                  <Calendar className="h-3 w-3" />
-                  {item.plannedDate}
-                </div>
-              </td>
-              <td className="p-3 font-medium text-sm text-gray-900">{item.articleName}</td>
-              <td className="p-3 font-mono text-xs text-gray-500">{item.sku || '-'}</td>
-              <td className="p-3 text-center">
-                <span className="inline-flex items-center justify-center w-8 h-8 rounded bg-gray-100 font-bold text-sm text-gray-700">
-                  {item.requiredQuantity}
-                </span>
-              </td>
+    <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+      <div className="px-6 pt-5 pb-4 border-b border-gray-100">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center">
+              <Leaf className="h-4 w-4 text-emerald-600" />
+            </div>
+            <h2 className="text-lg font-extrabold text-gray-900 tracking-tight">BOM-lijst</h2>
+          </div>
+        </div>
+
+        <div className="mt-4 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+            <button
+              type="button"
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-800 text-sm font-bold shrink-0"
+            >
+              Alles
+              <span className="inline-flex items-center justify-center min-w-7 h-6 px-2 rounded-full bg-emerald-600 text-white text-xs font-extrabold">
+                {formatNumberNl(totalCount)}
+              </span>
+            </button>
+
+            <Button variant="ghost" className="h-9 px-2 text-sm font-semibold text-gray-600 hover:text-gray-900">
+              <Columns3 className="h-4 w-4 mr-2" />
+              Kolommen
+            </Button>
+            <Button variant="ghost" className="h-9 px-2 text-sm font-semibold text-gray-600 hover:text-gray-900">
+              <Filter className="h-4 w-4 mr-2" />
+              Filters
+            </Button>
+            <Button variant="ghost" className="h-9 px-2 text-sm font-semibold text-gray-600 hover:text-gray-900">
+              <SlidersHorizontal className="h-4 w-4 mr-2" />
+              Dichtheid
+            </Button>
+            <Button variant="ghost" className="h-9 px-2 text-sm font-semibold text-gray-600 hover:text-gray-900">
+              <ZoomIn className="h-4 w-4 mr-2" />
+              Schaal
+            </Button>
+            <Button variant="ghost" className="h-9 px-2 text-sm font-semibold text-gray-600 hover:text-gray-900">
+              <Download className="h-4 w-4 mr-2" />
+              Exporteren
+            </Button>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="relative">
+              <Input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Zoeken..."
+                className="h-9 w-56 bg-gray-50 border-gray-200 text-sm"
+              />
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-emerald-500" />
+            </div>
+            <Button variant="ghost" size="icon" className="h-9 w-9 text-gray-500 hover:text-gray-900">
+              <Settings className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <div className="overflow-auto">
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="bg-gray-50/80 border-b border-gray-200">
+              <th className="p-3 px-4 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider w-40">Offerten…</th>
+              <th className="p-3 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider w-40">Projectnaa…</th>
+              <th className="p-3 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider w-32">Projectsta…</th>
+              <th className="p-3 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider w-32">Planningst…</th>
+              <th className="p-3 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider w-32">Planningst…</th>
+              <th className="p-3 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider w-32">Planningst…</th>
+              <th className="p-3 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider min-w-[220px]">Artikel</th>
+              <th className="p-3 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider w-36">SKU</th>
+              <th className="p-3 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider text-right w-24">Definitie…</th>
+              <th className="p-3 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider text-right w-28">Verkooppr…</th>
+              <th className="p-3 pr-6 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider text-right w-28">Aankooppr…</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {filtered.map((row) => (
+              <tr key={row.id} className="hover:bg-emerald-50/20 transition-colors">
+                <td className="p-3 px-4 text-sm font-medium text-gray-900">{row.offerteNaam}</td>
+                <td className="p-3 text-sm text-emerald-700 font-semibold">{row.projectCode}</td>
+                <td className="p-3">
+                  <Badge variant="outline" className={cn('text-[10px] font-extrabold px-2 py-0.5 rounded-full', projectStatusBadgeClass)}>
+                    {row.projectStatusLabel}
+                  </Badge>
+                </td>
+                <td className="p-3">
+                  <Badge variant="outline" className={cn('text-[10px] font-extrabold px-2 py-0.5 rounded-full', planningBadgeClass)}>
+                    {row.planningBadgeLabel}
+                  </Badge>
+                </td>
+                <td className="p-3 text-sm text-gray-900">{row.planningDate1}</td>
+                <td className="p-3 text-sm text-gray-900">{row.planningDate2}</td>
+                <td className="p-3 text-sm text-gray-900 truncate max-w-[340px]">{row.artikel}</td>
+                <td className="p-3 font-mono text-xs text-gray-600">{row.sku}</td>
+                <td className="p-3 text-sm text-gray-900 text-right">{formatNumberNl(row.definitie)}</td>
+                <td className="p-3 text-sm text-gray-900 text-right">{formatNumberNl(row.verkoopprijs)}</td>
+                <td className="p-3 pr-6 text-sm text-gray-900 text-right">{formatNumberNl(row.aankoopprijs)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="px-6 py-3 border-t border-gray-100 flex items-center justify-end gap-6 text-xs text-gray-500">
+        <div className="flex items-center gap-2">
+          <span className="font-semibold">Regels per pagina:</span>
+          <span className="text-gray-800 font-bold">25</span>
+        </div>
+        <span className="text-gray-800 font-semibold">1–25 of {formatNumberNl(totalCount)}</span>
+        <div className="flex items-center gap-2">
+          <button className="h-8 w-8 rounded-md border border-gray-200 text-gray-500 hover:text-gray-900 hover:bg-gray-50">
+            ‹
+          </button>
+          <button className="h-8 w-8 rounded-md border border-gray-200 text-gray-500 hover:text-gray-900 hover:bg-gray-50">
+            ›
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

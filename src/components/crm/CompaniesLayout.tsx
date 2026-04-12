@@ -1,14 +1,101 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { 
   Target, Settings, Columns3, SlidersHorizontal, AlignJustify, Maximize2, Download, Search, Plus, Archive, Edit, Info, Trash2
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { crmService, Company } from '@/lib/crmService';
+import { cn } from '@/lib/utils';
+
+type CompaniesColumnKey =
+  | 'select'
+  | 'referentie'
+  | 'bedrijfsnaam'
+  | 'tags'
+  | 'projecten'
+  | 'telefoonnummer'
+  | 'kvk'
+  | 'primaireContactpersoon'
+  | 'moederbedrijf'
+  | 'adres'
+  | 'btw'
+  | 'actions';
+
+type CompaniesColumnDef = {
+  key: CompaniesColumnKey;
+  label?: string;
+  width: number;
+  minWidth: number;
+  resizable: boolean;
+  thClassName?: string;
+};
+
+const companiesColumns: CompaniesColumnDef[] = [
+  { key: 'select', width: 52, minWidth: 44, resizable: false, thClassName: 'p-3 pl-4 text-center' },
+  { key: 'referentie', label: 'Referentie', width: 120, minWidth: 100, resizable: true, thClassName: 'p-3' },
+  { key: 'bedrijfsnaam', label: 'Bedrijfsnaam', width: 240, minWidth: 160, resizable: true, thClassName: 'p-3' },
+  { key: 'tags', label: 'Tags', width: 240, minWidth: 160, resizable: true, thClassName: 'p-3' },
+  { key: 'projecten', label: 'Projecten', width: 110, minWidth: 90, resizable: true, thClassName: 'p-3' },
+  { key: 'telefoonnummer', label: 'Telefoonnummer', width: 160, minWidth: 140, resizable: true, thClassName: 'p-3 whitespace-nowrap' },
+  { key: 'kvk', label: 'KVK', width: 120, minWidth: 100, resizable: true, thClassName: 'p-3' },
+  { key: 'primaireContactpersoon', label: 'Primaire contactpersoon', width: 250, minWidth: 180, resizable: true, thClassName: 'p-3 whitespace-nowrap' },
+  { key: 'moederbedrijf', label: 'Moederbedrijf', width: 210, minWidth: 160, resizable: true, thClassName: 'p-3' },
+  { key: 'adres', label: 'Adres', width: 360, minWidth: 220, resizable: true, thClassName: 'p-3' },
+  { key: 'btw', label: 'BTW', width: 160, minWidth: 130, resizable: true, thClassName: 'p-3' },
+  { key: 'actions', width: 88, minWidth: 72, resizable: false, thClassName: 'p-3 w-14 sticky right-0 bg-white z-20' },
+];
 
 export function CompaniesLayout() {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [columnWidths, setColumnWidths] = useState<Record<CompaniesColumnKey, number>>(() => {
+    return companiesColumns.reduce((acc, col) => {
+      acc[col.key] = col.width;
+      return acc;
+    }, {} as Record<CompaniesColumnKey, number>);
+  });
+  const resizingRef = useRef<{
+    key: CompaniesColumnKey;
+    startX: number;
+    startWidth: number;
+    minWidth: number;
+  } | null>(null);
+
+  const tableMinWidth = useMemo(() => {
+    return companiesColumns.reduce((total, col) => total + (columnWidths[col.key] ?? col.width), 0);
+  }, [columnWidths]);
+
+  const formatReference = (row: Company) => row.referenceNumber || (row.id ? row.id.slice(-6).toUpperCase() : '-');
+
+  const renderTags = (tags?: string[]) => {
+    if (!tags || tags.length === 0) return <span className="text-gray-300">-</span>;
+    return (
+      <div className="flex flex-wrap gap-1 max-w-[220px]">
+        {tags.slice(0, 3).map((t) => (
+          <span
+            key={t}
+            className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-bold uppercase tracking-tighter"
+          >
+            {t}
+          </span>
+        ))}
+        {tags.length > 3 ? (
+          <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-bold uppercase tracking-tighter">+{tags.length - 3}</span>
+        ) : null}
+      </div>
+    );
+  };
+
+  const renderProjects = (count?: number) => {
+    if (!count) return <span className="text-gray-300">-</span>;
+    return <span className="text-[13px] font-semibold text-gray-700">{count}</span>;
+  };
+
+  const formatAddress = (row: Company) => {
+    const base = row.address || '';
+    const city = row.city || '';
+    const combined = [base, city].filter(Boolean).join(', ');
+    return combined || '-';
+  };
 
   // Subscribe to real-time updates from Firebase
   useEffect(() => {
@@ -18,6 +105,34 @@ export function CompaniesLayout() {
     });
     return () => unsubscribe();
   }, []);
+
+  const startResize = (key: CompaniesColumnKey) => (e: React.PointerEvent) => {
+    const col = companiesColumns.find(c => c.key === key);
+    if (!col || !col.resizable) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const startX = e.clientX;
+    const startWidth = columnWidths[key] ?? col.width;
+    const minWidth = col.minWidth;
+    resizingRef.current = { key, startX, startWidth, minWidth };
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+
+    const onPointerMove = (evt: PointerEvent) => {
+      const nextWidth = Math.max(minWidth, startWidth + (evt.clientX - startX));
+      setColumnWidths(prev => ({ ...prev, [key]: nextWidth }));
+    };
+
+    const onPointerUp = () => {
+      resizingRef.current = null;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      window.removeEventListener('pointermove', onPointerMove);
+    };
+
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp, { once: true });
+  };
 
   const toggleSelect = (id: string) => {
     if (selectedIds.includes(id)) {
@@ -36,14 +151,43 @@ export function CompaniesLayout() {
   const handleAddSample = async () => {
     const names = ["Installatiegroep Duurzaam", "Solar Expertise", "Westland Daktechniek", "GroenStroom BV"];
     const randomName = names[Math.floor(Math.random() * names.length)];
+
+    const references = ['2600001', '2600010', '2500011', '2500019', '2600003', '2600004', '2600002'];
+    const addresses = [
+      { address: 'Schieland 27, 8245GB', city: 'Lelystad' },
+      { address: 'Apolloweg 138, 8239DA', city: 'Lelystad' },
+      { address: 'Magdalenbrugstraat 5, 7421', city: 'Deventer' },
+      { address: 'A. Hofmanweg 24, 2031 BL', city: 'Haarlem' },
+      { address: 'Industrieweg 13, 8084 GS', city: 't Harde' },
+      { address: 'Haparandweg 13, 1013 BD', city: 'Amsterdam' },
+      { address: 'De Steiger 27, 1351AB', city: 'Almere' },
+    ];
+    const contactNames = ['Sven | Installatiegroep', 'Sandra Brader', 'Lars Albrechts', 'System'];
+    const tagPool = ['Lead', 'Klant', 'Partner', 'Installatie', 'Service'];
+
+    const randomRef = references[Math.floor(Math.random() * references.length)];
+    const randomAddress = addresses[Math.floor(Math.random() * addresses.length)];
+    const randomContact = contactNames[Math.floor(Math.random() * contactNames.length)];
+    const tags = tagPool
+      .filter(() => Math.random() > 0.6)
+      .slice(0, 3);
+
+    const kvk = String(Math.floor(10000000 + Math.random() * 90000000));
+    const vat = Math.random() > 0.5 ? `NL${String(Math.floor(100000000 + Math.random() * 900000000))}B01` : undefined;
+    const projectsCount = Math.random() > 0.55 ? Math.floor(Math.random() * 4) : 0;
+
     await crmService.addCompany({
       name: `${randomName} ${Math.floor(Math.random() * 1000)}`,
-      email: "info@example.com",
-      phone: "06-12345678",
-      status: "Active",
-      type: "Klant",
-      address: "Hoofdstraat 1",
-      city: "Lelystad"
+      referenceNumber: randomRef,
+      tags,
+      projectsCount,
+      phone: Math.random() > 0.4 ? '06-12345678' : undefined,
+      kvkNumber: Math.random() > 0.5 ? kvk : undefined,
+      primaryContactPerson: Math.random() > 0.45 ? randomContact : undefined,
+      parentCompany: Math.random() > 0.8 ? 'OpusFlow' : undefined,
+      address: randomAddress.address,
+      city: randomAddress.city,
+      vatNumber: vat
     });
   };
 
@@ -100,33 +244,53 @@ export function CompaniesLayout() {
 
         {/* Data Table */}
         <div className="overflow-auto flex-1">
-          <table className="w-full text-left text-sm border-collapse min-w-[1000px]">
+          <table
+            className="w-full text-left text-sm border-collapse table-fixed"
+            style={{ minWidth: tableMinWidth }}
+          >
+            <colgroup>
+              {companiesColumns.map(col => (
+                <col key={col.key} style={{ width: columnWidths[col.key] }} />
+              ))}
+            </colgroup>
             <thead className="sticky top-0 bg-white z-10 shadow-sm border-b border-gray-100">
-              <tr className="bg-gray-50/30">
-                <th className="p-3 pl-4 w-10 text-center">
-                  <input type="checkbox" className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 h-4 w-4" />
-                </th>
-                <th className="p-3 font-semibold text-gray-800 text-[12px] uppercase">ID</th>
-                <th className="p-3 font-semibold text-gray-800 text-[12px] uppercase">Bedrijfsnaam</th>
-                <th className="p-3 font-semibold text-gray-800 text-[12px] uppercase">Type</th>
-                <th className="p-3 font-semibold text-gray-800 text-[12px] uppercase">Telefoon</th>
-                <th className="p-3 font-semibold text-gray-800 text-[12px] uppercase">Stad</th>
-                <th className="p-3 font-semibold text-gray-800 text-[12px] uppercase">Email</th>
-                <th className="p-3 font-semibold text-gray-800 text-[12px] uppercase whitespace-nowrap">Gemaakt op</th>
-                <th className="p-3 font-semibold text-gray-800 text-[12px] uppercase">Status</th>
-                <th className="p-3 w-14 sticky right-0 bg-white z-20"></th>
+              <tr className="bg-gray-50/30 font-bold uppercase tracking-tighter text-gray-400 text-[11px]">
+                {companiesColumns.map(col => (
+                  <th
+                    key={col.key}
+                    className={cn('relative select-none overflow-hidden whitespace-nowrap', col.thClassName)}
+                  >
+                    {col.key === 'select' ? (
+                      <input type="checkbox" className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 h-4 w-4" />
+                    ) : col.key === 'actions' ? null : (
+                      <span className="truncate block">{col.label}</span>
+                    )}
+
+                    {col.resizable ? (
+                      <div
+                        onPointerDown={startResize(col.key)}
+                        className="absolute right-0 top-0 h-full w-2 cursor-col-resize group"
+                        role="separator"
+                        aria-orientation="vertical"
+                        aria-label={`Resize column ${col.label ?? col.key}`}
+                      >
+                        <div className="absolute right-0 top-0 h-full w-px bg-transparent group-hover:bg-gray-300" />
+                      </div>
+                    ) : null}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
               {isLoading ? (
                 <tr>
-                  <td colSpan={10} className="p-20 text-center text-gray-400 italic">
+                  <td colSpan={companiesColumns.length} className="p-20 text-center text-gray-400 italic">
                     Laden van bedrijven...
                   </td>
                 </tr>
               ) : companies.length === 0 ? (
                 <tr>
-                   <td colSpan={10} className="p-20 text-center text-gray-400 italic">
+                   <td colSpan={companiesColumns.length} className="p-20 text-center text-gray-400 italic">
                     Geen bedrijven gevonden. Klik op "+ Sample Toevoegen" om te testen!
                   </td>
                 </tr>
@@ -140,41 +304,42 @@ export function CompaniesLayout() {
                       onChange={() => toggleSelect(row.id!)}
                     />
                   </td>
-                  <td className="p-3 text-[13px] text-gray-500 font-mono">
-                    {row.id?.slice(-6).toUpperCase()}
+                  <td className="p-3 text-[13px] text-gray-500 font-mono whitespace-nowrap">
+                    {formatReference(row)}
                   </td>
-                  <td className="p-3 text-[13px] font-bold text-emerald-800 hover:underline cursor-pointer truncate max-w-[200px]">
+                  <td className="p-3 text-[13px] font-bold text-emerald-800 hover:underline cursor-pointer truncate">
                     {row.name}
                   </td>
                   <td className="p-3">
-                    <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">{row.type}</span>
-                  </td>
-                  <td className="p-3 text-[13px] font-medium text-blue-600">
-                    {row.phone}
-                  </td>
-                  <td className="p-3 text-[13px] text-gray-600">
-                    {row.city}
-                  </td>
-                  <td className="p-3 text-[13px] text-gray-600">
-                    {row.email}
-                  </td>
-                  <td className="p-3 text-[13px] text-gray-500 whitespace-nowrap font-medium">
-                    {row.createdAt?.toDate().toLocaleDateString('nl-NL') || '-'}
+                    {renderTags(row.tags)}
                   </td>
                   <td className="p-3">
-                    <span className={cn(
-                      "text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-tighter",
-                      row.status === 'Active' ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"
-                    )}>
-                      {row.status}
-                    </span>
+                    {renderProjects(row.projectsCount)}
                   </td>
-                  <td className="p-3 text-right">
+                  <td className="p-3 text-[13px] font-medium text-blue-600 whitespace-nowrap">
+                    {row.phone || <span className="text-gray-300">-</span>}
+                  </td>
+                  <td className="p-3 text-[13px] text-gray-600 whitespace-nowrap">
+                    {row.kvkNumber || <span className="text-gray-300">-</span>}
+                  </td>
+                  <td className="p-3 text-[13px] text-gray-600 truncate">
+                    {row.primaryContactPerson || <span className="text-gray-300">-</span>}
+                  </td>
+                  <td className="p-3 text-[13px] text-gray-600 truncate">
+                    {row.parentCompany || <span className="text-gray-300">-</span>}
+                  </td>
+                  <td className="p-3 text-[13px] text-gray-600 truncate">
+                    {formatAddress(row)}
+                  </td>
+                  <td className="p-3 text-[13px] text-gray-600 whitespace-nowrap">
+                    {row.vatNumber || <span className="text-gray-300">-</span>}
+                  </td>
+                  <td className="p-3 text-right sticky right-0 bg-white/90 backdrop-blur-sm group-hover:bg-gray-50/90 transition-colors z-10">
                     <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button className="text-gray-400 hover:text-emerald-700 p-1 rounded hover:bg-gray-100 transition-colors">
                         <Edit className="h-4 w-4" />
                       </button>
-                      <button 
+                      <button
                         onClick={() => handleDelete(row.id!)}
                         className="text-gray-300 hover:text-red-500 p-1 rounded hover:bg-red-50 transition-colors"
                       >
