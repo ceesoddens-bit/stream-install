@@ -162,8 +162,8 @@ const navItems: NavItem[] = [
         id: 'management_automation_parent',
         icon: Sparkles,
         subItems: [
-          { label: 'Overzicht', id: 'management_automation_overview' },
-          { label: 'Integraties', id: 'management_automation_integrations' }
+          { label: 'Automation', id: 'management_automation' },
+          { label: 'Automatisering Lite', id: 'management_automation_lite' }
         ]
       },
       { label: 'PV-Designer', id: 'management_pv_designer', icon: Map },
@@ -172,13 +172,28 @@ const navItems: NavItem[] = [
         id: 'management_templates_parent',
         icon: FileText,
         subItems: [
-          { label: 'Documenten', id: 'management_templates_documents' },
-          { label: "E-mails", id: 'management_templates_emails' }
+          { label: 'Automation E-Mail', id: 'management_templates_automation_email' },
+          { label: 'Email', id: 'management_templates_email' },
+          { label: 'Formulieren', id: 'management_templates_forms' },
+          { label: 'PDF', id: 'management_templates_pdf' },
+          { label: 'Workflows', id: 'management_templates_workflows' }
         ]
       },
-      { label: 'Projecten', id: 'management_projects', icon: ListTodo },
-      { label: 'Customer Portal', id: 'management_customer_portal', icon: Globe },
-      { label: 'Instellingen', id: 'management_settings', icon: Settings },
+      {
+        label: 'Projecten',
+        id: 'management_projects',
+        icon: ListTodo,
+        subItems: [{ label: 'Groepen', id: 'management_projectgroups' }]
+      },
+      {
+        label: 'Customer Portal',
+        id: 'management_customer_portal',
+        icon: Globe,
+        subItems: [
+          { label: 'Layout', id: 'management_customer_portal_layout' },
+          { label: 'Klantportaalinhoud', id: 'management_customer_portal_content' }
+        ]
+      },
     ]
   },
   {
@@ -212,6 +227,8 @@ export function Sidebar({
     'finance_parent',
     'logistiek_parent',
     'management_parent',
+    'management_projects',
+    'management_customer_portal',
     'settings_parent',
     'tickets_parent'
   ]);
@@ -258,7 +275,12 @@ export function Sidebar({
               <button
                 onClick={() => {
                   if (hasSubItems) {
+                    const willExpand = !isExpanded;
                     toggleExpand(item.id);
+                    if (willExpand && item.id === 'management_customer_portal') {
+                      const defaultSubItemId = item.subItems?.[0]?.id;
+                      if (defaultSubItemId) onViewChange(defaultSubItemId);
+                    }
                   } else {
                     onViewChange(item.id);
                   }
@@ -293,6 +315,12 @@ export function Sidebar({
                         <button
                           onClick={() => {
                             if (hasSubSubItems) {
+                              if (subItem.id === 'management_customer_portal') {
+                                if (!isSubExpanded) toggleExpand(subItem.id);
+                                const defaultLeafId = subItem.subItems?.[0]?.id;
+                                if (defaultLeafId) onViewChange(defaultLeafId);
+                                return;
+                              }
                               toggleExpand(subItem.id);
                             } else {
                               onViewChange(subItem.id);

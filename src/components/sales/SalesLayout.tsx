@@ -1,7 +1,147 @@
-import React from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { Columns3, SlidersHorizontal, AlignJustify, Download, Search, Calendar as CalendarIcon } from 'lucide-react';
 
+type SalesTotalColumnKey =
+  | 'accountManager'
+  | 'leads'
+  | 'marge'
+  | 'marginPerc'
+  | 'verkoopmarge'
+  | 'inkoopprijs'
+  | 'verkoopprijs';
+
+type SalesOfferColumnKey =
+  | 'id'
+  | 'project'
+  | 'accountManager'
+  | 'marge'
+  | 'marginPerc'
+  | 'verkoopmarge'
+  | 'inkoopprijs'
+  | 'verkoopprijs'
+  | 'datum';
+
+type SalesColumnDef<K extends string> = {
+  key: K;
+  label: string;
+  width: number;
+  minWidth: number;
+  resizable: boolean;
+  thClassName?: string;
+};
+
+const salesTotalColumns: SalesColumnDef<SalesTotalColumnKey>[] = [
+  { key: 'accountManager', label: 'Account manager', width: 220, minWidth: 160, resizable: true, thClassName: 'p-3 font-semibold text-gray-700' },
+  { key: 'leads', label: '# Leads', width: 90, minWidth: 80, resizable: true, thClassName: 'p-3 font-semibold text-gray-700 whitespace-nowrap' },
+  { key: 'marge', label: 'Marge', width: 120, minWidth: 110, resizable: true, thClassName: 'p-3 font-semibold text-gray-700 text-right' },
+  { key: 'marginPerc', label: 'Margin %', width: 110, minWidth: 100, resizable: true, thClassName: 'p-3 font-semibold text-gray-700 text-right whitespace-nowrap' },
+  { key: 'verkoopmarge', label: 'Verkoopmarge', width: 140, minWidth: 120, resizable: true, thClassName: 'p-3 font-semibold text-gray-700 text-right whitespace-nowrap' },
+  { key: 'inkoopprijs', label: 'Inkoopprijs', width: 140, minWidth: 120, resizable: true, thClassName: 'p-3 font-semibold text-gray-700 text-right' },
+  { key: 'verkoopprijs', label: 'Verkoopprijs', width: 150, minWidth: 130, resizable: true, thClassName: 'p-3 font-semibold text-gray-700 text-right' },
+];
+
+const salesOfferColumns: SalesColumnDef<SalesOfferColumnKey>[] = [
+  { key: 'id', label: 'Id', width: 70, minWidth: 60, resizable: true, thClassName: 'p-3 font-semibold text-gray-700' },
+  { key: 'project', label: 'Project', width: 240, minWidth: 160, resizable: true, thClassName: 'p-3 font-semibold text-gray-700' },
+  { key: 'accountManager', label: 'Accountmanager', width: 220, minWidth: 160, resizable: true, thClassName: 'p-3 font-semibold text-gray-700' },
+  { key: 'marge', label: 'Marge', width: 120, minWidth: 110, resizable: true, thClassName: 'p-3 font-semibold text-gray-700 text-right' },
+  { key: 'marginPerc', label: 'Margin %', width: 110, minWidth: 100, resizable: true, thClassName: 'p-3 font-semibold text-gray-700 text-right whitespace-nowrap' },
+  { key: 'verkoopmarge', label: 'Verkoopmarge', width: 140, minWidth: 120, resizable: true, thClassName: 'p-3 font-semibold text-gray-700 text-right whitespace-nowrap' },
+  { key: 'inkoopprijs', label: 'Inkoopprijs', width: 140, minWidth: 120, resizable: true, thClassName: 'p-3 font-semibold text-gray-700 text-right' },
+  { key: 'verkoopprijs', label: 'Verkoopprijs', width: 150, minWidth: 130, resizable: true, thClassName: 'p-3 font-semibold text-gray-700 text-right' },
+  { key: 'datum', label: 'Geaccepteerd', width: 140, minWidth: 120, resizable: true, thClassName: 'p-3 font-semibold text-gray-700 text-right whitespace-nowrap' },
+];
+
 export function SalesLayout() {
+  const [totalColumnWidths, setTotalColumnWidths] = useState<Record<SalesTotalColumnKey, number>>(() => {
+    return salesTotalColumns.reduce((acc, col) => {
+      acc[col.key] = col.width;
+      return acc;
+    }, {} as Record<SalesTotalColumnKey, number>);
+  });
+  const [offerColumnWidths, setOfferColumnWidths] = useState<Record<SalesOfferColumnKey, number>>(() => {
+    return salesOfferColumns.reduce((acc, col) => {
+      acc[col.key] = col.width;
+      return acc;
+    }, {} as Record<SalesOfferColumnKey, number>);
+  });
+  const totalResizingRef = useRef<{
+    key: SalesTotalColumnKey;
+    startX: number;
+    startWidth: number;
+    minWidth: number;
+  } | null>(null);
+  const offerResizingRef = useRef<{
+    key: SalesOfferColumnKey;
+    startX: number;
+    startWidth: number;
+    minWidth: number;
+  } | null>(null);
+
+  const totalTableMinWidth = useMemo(() => {
+    return salesTotalColumns.reduce((sum, col) => sum + (totalColumnWidths[col.key] ?? col.width), 0);
+  }, [totalColumnWidths]);
+
+  const offerTableMinWidth = useMemo(() => {
+    return salesOfferColumns.reduce((sum, col) => sum + (offerColumnWidths[col.key] ?? col.width), 0);
+  }, [offerColumnWidths]);
+
+  const startTotalResize = (key: SalesTotalColumnKey) => (e: React.PointerEvent) => {
+    const col = salesTotalColumns.find(c => c.key === key);
+    if (!col || !col.resizable) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const startX = e.clientX;
+    const startWidth = totalColumnWidths[key] ?? col.width;
+    const minWidth = col.minWidth;
+    totalResizingRef.current = { key, startX, startWidth, minWidth };
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+
+    const onPointerMove = (evt: PointerEvent) => {
+      const nextWidth = Math.max(minWidth, startWidth + (evt.clientX - startX));
+      setTotalColumnWidths(prev => ({ ...prev, [key]: nextWidth }));
+    };
+
+    const onPointerUp = () => {
+      totalResizingRef.current = null;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      window.removeEventListener('pointermove', onPointerMove);
+    };
+
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp, { once: true });
+  };
+
+  const startOfferResize = (key: SalesOfferColumnKey) => (e: React.PointerEvent) => {
+    const col = salesOfferColumns.find(c => c.key === key);
+    if (!col || !col.resizable) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const startX = e.clientX;
+    const startWidth = offerColumnWidths[key] ?? col.width;
+    const minWidth = col.minWidth;
+    offerResizingRef.current = { key, startX, startWidth, minWidth };
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+
+    const onPointerMove = (evt: PointerEvent) => {
+      const nextWidth = Math.max(minWidth, startWidth + (evt.clientX - startX));
+      setOfferColumnWidths(prev => ({ ...prev, [key]: nextWidth }));
+    };
+
+    const onPointerUp = () => {
+      offerResizingRef.current = null;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      window.removeEventListener('pointermove', onPointerMove);
+    };
+
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp, { once: true });
+  };
+
   const totaalData = [
     { manager: 'Installatiegroep...', leads: 6, marge: '€ 5.747,78', marginPerc: '66.19', verkoopmarge: '39.83', inkoopprijs: '€ 8.684,00', verkoopprijs: '€ 14.431,78' },
     { manager: 'Sandra Brader', leads: 1, marge: '€ 1.612,00', marginPerc: '76.91', verkoopmarge: '43.47', inkoopprijs: '€ 2.096,00', verkoopprijs: '€ 3.708,00' }
@@ -58,22 +198,39 @@ export function SalesLayout() {
           </div>
 
           <div className="overflow-x-auto flex-1 h-[400px]">
-            <table className="w-full text-left text-sm border-collapse min-w-[700px]">
+            <table
+              className="w-full text-left text-sm border-collapse table-fixed"
+              style={{ minWidth: totalTableMinWidth }}
+            >
+              <colgroup>
+                {salesTotalColumns.map(col => (
+                  <col key={col.key} style={{ width: totalColumnWidths[col.key] }} />
+                ))}
+              </colgroup>
               <thead className="sticky top-0 bg-white">
                 <tr className="border-b border-gray-100">
-                  <th className="p-3 font-semibold text-gray-700">Account manager</th>
-                  <th className="p-3 font-semibold text-gray-700 whitespace-nowrap"># Leads</th>
-                  <th className="p-3 font-semibold text-gray-700 text-right">Marge</th>
-                  <th className="p-3 font-semibold text-gray-700 text-right whitespace-nowrap">Margin %</th>
-                  <th className="p-3 font-semibold text-gray-700 text-right whitespace-nowrap">Verkoopmar...</th>
-                  <th className="p-3 font-semibold text-gray-700 text-right">Inkoopprijs</th>
-                  <th className="p-3 font-semibold text-gray-700 text-right">Verkoopprijs</th>
+                  {salesTotalColumns.map(col => (
+                    <th key={col.key} className={`relative select-none overflow-hidden whitespace-nowrap ${col.thClassName ?? ''}`}>
+                      <span className="truncate block">{col.label}</span>
+                      {col.resizable ? (
+                        <div
+                          onPointerDown={startTotalResize(col.key)}
+                          className="absolute right-0 top-0 h-full w-2 cursor-col-resize group"
+                          role="separator"
+                          aria-orientation="vertical"
+                          aria-label={`Resize column ${col.label}`}
+                        >
+                          <div className="absolute right-0 top-0 h-full w-px bg-transparent group-hover:bg-gray-300" />
+                        </div>
+                      ) : null}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
                 {totaalData.map((row, i) => (
                   <tr key={i} className="border-b border-gray-50 hover:bg-gray-50/50">
-                    <td className="p-3 text-gray-600">{row.manager}</td>
+                    <td className="p-3 text-gray-600 truncate">{row.manager}</td>
                     <td className="p-3 text-gray-600">{row.leads}</td>
                     <td className="p-3 text-gray-600 text-right">{row.marge}</td>
                     <td className="p-3 text-gray-600 text-right">{row.marginPerc}</td>
@@ -121,18 +278,33 @@ export function SalesLayout() {
           </div>
 
           <div className="overflow-x-auto flex-1 h-[400px]">
-            <table className="w-full text-left text-sm border-collapse min-w-[940px]">
+            <table
+              className="w-full text-left text-sm border-collapse table-fixed"
+              style={{ minWidth: offerTableMinWidth }}
+            >
+              <colgroup>
+                {salesOfferColumns.map(col => (
+                  <col key={col.key} style={{ width: offerColumnWidths[col.key] }} />
+                ))}
+              </colgroup>
               <thead className="sticky top-0 bg-white">
                 <tr className="border-b border-gray-100">
-                  <th className="p-3 font-semibold text-gray-700 w-[60px]">Id</th>
-                  <th className="p-3 font-semibold text-gray-700">Project</th>
-                  <th className="p-3 font-semibold text-gray-700">Accountmanager</th>
-                  <th className="p-3 font-semibold text-gray-700 text-right">Marge</th>
-                  <th className="p-3 font-semibold text-gray-700 text-right whitespace-nowrap">Margin %</th>
-                  <th className="p-3 font-semibold text-gray-700 text-right whitespace-nowrap">Verkoopmar...</th>
-                  <th className="p-3 font-semibold text-gray-700 text-right">Inkoopprijs</th>
-                  <th className="p-3 font-semibold text-gray-700 text-right">Verkoopprijs</th>
-                  <th className="p-3 font-semibold text-gray-700 text-right whitespace-nowrap">Accepteer...</th>
+                  {salesOfferColumns.map(col => (
+                    <th key={col.key} className={`relative select-none overflow-hidden whitespace-nowrap ${col.thClassName ?? ''}`}>
+                      <span className="truncate block">{col.label}</span>
+                      {col.resizable ? (
+                        <div
+                          onPointerDown={startOfferResize(col.key)}
+                          className="absolute right-0 top-0 h-full w-2 cursor-col-resize group"
+                          role="separator"
+                          aria-orientation="vertical"
+                          aria-label={`Resize column ${col.label}`}
+                        >
+                          <div className="absolute right-0 top-0 h-full w-px bg-transparent group-hover:bg-gray-300" />
+                        </div>
+                      ) : null}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
@@ -140,9 +312,9 @@ export function SalesLayout() {
                   <tr key={i} className="border-b border-gray-50 hover:bg-gray-50/50">
                     <td className="p-3 text-emerald-700 font-bold">{row.id}</td>
                     <td className="p-3">
-                      <span className="text-emerald-700 font-semibold hover:underline cursor-pointer">{row.project}</span>
+                      <span className="text-emerald-700 font-semibold hover:underline cursor-pointer truncate block">{row.project}</span>
                     </td>
-                    <td className="p-3 text-gray-600">{row.manager}</td>
+                    <td className="p-3 text-gray-600 truncate">{row.manager}</td>
                     <td className="p-3 text-gray-600 text-right">{row.marge}</td>
                     <td className="p-3 text-gray-600 text-right">{row.marginPerc}</td>
                     <td className="p-3 text-gray-600 text-right">{row.verkoopmarge}</td>

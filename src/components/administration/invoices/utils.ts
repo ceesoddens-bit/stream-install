@@ -40,7 +40,8 @@ export function toneClasses(tone: (typeof statusFilters)[number]['tone']) {
   }
 }
 
-export function formatCurrency(value: number) {
+export function formatCurrency(value: number | undefined | null) {
+  if (value === undefined || value === null || Number.isNaN(value)) return '-';
   return value.toLocaleString('nl-NL', {
     style: 'currency',
     currency: 'EUR',
@@ -100,8 +101,23 @@ export function filterInvoices({
     .filter((r) => (statusFilter === 'Alles' ? true : r.status === statusFilter))
     .filter((r) => {
       if (!q) return true;
-      const haystack = [String(r.code), r.project, r.bedrijfsnaam, r.offerte?.label ?? ''].join(' ').toLowerCase();
+      const haystack = [
+        String(r.code),
+        r.project,
+        r.bedrijfsnaam,
+        r.offerte?.label ?? '',
+        r.kredietOorspr,
+        r.contactName,
+        r.emailAddress,
+        r.reference,
+        String(r.paymentTermDays),
+        r.createdAt,
+        r.createdBy.name,
+        r.updatedAt,
+        r.updatedBy.name,
+      ]
+        .join(' ')
+        .toLowerCase();
       return haystack.includes(q);
     });
 }
-

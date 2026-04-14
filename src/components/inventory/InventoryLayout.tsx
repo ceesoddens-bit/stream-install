@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { ArticlesTable } from './ArticlesTable';
 import { BOMTable } from './BOMTable';
+import { SuppliersTable } from './SuppliersTable';
+import { StockOverviewTable } from './StockOverviewTable';
+import { MutationsTable } from './MutationsTable';
+import { WarehousesTable } from './WarehousesTable';
+import { PurchaseOrdersTable } from './PurchaseOrdersTable';
 import { cn } from '@/lib/utils';
 import { Search, Filter, Plus, Download, PackageOpen, AlertTriangle, TrendingDown } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -28,7 +33,7 @@ export function InventoryLayout({ initialTab }: InventoryLayoutProps) {
     return 'artikelen';
   });
   const [items, setItems] = useState<InventoryItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(activeTab === 'artikelen');
 
   useEffect(() => {
     if (!initialTab) return;
@@ -37,12 +42,17 @@ export function InventoryLayout({ initialTab }: InventoryLayoutProps) {
   }, [initialTab]);
 
   useEffect(() => {
+    if (activeTab !== 'artikelen') {
+      setIsLoading(false);
+      return;
+    }
+    setIsLoading(true);
     const unsubscribe = inventoryService.subscribeToInventory((fetched) => {
       setItems(fetched);
       setIsLoading(false);
     });
     return () => unsubscribe();
-  }, []);
+  }, [activeTab]);
 
   const handleAddSample = async () => {
     const cats = ['Warmtepompen', 'Batterij', 'Airco', 'Zonnepanelen'];
@@ -70,9 +80,15 @@ export function InventoryLayout({ initialTab }: InventoryLayoutProps) {
   const lowStockItems = items.filter(a => a.stock > 0 && a.stock <= a.minStock).length;
   const outOfStockItems = items.filter(a => a.stock === 0).length;
 
+  if (activeTab === 'overzicht') return <StockOverviewTable />;
+  if (activeTab === 'mutaties') return <MutationsTable />;
+  if (activeTab === 'magazijnen') return <WarehousesTable />;
+  if (activeTab === 'inkooporders') return <PurchaseOrdersTable />;
+  if (activeTab === 'leveranciers') return <SuppliersTable />;
+  if (activeTab === 'boms') return <BOMTable />;
+
   return (
     <div className="flex flex-col h-full bg-gray-50/50">
-      {/* ── Page Header & KPIs ── */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Voorraadbeheer</h1>
@@ -96,7 +112,7 @@ export function InventoryLayout({ initialTab }: InventoryLayoutProps) {
               </div>
             </CardContent>
           </Card>
-          
+
           <Card className="border-gray-200 shadow-sm bg-white">
             <CardContent className="p-4 flex items-center gap-4">
               <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center shrink-0">
@@ -108,7 +124,7 @@ export function InventoryLayout({ initialTab }: InventoryLayoutProps) {
               </div>
             </CardContent>
           </Card>
-          
+
           <Card className="border-gray-200 border-l-4 border-l-orange-400 shadow-sm bg-white cursor-pointer hover:bg-orange-50/30 transition-colors">
             <CardContent className="p-4 flex items-center gap-4">
               <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center shrink-0">
@@ -136,7 +152,6 @@ export function InventoryLayout({ initialTab }: InventoryLayoutProps) {
       </div>
 
       <div className="flex flex-col flex-1 bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-        {/* Sub-navigation */}
         <div className="flex items-center justify-between border-b border-gray-100 px-4 bg-gray-50/50 shrink-0">
           <div className="flex gap-2 overflow-x-auto no-scrollbar">
             {tabs.map((tab) => (
@@ -145,9 +160,7 @@ export function InventoryLayout({ initialTab }: InventoryLayoutProps) {
                 onClick={() => setActiveTab(tab.id)}
                 className={cn(
                   "px-4 py-3 text-sm font-semibold transition-colors relative whitespace-nowrap",
-                  activeTab === tab.id 
-                    ? "text-blue-700" 
-                    : "text-gray-500 hover:text-gray-800"
+                  activeTab === tab.id ? "text-blue-700" : "text-gray-500 hover:text-gray-800"
                 )}
               >
                 {tab.label}
@@ -162,9 +175,10 @@ export function InventoryLayout({ initialTab }: InventoryLayoutProps) {
               <Download className="h-3.5 w-3.5" />
               Exporteren
             </Button>
-            <Button 
+            <Button
               onClick={handleAddSample}
-              size="sm" className="h-8 gap-2 bg-blue-600 hover:bg-blue-700 text-xs font-semibold ml-2 shadow-sm"
+              size="sm"
+              className="h-8 gap-2 bg-blue-600 hover:bg-blue-700 text-xs font-semibold ml-2 shadow-sm"
             >
               <Plus className="h-3.5 w-3.5" />
               Nieuw Artikel (Sample)
@@ -172,7 +186,6 @@ export function InventoryLayout({ initialTab }: InventoryLayoutProps) {
           </div>
         </div>
 
-        {/* Toolbar */}
         <div className="flex items-center justify-between gap-4 p-4 shrink-0">
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
@@ -189,26 +202,11 @@ export function InventoryLayout({ initialTab }: InventoryLayoutProps) {
           </div>
         </div>
 
-        {/* Content Area */}
         <div className="flex-1 overflow-auto bg-gray-50/30">
           {isLoading ? (
             <div className="p-20 text-center text-gray-400 animate-pulse">Laden van artikelen...</div>
           ) : (
-            <>
-              {activeTab === 'artikelen' && <ArticlesTable items={items} />}
-              {activeTab === 'boms' && <BOMTable />}
-              {activeTab !== 'artikelen' && activeTab !== 'boms' && (
-                <div className="flex items-center justify-center p-12 h-64">
-                  <div className="text-center">
-                    <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                      <PackageOpen className="h-5 w-5 text-gray-400" />
-                    </div>
-                    <h2 className="text-lg font-bold text-gray-900 mb-1">{tabs.find(t => t.id === activeTab)?.label} in aanbouw</h2>
-                    <p className="text-sm text-gray-500">Deze module wordt momenteel ontwikkeld in Firebase.</p>
-                  </div>
-                </div>
-              )}
-            </>
+            <ArticlesTable items={items} />
           )}
         </div>
       </div>

@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { bomItems, articles } from '@/data/mockData';
 import { cn } from '@/lib/utils';
+import { useResizableColumns } from '@/lib/useResizableColumns';
 import {
   Columns3,
   Download,
@@ -35,9 +36,49 @@ const planningBadgeClass = 'bg-emerald-500 text-white border-emerald-500';
 
 const formatNumberNl = (value: number) => new Intl.NumberFormat('nl-NL').format(value);
 
+type BomColumnKey =
+  | 'offerteNaam'
+  | 'projectCode'
+  | 'projectStatus'
+  | 'planningBadge'
+  | 'planningDate1'
+  | 'planningDate2'
+  | 'planningDate3'
+  | 'artikel'
+  | 'sku'
+  | 'definitie'
+  | 'verkoopprijs'
+  | 'aankoopprijs';
+
+type BomColumnDef = {
+  key: BomColumnKey;
+  label: string;
+  width: number;
+  minWidth: number;
+  resizable: boolean;
+  thClassName?: string;
+};
+
+const bomColumns: BomColumnDef[] = [
+  { key: 'offerteNaam', label: 'Offerte', width: 180, minWidth: 140, resizable: true, thClassName: 'p-3 px-4 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider' },
+  { key: 'projectCode', label: 'Projectnaam', width: 190, minWidth: 150, resizable: true, thClassName: 'p-3 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider' },
+  { key: 'projectStatus', label: 'Projectstatus', width: 150, minWidth: 130, resizable: true, thClassName: 'p-3 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider' },
+  { key: 'planningBadge', label: 'Planningstatus', width: 170, minWidth: 140, resizable: true, thClassName: 'p-3 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider' },
+  { key: 'planningDate1', label: 'Planning 1', width: 140, minWidth: 120, resizable: true, thClassName: 'p-3 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider' },
+  { key: 'planningDate2', label: 'Planning 2', width: 140, minWidth: 120, resizable: true, thClassName: 'p-3 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider' },
+  { key: 'planningDate3', label: 'Planning 3', width: 140, minWidth: 120, resizable: true, thClassName: 'p-3 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider' },
+  { key: 'artikel', label: 'Artikel', width: 320, minWidth: 220, resizable: true, thClassName: 'p-3 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider' },
+  { key: 'sku', label: 'SKU', width: 140, minWidth: 120, resizable: true, thClassName: 'p-3 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider' },
+  { key: 'definitie', label: 'Definitie', width: 120, minWidth: 100, resizable: true, thClassName: 'p-3 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider text-right' },
+  { key: 'verkoopprijs', label: 'Verkoopprijs', width: 140, minWidth: 120, resizable: true, thClassName: 'p-3 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider text-right' },
+  { key: 'aankoopprijs', label: 'Aankoopprijs', width: 140, minWidth: 120, resizable: true, thClassName: 'p-3 pr-6 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider text-right' },
+];
+
 export function BOMTable() {
   const [query, setQuery] = useState('');
   const totalCount = 643;
+
+  const { columnWidths, startResize, tableMinWidth } = useResizableColumns(bomColumns);
 
   const rows: BomRow[] = useMemo(() => {
     return bomItems.map((item, idx) => {
@@ -140,20 +181,33 @@ export function BOMTable() {
       </div>
 
       <div className="overflow-auto">
-        <table className="w-full text-left border-collapse">
+        <table className="w-full text-left border-collapse table-fixed" style={{ minWidth: tableMinWidth }}>
+          <colgroup>
+            {bomColumns.map(col => (
+              <col key={col.key} style={{ width: columnWidths[col.key] }} />
+            ))}
+          </colgroup>
           <thead>
             <tr className="bg-gray-50/80 border-b border-gray-200">
-              <th className="p-3 px-4 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider w-40">Offerten…</th>
-              <th className="p-3 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider w-40">Projectnaa…</th>
-              <th className="p-3 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider w-32">Projectsta…</th>
-              <th className="p-3 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider w-32">Planningst…</th>
-              <th className="p-3 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider w-32">Planningst…</th>
-              <th className="p-3 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider w-32">Planningst…</th>
-              <th className="p-3 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider min-w-[220px]">Artikel</th>
-              <th className="p-3 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider w-36">SKU</th>
-              <th className="p-3 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider text-right w-24">Definitie…</th>
-              <th className="p-3 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider text-right w-28">Verkooppr…</th>
-              <th className="p-3 pr-6 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider text-right w-28">Aankooppr…</th>
+              {bomColumns.map(col => (
+                <th
+                  key={col.key}
+                  className={cn('relative select-none overflow-hidden whitespace-nowrap', col.thClassName)}
+                >
+                  <span className="truncate block">{col.label}</span>
+                  {col.resizable ? (
+                    <div
+                      onPointerDown={startResize(col.key)}
+                      className="absolute right-0 top-0 h-full w-2 cursor-col-resize group"
+                      role="separator"
+                      aria-orientation="vertical"
+                      aria-label={`Resize column ${col.label}`}
+                    >
+                      <div className="absolute right-0 top-0 h-full w-px bg-transparent group-hover:bg-gray-300" />
+                    </div>
+                  ) : null}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -173,7 +227,8 @@ export function BOMTable() {
                 </td>
                 <td className="p-3 text-sm text-gray-900">{row.planningDate1}</td>
                 <td className="p-3 text-sm text-gray-900">{row.planningDate2}</td>
-                <td className="p-3 text-sm text-gray-900 truncate max-w-[340px]">{row.artikel}</td>
+                <td className="p-3 text-sm text-gray-900">{row.planningDate3}</td>
+                <td className="p-3 text-sm text-gray-900 truncate" title={row.artikel}>{row.artikel}</td>
                 <td className="p-3 font-mono text-xs text-gray-600">{row.sku}</td>
                 <td className="p-3 text-sm text-gray-900 text-right">{formatNumberNl(row.definitie)}</td>
                 <td className="p-3 text-sm text-gray-900 text-right">{formatNumberNl(row.verkoopprijs)}</td>

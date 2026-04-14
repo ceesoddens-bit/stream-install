@@ -1,0 +1,268 @@
+import React, { useMemo, useRef, useState } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import { managementUsers } from '@/data/managementMockData';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Columns3, Filter, Search, Users, Mail, Plus } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+
+const formatRangeLabel = (from: number, to: number, total: number) => `${from}–${to} of ${total}`;
+
+type UsersColumnKey =
+  | 'foto'
+  | 'naam'
+  | 'adres'
+  | 'email'
+  | 'afdelingen'
+  | 'rol'
+  | 'uurtarief1'
+  | 'uurtarief2'
+  | 'gearchiveerd'
+  | 'actions';
+
+type UsersColumnDef = {
+  key: UsersColumnKey;
+  label?: string;
+  width: number;
+  minWidth: number;
+  resizable: boolean;
+  thClassName?: string;
+};
+
+const usersColumns: UsersColumnDef[] = [
+  { key: 'foto', label: 'Foto', width: 96, minWidth: 80, resizable: false, thClassName: 'p-3 px-4 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider' },
+  { key: 'naam', label: 'Naam', width: 240, minWidth: 180, resizable: true, thClassName: 'p-3 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider' },
+  { key: 'adres', label: 'Adres', width: 240, minWidth: 180, resizable: true, thClassName: 'p-3 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider' },
+  { key: 'email', label: 'Email', width: 260, minWidth: 200, resizable: true, thClassName: 'p-3 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider' },
+  { key: 'afdelingen', label: 'Afdeling(en)', width: 200, minWidth: 160, resizable: true, thClassName: 'p-3 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider' },
+  { key: 'rol', label: 'Rol', width: 160, minWidth: 140, resizable: true, thClassName: 'p-3 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider' },
+  { key: 'uurtarief1', label: 'Uurtarief (1)', width: 160, minWidth: 140, resizable: true, thClassName: 'p-3 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider' },
+  { key: 'uurtarief2', label: 'Uurtarief (2)', width: 160, minWidth: 140, resizable: true, thClassName: 'p-3 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider' },
+  { key: 'gearchiveerd', label: 'Gearchiveerd', width: 120, minWidth: 110, resizable: true, thClassName: 'p-3 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider' },
+  { key: 'actions', width: 64, minWidth: 56, resizable: false, thClassName: 'p-3 pr-4 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider' },
+];
+
+export function ManagementUsersView() {
+  const [query, setQuery] = useState('');
+
+  const [columnWidths, setColumnWidths] = useState<Record<UsersColumnKey, number>>(() => {
+    return usersColumns.reduce((acc, col) => {
+      acc[col.key] = col.width;
+      return acc;
+    }, {} as Record<UsersColumnKey, number>);
+  });
+  const resizingRef = useRef<{
+    key: UsersColumnKey;
+    startX: number;
+    startWidth: number;
+    minWidth: number;
+  } | null>(null);
+
+  const tableMinWidth = useMemo(() => {
+    return usersColumns.reduce((total, col) => total + (columnWidths[col.key] ?? col.width), 0);
+  }, [columnWidths]);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return managementUsers;
+    return managementUsers.filter((u) => {
+      return (
+        u.name.toLowerCase().includes(q) ||
+        u.email.toLowerCase().includes(q) ||
+        u.role.toLowerCase().includes(q) ||
+        u.departments.toLowerCase().includes(q)
+      );
+    });
+  }, [query]);
+
+  const activeCount = managementUsers.length;
+  const invitedCount = 0;
+  const perPage = 50;
+  const shownFrom = filtered.length ? 1 : 0;
+  const shownTo = filtered.length;
+
+  const startResize = (key: UsersColumnKey) => (e: React.PointerEvent) => {
+    const col = usersColumns.find(c => c.key === key);
+    if (!col || !col.resizable) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const startX = e.clientX;
+    const startWidth = columnWidths[key] ?? col.width;
+    const minWidth = col.minWidth;
+    resizingRef.current = { key, startX, startWidth, minWidth };
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+
+    const onPointerMove = (evt: PointerEvent) => {
+      const nextWidth = Math.max(minWidth, startWidth + (evt.clientX - startX));
+      setColumnWidths(prev => ({ ...prev, [key]: nextWidth }));
+    };
+
+    const onPointerUp = () => {
+      resizingRef.current = null;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      window.removeEventListener('pointermove', onPointerMove);
+    };
+
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp, { once: true });
+  };
+
+  return (
+    <div className="flex flex-col h-full">
+      <div className="flex items-start justify-between gap-6 mb-6">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center border border-emerald-100">
+            <Users className="h-5 w-5" />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900">Gebruikers</h1>
+        </div>
+
+        <div className="flex items-stretch gap-3 flex-1 justify-end">
+          <Card className="border-0 shadow-sm bg-blue-700 text-white min-w-[260px]">
+            <CardContent className="p-4 flex items-center justify-between gap-3">
+              <div>
+                <div className="text-3xl font-extrabold leading-none">{activeCount}</div>
+                <div className="text-xs font-semibold text-white/80 mt-1">Actieve gebruikers</div>
+              </div>
+              <div className="h-10 w-10 rounded-xl bg-white/10 flex items-center justify-center">
+                <Users className="h-5 w-5 text-white" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-sm bg-amber-600 text-white min-w-[260px]">
+            <CardContent className="p-4 flex items-center justify-between gap-3">
+              <div>
+                <div className="text-3xl font-extrabold leading-none">{invitedCount}</div>
+                <div className="text-xs font-semibold text-white/80 mt-1">Uitgenodigd</div>
+              </div>
+              <div className="h-10 w-10 rounded-xl bg-white/10 flex items-center justify-center">
+                <Mail className="h-5 w-5 text-white" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Button className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2 h-11 px-4 shadow-sm">
+            <Plus className="h-4 w-4" />
+            Nieuwe Gebruiker
+          </Button>
+        </div>
+      </div>
+
+      <div className="flex flex-col flex-1 bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+        <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-gray-100 bg-gray-50/50 shrink-0">
+          <button
+            type="button"
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-800 text-sm font-bold shrink-0"
+          >
+            Alles
+          </button>
+
+          <div className="flex items-center gap-1 overflow-x-auto no-scrollbar flex-1">
+            <Button variant="ghost" className="h-9 px-2 text-sm font-semibold text-gray-600 hover:text-gray-900">
+              <Columns3 className="h-4 w-4 mr-2" />
+              Kolommen
+            </Button>
+            <Button variant="ghost" className="h-9 px-2 text-sm font-semibold text-gray-600 hover:text-gray-900">
+              <Filter className="h-4 w-4 mr-2" />
+              Filters
+            </Button>
+            <Button variant="ghost" className="h-9 px-2 text-sm font-semibold text-gray-600 hover:text-gray-900">
+              Grootte
+            </Button>
+            <Button variant="ghost" className="h-9 px-2 text-sm font-semibold text-gray-600 hover:text-gray-900">
+              Filtersjablonen
+            </Button>
+          </div>
+
+          <div className="relative w-64 shrink-0">
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+            <Input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Zoeken…"
+              className="pl-9 h-9 bg-white border-gray-200 text-sm"
+            />
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-auto">
+          <table className="w-full text-left border-collapse table-fixed" style={{ minWidth: tableMinWidth }}>
+            <colgroup>
+              {usersColumns.map(col => (
+                <col key={col.key} style={{ width: columnWidths[col.key] }} />
+              ))}
+            </colgroup>
+            <thead>
+              <tr className="bg-white border-b border-gray-200">
+                {usersColumns.map(col => (
+                  <th
+                    key={col.key}
+                    className={cn('relative select-none overflow-hidden whitespace-nowrap', col.thClassName)}
+                  >
+                    {col.key === 'actions' ? null : (
+                      <span className="truncate block">{col.label}</span>
+                    )}
+
+                    {col.resizable ? (
+                      <div
+                        onPointerDown={startResize(col.key)}
+                        className="absolute right-0 top-0 h-full w-2 cursor-col-resize group"
+                        role="separator"
+                        aria-orientation="vertical"
+                        aria-label={`Resize column ${col.label ?? col.key}`}
+                      >
+                        <div className="absolute right-0 top-0 h-full w-px bg-transparent group-hover:bg-gray-300" />
+                      </div>
+                    ) : null}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {filtered.map((u) => (
+                <tr key={u.id} className="hover:bg-emerald-50/20 transition-colors">
+                  <td className="p-3 px-4">
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback className="bg-gray-100 text-gray-500 text-xs"> </AvatarFallback>
+                    </Avatar>
+                  </td>
+                  <td className="p-3 text-sm font-medium text-gray-900">{u.name}</td>
+                  <td className="p-3 text-sm text-gray-600 truncate" title={u.address}>{u.address}</td>
+                  <td className="p-3 text-sm text-gray-700 truncate" title={u.email}>{u.email}</td>
+                  <td className="p-3 text-sm text-gray-600">{u.departments}</td>
+                  <td className="p-3 text-sm text-gray-800">{u.role}</td>
+                  <td className="p-3 text-sm text-gray-600">{u.hourlyRate1}</td>
+                  <td className="p-3 text-sm text-gray-600">{u.hourlyRate2}</td>
+                  <td className="p-3">
+                    <div className={cn('h-5 w-5 rounded-full flex items-center justify-center border', u.archived ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-gray-200 bg-gray-50 text-gray-400')}>
+                      ×
+                    </div>
+                  </td>
+                  <td className="p-3 pr-4">
+                    <button className="h-8 w-8 rounded-md hover:bg-gray-100 text-gray-500">⋮</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="px-6 py-3 border-t border-gray-100 flex items-center justify-end gap-6 text-xs text-gray-500 shrink-0">
+          <div className="flex items-center gap-2">
+            <span className="font-semibold">Regels per pagina:</span>
+            <span className="text-gray-800 font-bold">{perPage}</span>
+          </div>
+          <span className="text-gray-800 font-semibold">{formatRangeLabel(shownFrom, shownTo, activeCount)}</span>
+          <div className="flex items-center gap-2">
+            <button className="h-8 w-8 rounded-md border border-gray-200 text-gray-500 hover:text-gray-900 hover:bg-gray-50">‹</button>
+            <button className="h-8 w-8 rounded-md border border-gray-200 text-gray-500 hover:text-gray-900 hover:bg-gray-50">›</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

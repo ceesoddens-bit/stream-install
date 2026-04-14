@@ -6,6 +6,12 @@ export type InvoiceStatus =
   | 'Afgerond'
   | 'Creditfactuur';
 
+export type InvoiceActor = {
+  name: string;
+  initials: string;
+  kind: 'Systeem' | 'Gebruiker';
+};
+
 export type InvoiceRow = {
   id: string;
   jaarcode?: string | null;
@@ -20,6 +26,16 @@ export type InvoiceRow = {
   totaalVoorschot: number;
   kredietOorspr: string;
   bedrijfsnaam: string;
+  contactName: string;
+  emailAddress: string;
+  emailIndicators: number;
+  sentIndicator: boolean;
+  reference: string;
+  paymentTermDays: number;
+  createdAt: string;
+  createdBy: InvoiceActor;
+  updatedAt: string;
+  updatedBy: InvoiceActor;
 };
 
 export type StatusFilter = 'Alles' | InvoiceStatus;
@@ -37,4 +53,3 @@ export const statusFilters: Array<{
   { id: 'Afgerond', label: 'Afgerond', tone: 'neutral' },
   { id: 'Creditfactuur', label: 'Creditfactuur', tone: 'blue' },
 ];
-

@@ -1,9 +1,93 @@
-import React from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { 
   Settings, Columns3, SlidersHorizontal, AlignJustify, Maximize2, Download, Search, Info
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+type HoursColumnKey =
+  | 'select'
+  | 'gebruiker'
+  | 'begin'
+  | 'einde'
+  | 'duur'
+  | 'duration'
+  | 'type'
+  | 'project'
+  | 'event'
+  | 'planningsregel'
+  | 'bedrijf'
+  | 'spacer';
+
+type HoursColumnDef = {
+  key: HoursColumnKey;
+  label?: string;
+  width: number;
+  minWidth: number;
+  resizable: boolean;
+  thClassName?: string;
+};
+
+const hoursColumns: HoursColumnDef[] = [
+  { key: 'select', width: 52, minWidth: 44, resizable: false, thClassName: 'p-3 pl-4 text-center' },
+  { key: 'gebruiker', label: 'Gebruiker', width: 200, minWidth: 150, resizable: true, thClassName: 'p-3 font-semibold text-gray-800' },
+  { key: 'begin', label: 'Begin', width: 140, minWidth: 120, resizable: true, thClassName: 'p-3 font-semibold text-gray-800' },
+  { key: 'einde', label: 'Einde', width: 140, minWidth: 120, resizable: true, thClassName: 'p-3 font-semibold text-gray-800' },
+  { key: 'duur', label: 'Duur', width: 110, minWidth: 90, resizable: true, thClassName: 'p-3 font-semibold text-gray-800' },
+  { key: 'duration', label: 'Duration', width: 150, minWidth: 120, resizable: true, thClassName: 'p-3 font-semibold text-gray-800' },
+  { key: 'type', label: 'Type', width: 130, minWidth: 110, resizable: true, thClassName: 'p-3 font-semibold text-gray-800' },
+  { key: 'project', label: 'Project', width: 240, minWidth: 160, resizable: true, thClassName: 'p-3 font-semibold text-gray-800' },
+  { key: 'event', label: 'Evenement', width: 160, minWidth: 130, resizable: true, thClassName: 'p-3 font-semibold text-gray-800' },
+  { key: 'planningsregel', label: 'Planningsregel', width: 200, minWidth: 160, resizable: true, thClassName: 'p-3 font-semibold text-gray-800' },
+  { key: 'bedrijf', label: 'Bedrijf', width: 190, minWidth: 150, resizable: true, thClassName: 'p-3 font-semibold text-gray-800' },
+  { key: 'spacer', width: 120, minWidth: 100, resizable: false, thClassName: 'p-3 border-l border-transparent' },
+];
 
 export function HoursLayout() {
+  const [columnWidths, setColumnWidths] = useState<Record<HoursColumnKey, number>>(() => {
+    return hoursColumns.reduce((acc, col) => {
+      acc[col.key] = col.width;
+      return acc;
+    }, {} as Record<HoursColumnKey, number>);
+  });
+  const resizingRef = useRef<{
+    key: HoursColumnKey;
+    startX: number;
+    startWidth: number;
+    minWidth: number;
+  } | null>(null);
+
+  const tableMinWidth = useMemo(() => {
+    return hoursColumns.reduce((total, col) => total + (columnWidths[col.key] ?? col.width), 0);
+  }, [columnWidths]);
+
+  const startResize = (key: HoursColumnKey) => (e: React.PointerEvent) => {
+    const col = hoursColumns.find(c => c.key === key);
+    if (!col || !col.resizable) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const startX = e.clientX;
+    const startWidth = columnWidths[key] ?? col.width;
+    const minWidth = col.minWidth;
+    resizingRef.current = { key, startX, startWidth, minWidth };
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+
+    const onPointerMove = (evt: PointerEvent) => {
+      const nextWidth = Math.max(minWidth, startWidth + (evt.clientX - startX));
+      setColumnWidths(prev => ({ ...prev, [key]: nextWidth }));
+    };
+
+    const onPointerUp = () => {
+      resizingRef.current = null;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      window.removeEventListener('pointermove', onPointerMove);
+    };
+
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp, { once: true });
+  };
+
   return (
     <div className="flex flex-col h-full bg-slate-50 relative space-y-4 pt-2 pb-8">
       
@@ -66,30 +150,47 @@ export function HoursLayout() {
 
         {/* Data Table */}
         <div className="overflow-auto flex-1">
-          <table className="w-full text-left text-[13px] border-collapse min-w-[1200px]">
+          <table
+            className="w-full text-left text-[13px] border-collapse table-fixed"
+            style={{ minWidth: tableMinWidth }}
+          >
+            <colgroup>
+              {hoursColumns.map(col => (
+                <col key={col.key} style={{ width: columnWidths[col.key] }} />
+              ))}
+            </colgroup>
             <thead className="sticky top-0 bg-white z-10 shadow-sm shadow-gray-100/50">
               <tr className="border-b border-gray-200">
-                <th className="p-3 pl-4 w-10 text-center">
-                  <input type="checkbox" className="rounded border-gray-300 text-green-600 focus:ring-green-500 h-4 w-4" />
-                </th>
-                <th className="p-3 font-semibold text-gray-800">Gebruiker</th>
-                <th className="p-3 font-semibold text-gray-800">Begin</th>
-                <th className="p-3 font-semibold text-gray-800">Einde</th>
-                <th className="p-3 font-semibold text-gray-800">Duur</th>
-                <th className="p-3 font-semibold text-gray-800">Duration (...</th>
-                <th className="p-3 font-semibold text-gray-800">Type</th>
-                <th className="p-3 font-semibold text-gray-800">Project</th>
-                <th className="p-3 font-semibold text-gray-800">Evene...</th>
-                <th className="p-3 font-semibold text-gray-800">Planningsregel</th>
-                <th className="p-3 font-semibold text-gray-800">Bedrijf</th>
-                {/* Extra spacer for scroll effect matching screenshot */}
-                <th className="p-3 min-w-[100px] border-l border-transparent"></th>
+                {hoursColumns.map(col => (
+                  <th
+                    key={col.key}
+                    className={cn('relative select-none overflow-hidden whitespace-nowrap', col.thClassName)}
+                  >
+                    {col.key === 'select' ? (
+                      <input type="checkbox" className="rounded border-gray-300 text-green-600 focus:ring-green-500 h-4 w-4" />
+                    ) : col.key === 'spacer' ? null : (
+                      <span className="truncate block">{col.label}</span>
+                    )}
+
+                    {col.resizable ? (
+                      <div
+                        onPointerDown={startResize(col.key)}
+                        className="absolute right-0 top-0 h-full w-2 cursor-col-resize group"
+                        role="separator"
+                        aria-orientation="vertical"
+                        aria-label={`Resize column ${col.label ?? col.key}`}
+                      >
+                        <div className="absolute right-0 top-0 h-full w-px bg-transparent group-hover:bg-gray-300" />
+                      </div>
+                    ) : null}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
               {/* Empty State */}
               <tr>
-                <td colSpan={12} className="text-center py-40">
+                <td colSpan={hoursColumns.length} className="text-center py-40">
                   <span className="text-[13px] text-gray-700">Geen resultaten.</span>
                 </td>
               </tr>

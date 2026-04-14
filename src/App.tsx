@@ -26,8 +26,10 @@ import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { stateService, TimerState } from '@/lib/stateService';
 import { LandingPage } from '@/components/marketing/LandingPage';
+import { isAdministrationView, isKnownView, isManagementView, isTicketsView } from '@/lib/viewRegistry';
 import { AdministrationLayout } from '@/components/administration/AdministrationLayout';
 import { ManagementLayout } from '@/components/management/ManagementLayout';
+import { ManagementDashboardView } from '@/components/management/ManagementDashboardView';
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -86,36 +88,10 @@ export default function App() {
 
   const isTimerRunning = timerDoc.isRunning;
 
-  const isAdministrationView = ['administratie_offertes', 'administratie_facturen', 'administratie_urenregistratie'].includes(activeView);
-  const isTicketsView = ['tickets_all', 'tickets_my'].includes(activeView);
-  const isManagementView = activeView.startsWith('management_');
-  const knownViews = new Set([
-    'dashboard',
-    'project_detail',
-    'projects',
-    'my_projects',
-    'planning',
-    'planning_list',
-    'teams',
-    'inventory',
-    'inventory_overview',
-    'inventory_mutaties',
-    'inventory_magazijnen',
-    'inventory_inkooporders',
-    'inventory_leveranciers',
-    'inventory_boms',
-    'finance',
-    'quotes',
-    'settings',
-    'crm',
-    'crm_companies',
-    'forms',
-    'sales',
-    'tasks',
-    'calendar',
-    'hours',
-  ]);
-  const isKnownView = knownViews.has(activeView) || isAdministrationView || isTicketsView || isManagementView;
+  const isAdministration = isAdministrationView(activeView);
+  const isTickets = isTicketsView(activeView);
+  const isManagement = isManagementView(activeView);
+  const isKnown = isKnownView(activeView);
 
   if (authLoading) {
     return (
@@ -162,12 +138,7 @@ export default function App() {
               />
             )}
             {activeView === 'management_dashboard' && (
-              <Dashboard 
-                timerSeconds={timerSeconds}
-                isTimerRunning={isTimerRunning}
-                onToggleTimer={toggleTimer}
-                onResetTimer={resetTimer}
-              />
+              <ManagementDashboardView />
             )}
             {activeView === 'project_detail' && <ProjectDetail onBack={() => setActiveView('projects')} />}
             {(activeView === 'projects' || activeView === 'my_projects') && (
@@ -187,7 +158,7 @@ export default function App() {
             {activeView === 'inventory_boms' && <InventoryLayout initialTab="boms" />}
             {activeView === 'finance' && <FinanceLayout />}
             {activeView === 'quotes' && <QuotesLayout />}
-            {isAdministrationView && (
+            {isAdministration && (
               <AdministrationLayout activeView={activeView} onViewChange={setActiveView} />
             )}
             {activeView === 'settings' && <SettingsLayout />}
@@ -199,11 +170,11 @@ export default function App() {
             {activeView === 'calendar' && <CalendarLayout />}
             {activeView === 'hours' && <HoursLayout />}
             {activeView === 'teams' && <TeamsLayout />}
-            {isTicketsView && <TicketsLayout />}
-            {isManagementView && activeView !== 'management_dashboard' && (
+            {isTickets && <TicketsLayout />}
+            {isManagement && activeView !== 'management_dashboard' && (
               <ManagementLayout activeView={activeView} />
             )}
-            {!isKnownView && (
+            {!isKnown && (
               <div className="flex items-center justify-center h-full text-gray-500">
                 <div className="text-center">
                   <h2 className="text-2xl font-bold mb-2 capitalize">{activeView.replace('_', ' ')}</h2>

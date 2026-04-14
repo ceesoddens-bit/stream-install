@@ -1,7 +1,38 @@
+import React, { useMemo, useRef, useState } from 'react';
 import { inventoryService, InventoryItem } from '@/lib/inventoryService';
 import { Package, Search, Image as ImageIcon, AlertTriangle, ArrowRight, TrendingUp, Trash2, Edit2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+
+type ArticlesColumnKey =
+  | 'select'
+  | 'foto'
+  | 'artikelSku'
+  | 'omschrijving'
+  | 'categorie'
+  | 'prijs'
+  | 'voorraad'
+  | 'actions';
+
+type ArticlesColumnDef = {
+  key: ArticlesColumnKey;
+  label?: string;
+  width: number;
+  minWidth: number;
+  resizable: boolean;
+  thClassName?: string;
+};
+
+const articlesColumns: ArticlesColumnDef[] = [
+  { key: 'select', width: 56, minWidth: 48, resizable: false, thClassName: 'p-3 px-4' },
+  { key: 'foto', label: 'Foto', width: 90, minWidth: 80, resizable: false, thClassName: 'p-3 text-[11px] font-bold text-gray-500 uppercase tracking-wider' },
+  { key: 'artikelSku', label: 'Artikel / SKU', width: 150, minWidth: 130, resizable: true, thClassName: 'p-3 text-[11px] font-bold text-gray-500 uppercase tracking-wider' },
+  { key: 'omschrijving', label: 'Omschrijving', width: 360, minWidth: 220, resizable: true, thClassName: 'p-3 text-[11px] font-bold text-gray-500 uppercase tracking-wider' },
+  { key: 'categorie', label: 'Categorie', width: 180, minWidth: 150, resizable: true, thClassName: 'p-3 text-[11px] font-bold text-gray-500 uppercase tracking-wider' },
+  { key: 'prijs', label: 'Prijs', width: 140, minWidth: 120, resizable: true, thClassName: 'p-3 text-[11px] font-bold text-gray-500 uppercase tracking-wider text-right' },
+  { key: 'voorraad', label: 'Voorraad', width: 200, minWidth: 170, resizable: true, thClassName: 'p-3 text-[11px] font-bold text-gray-500 uppercase tracking-wider text-right pr-6' },
+  { key: 'actions', width: 64, minWidth: 56, resizable: false, thClassName: 'p-3 w-10' },
+];
 
 interface ArticlesTableProps {
   items: InventoryItem[];
@@ -31,6 +62,23 @@ const getStockStatus = (stock: number, min: number) => {
 };
 
 export function ArticlesTable({ items }: ArticlesTableProps) {
+  const [columnWidths, setColumnWidths] = useState<Record<ArticlesColumnKey, number>>(() => {
+    return articlesColumns.reduce((acc, col) => {
+      acc[col.key] = col.width;
+      return acc;
+    }, {} as Record<ArticlesColumnKey, number>);
+  });
+  const resizingRef = useRef<{
+    key: ArticlesColumnKey;
+    startX: number;
+    startWidth: number;
+    minWidth: number;
+  } | null>(null);
+
+  const tableMinWidth = useMemo(() => {
+    return articlesColumns.reduce((total, col) => total + (columnWidths[col.key] ?? col.width), 0);
+  }, [columnWidths]);
+
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 }).format(amount);
 
@@ -40,19 +88,68 @@ export function ArticlesTable({ items }: ArticlesTableProps) {
     }
   };
 
+  const startResize = (key: ArticlesColumnKey) => (e: React.PointerEvent) => {
+    const col = articlesColumns.find(c => c.key === key);
+    if (!col || !col.resizable) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const startX = e.clientX;
+    const startWidth = columnWidths[key] ?? col.width;
+    const minWidth = col.minWidth;
+    resizingRef.current = { key, startX, startWidth, minWidth };
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+
+    const onPointerMove = (evt: PointerEvent) => {
+      const nextWidth = Math.max(minWidth, startWidth + (evt.clientX - startX));
+      setColumnWidths(prev => ({ ...prev, [key]: nextWidth }));
+    };
+
+    const onPointerUp = () => {
+      resizingRef.current = null;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      window.removeEventListener('pointermove', onPointerMove);
+    };
+
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp, { once: true });
+  };
+
   return (
     <div className="bg-white border-t border-gray-200">
-      <table className="w-full text-left border-collapse">
+      <table className="w-full text-left border-collapse table-fixed" style={{ minWidth: tableMinWidth }}>
+        <colgroup>
+          {articlesColumns.map(col => (
+            <col key={col.key} style={{ width: columnWidths[col.key] }} />
+          ))}
+        </colgroup>
         <thead>
           <tr className="bg-gray-50/80 border-b border-gray-200">
-            <th className="p-3 px-4 w-12"><input type="checkbox" className="rounded border-gray-300 shadow-sm" /></th>
-            <th className="p-3 text-[11px] font-bold text-gray-500 uppercase tracking-wider w-[60px]">Foto</th>
-            <th className="p-3 text-[11px] font-bold text-gray-500 uppercase tracking-wider w-32">Artikel / SKU</th>
-            <th className="p-3 text-[11px] font-bold text-gray-500 uppercase tracking-wider">Omschrijving</th>
-            <th className="p-3 text-[11px] font-bold text-gray-500 uppercase tracking-wider">Categorie</th>
-            <th className="p-3 text-[11px] font-bold text-gray-500 uppercase tracking-wider text-right">Prijs</th>
-            <th className="p-3 text-[11px] font-bold text-gray-500 uppercase tracking-wider w-40 text-right pr-6">Voorraad</th>
-            <th className="p-3 w-10"></th>
+            {articlesColumns.map(col => (
+              <th
+                key={col.key}
+                className={cn('relative select-none overflow-hidden whitespace-nowrap', col.thClassName)}
+              >
+                {col.key === 'select' ? (
+                  <input type="checkbox" className="rounded border-gray-300 shadow-sm" />
+                ) : col.key === 'actions' ? null : (
+                  <span className="truncate block">{col.label}</span>
+                )}
+
+                {col.resizable ? (
+                  <div
+                    onPointerDown={startResize(col.key)}
+                    className="absolute right-0 top-0 h-full w-2 cursor-col-resize group"
+                    role="separator"
+                    aria-orientation="vertical"
+                    aria-label={`Resize column ${col.label ?? col.key}`}
+                  >
+                    <div className="absolute right-0 top-0 h-full w-px bg-transparent group-hover:bg-gray-300" />
+                  </div>
+                ) : null}
+              </th>
+            ))}
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100">
@@ -73,7 +170,7 @@ export function ArticlesTable({ items }: ArticlesTableProps) {
                   </div>
                 </td>
                 <td className="p-3">
-                  <span className="font-bold text-sm text-gray-900 group-hover:text-blue-700 transition-colors">{article.name}</span>
+                  <span className="font-bold text-sm text-gray-900 group-hover:text-blue-700 transition-colors truncate block" title={article.name}>{article.name}</span>
                 </td>
                 <td className="p-3">
                   <Badge variant="outline" className={cn("text-[10px] font-bold px-2 py-0.5 whitespace-nowrap uppercase tracking-tighter", getCategoryBadge(article.category))}>

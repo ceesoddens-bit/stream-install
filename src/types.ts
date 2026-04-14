@@ -129,6 +129,64 @@ export interface TenantSettings {
   referencePrefix: string;
 }
 
+export interface Supplier {
+  id: string;
+  name: string;
+  currency?: string | null;
+  address?: string | null;
+  kvk?: string | null;
+  createdAt: string;
+  createdByName: string;
+  createdByInitials: string;
+  updatedAt: string;
+  updatedByName: string;
+  updatedByInitials: string;
+}
+
+export interface Warehouse {
+  id: string;
+  shortCode: string;
+  name: string;
+  subCount: number;
+  createdAt: string;
+  createdByName: string;
+  createdByInitials: string;
+  updatedAt: string;
+  updatedByName: string;
+  updatedByInitials: string;
+}
+
+export interface StockOverviewRow {
+  id: string;
+  artikel: string;
+  magazijn: string;
+  locatie: string;
+  statusLocatie: string;
+  status: string;
+  hoeveelheid: number;
+  prijsPerStuk: number;
+  wisselkoers: number;
+  totaal: number;
+}
+
+export type MutationType = 'Inkomend' | 'Voorraadcontrole' | 'Intern' | 'Uitgaand';
+
+export interface InventoryMutation {
+  id: string;
+  type: MutationType;
+  identificatie: string;
+  status: string;
+  magazijn: string;
+  project: string;
+  regels: number;
+  totaal: number;
+  gereserveerd: number;
+  uitgegeven: number;
+  gemaaktOp: string;
+  gemaaktDoor: string;
+  bijgewerktOp: string;
+}
+
 export type PlanningStatus =
   | 'Nieuwe lead'
   | 'Adviesgesprek plannen(Schouw)'

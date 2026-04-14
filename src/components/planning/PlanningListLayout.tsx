@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useRef, useState, useEffect } from 'react';
 import {
   Hourglass,
   Settings,
@@ -53,6 +53,25 @@ export function PlanningListLayout() {
     createdAt: true,
     createdBy: true,
   });
+
+  const [columnWidths, setColumnWidths] = useState<Record<ColumnId, number>>({
+    type: 140,
+    date: 240,
+    added: 120,
+    status: 110,
+    accountManager: 190,
+    project: 260,
+    contact: 190,
+    mobile: 150,
+    createdAt: 170,
+    createdBy: 190,
+  });
+  const resizingRef = useRef<{
+    key: ColumnId;
+    startX: number;
+    startWidth: number;
+    minWidth: number;
+  } | null>(null);
 
   useEffect(() => {
     const unsubscribe = planningService.subscribeToPlanning((fetched) => {
@@ -125,6 +144,8 @@ export function PlanningListLayout() {
     {
       id: 'type' as const,
       label: 'Type',
+      width: 140,
+      minWidth: 120,
       headerClassName: 'p-3 font-semibold text-gray-700',
       cellClassName: 'p-3',
       render: (row: PlanningEntry) => (
@@ -141,6 +162,8 @@ export function PlanningListLayout() {
     {
       id: 'date' as const,
       label: 'Datum',
+      width: 240,
+      minWidth: 200,
       headerClassName: 'p-3 font-semibold text-gray-700',
       cellClassName: 'p-3 text-xs font-semibold text-gray-900 font-mono',
       render: (row: PlanningEntry) => formatDateRange(row),
@@ -148,6 +171,8 @@ export function PlanningListLayout() {
     {
       id: 'added' as const,
       label: 'Toegewezen',
+      width: 120,
+      minWidth: 100,
       headerClassName: 'p-3 font-semibold text-gray-700 text-center',
       cellClassName: 'p-3 text-center text-gray-400',
       render: (row: PlanningEntry) => (
@@ -162,6 +187,8 @@ export function PlanningListLayout() {
     {
       id: 'status' as const,
       label: 'Status',
+      width: 110,
+      minWidth: 90,
       headerClassName: 'p-3 font-semibold text-gray-700 text-center',
       cellClassName: 'p-3 text-center',
       render: () => <Wrench className="h-4 w-4 inline-block text-blue-600" />,
@@ -169,6 +196,8 @@ export function PlanningListLayout() {
     {
       id: 'accountManager' as const,
       label: 'Accountmanager',
+      width: 190,
+      minWidth: 150,
       headerClassName: 'p-3 font-semibold text-gray-700',
       cellClassName: 'p-3 text-xs',
       render: (row: PlanningEntry) => row.accountManager ?? '-',
@@ -176,22 +205,26 @@ export function PlanningListLayout() {
     {
       id: 'project' as const,
       label: 'Project',
+      width: 260,
+      minWidth: 200,
       headerClassName: 'p-3 font-semibold text-gray-700',
-      cellClassName:
-        'p-3 text-xs font-semibold text-emerald-600 hover:underline cursor-pointer truncate max-w-[200px]',
+      cellClassName: 'p-3 text-xs font-semibold text-emerald-600 hover:underline cursor-pointer truncate',
       render: (row: PlanningEntry) => `${row.projectId} - ${row.projectName}`,
     },
     {
       id: 'contact' as const,
       label: 'Contact',
+      width: 190,
+      minWidth: 150,
       headerClassName: 'p-3 font-semibold text-gray-700',
-      cellClassName:
-        'p-3 text-xs font-semibold text-emerald-600 hover:underline cursor-pointer truncate max-w-[150px]',
+      cellClassName: 'p-3 text-xs font-semibold text-emerald-600 hover:underline cursor-pointer truncate',
       render: (row: PlanningEntry) => row.client,
     },
     {
       id: 'mobile' as const,
       label: 'Mobiel nr',
+      width: 150,
+      minWidth: 130,
       headerClassName: 'p-3 font-semibold text-gray-700',
       cellClassName: 'p-3 text-xs text-gray-700',
       render: (row: PlanningEntry) => row.contactMobile ?? '-',
@@ -199,6 +232,8 @@ export function PlanningListLayout() {
     {
       id: 'createdAt' as const,
       label: 'Gemaakt op',
+      width: 170,
+      minWidth: 150,
       headerClassName: 'p-3 font-semibold text-gray-700',
       cellClassName: 'p-3 text-xs text-gray-500',
       render: (row: PlanningEntry) => formatTimestamp(row),
@@ -206,12 +241,14 @@ export function PlanningListLayout() {
     {
       id: 'createdBy' as const,
       label: 'Gemaakt door',
+      width: 190,
+      minWidth: 160,
       headerClassName: 'p-3 font-semibold text-gray-700',
       cellClassName: 'p-3 text-xs text-gray-700',
       render: (row: PlanningEntry) => (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 min-w-0">
           <div className="h-6 w-6 bg-gray-200 rounded-full" />
-          <span className="truncate max-w-[120px]">{row.createdBy ?? '—'}</span>
+          <span className="truncate">{row.createdBy ?? '—'}</span>
         </div>
       ),
     },
@@ -220,6 +257,43 @@ export function PlanningListLayout() {
   const orderedVisibleColumns = columns.filter((c) => visibleColumns[c.id]);
 
   const tableColSpan = 2 + orderedVisibleColumns.length;
+
+  const tableMinWidth = useMemo(() => {
+    const selectWidth = 52;
+    const actionsWidth = 72;
+    const colsWidth = orderedVisibleColumns.reduce((sum, col) => {
+      return sum + (columnWidths[col.id] ?? col.width);
+    }, 0);
+    return selectWidth + colsWidth + actionsWidth;
+  }, [columnWidths, orderedVisibleColumns]);
+
+  const startResize = (key: ColumnId) => (e: React.PointerEvent) => {
+    const col = columns.find(c => c.id === key);
+    if (!col) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const startX = e.clientX;
+    const startWidth = columnWidths[key] ?? col.width;
+    const minWidth = col.minWidth;
+    resizingRef.current = { key, startX, startWidth, minWidth };
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+
+    const onPointerMove = (evt: PointerEvent) => {
+      const nextWidth = Math.max(minWidth, startWidth + (evt.clientX - startX));
+      setColumnWidths(prev => ({ ...prev, [key]: nextWidth }));
+    };
+
+    const onPointerUp = () => {
+      resizingRef.current = null;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      window.removeEventListener('pointermove', onPointerMove);
+    };
+
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp, { once: true });
+  };
 
   return (
     <div className="flex flex-col h-full bg-slate-50 relative space-y-4 pt-2 pb-8">
@@ -306,15 +380,40 @@ export function PlanningListLayout() {
 
         {/* Data Table */}
         <div className="overflow-auto flex-1">
-          <table className="w-full text-left text-sm border-collapse min-w-[1200px]">
+          <table
+            className="w-full text-left text-sm border-collapse table-fixed"
+            style={{ minWidth: tableMinWidth }}
+          >
+            <colgroup>
+              <col style={{ width: 52 }} />
+              {orderedVisibleColumns.map(col => (
+                <col key={col.id} style={{ width: columnWidths[col.id] ?? col.width }} />
+              ))}
+              <col style={{ width: 72 }} />
+            </colgroup>
             <thead className="sticky top-0 bg-white z-10 shadow-sm shadow-gray-100/50">
               <tr className="border-b border-gray-200 bg-gray-50/20">
                 <th className="p-3 w-10 text-center">
                   <input type="checkbox" className="rounded border-gray-300 text-green-600 focus:ring-green-500" />
                 </th>
                 {orderedVisibleColumns.map((col) => (
-                  <th key={col.id} className={col.headerClassName}>
-                    {col.label}
+                  <th
+                    key={col.id}
+                    className={cn(
+                      'relative select-none overflow-hidden whitespace-nowrap',
+                      col.headerClassName
+                    )}
+                  >
+                    <span className="truncate block">{col.label}</span>
+                    <div
+                      onPointerDown={startResize(col.id)}
+                      className="absolute right-0 top-0 h-full w-2 cursor-col-resize group"
+                      role="separator"
+                      aria-orientation="vertical"
+                      aria-label={`Resize column ${col.label}`}
+                    >
+                      <div className="absolute right-0 top-0 h-full w-px bg-transparent group-hover:bg-gray-300" />
+                    </div>
                   </th>
                 ))}
                 <th className="p-3 w-14"></th>
