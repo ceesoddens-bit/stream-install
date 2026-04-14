@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef, useState, useEffect } from 'react';
 import {
   LifeBuoy,
   HelpCircle,
@@ -17,7 +17,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { formItems } from '@/data/mockData';
+import { formsService, FormItem } from '@/lib/formsService';
 
 type FormsColumnKey =
   | 'select'
@@ -54,6 +54,13 @@ const formsColumns: FormsColumnDef[] = [
 ];
 
 export function FormsLayout() {
+  const [formItems, setFormItems] = useState<FormItem[]>([]);
+  const [query, setQuery] = useState('');
+
+  useEffect(() => {
+    return formsService.subscribeToFormItems(setFormItems);
+  }, []);
+
   const [columnWidths, setColumnWidths] = useState<Record<FormsColumnKey, number>>(() => {
     return formsColumns.reduce((acc, col) => {
       acc[col.key] = col.width;
@@ -99,6 +106,23 @@ export function FormsLayout() {
     window.addEventListener('pointerup', onPointerUp, { once: true });
   };
 
+  const formatTimestamp = (ts: any) => {
+    if (!ts) return '-';
+    if (typeof ts === 'string') return ts;
+    if (ts.toDate) return ts.toDate().toLocaleString('nl-NL');
+    return '-';
+  };
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return formItems;
+    return formItems.filter(f => 
+      f.name.toLowerCase().includes(q) || 
+      f.project.toLowerCase().includes(q) || 
+      f.planningsregel.toLowerCase().includes(q)
+    );
+  }, [query, formItems]);
+
   return (
     <div className="flex flex-col h-full bg-slate-50 relative">
       {/* ── Header ── */}
@@ -114,6 +138,8 @@ export function FormsLayout() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <input
               type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
               placeholder="Zoeken..."
               className="pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 w-64"
             />
@@ -142,7 +168,7 @@ export function FormsLayout() {
             <button className="px-4 py-2 text-sm font-semibold border-b-2 border-green-600 text-green-700 -mb-px flex items-center gap-2">
               Alles
               <span className="bg-green-700 text-white text-[10px] px-1.5 py-0.5 rounded-md leading-none">
-                421
+                {filtered.length}
               </span>
             </button>
           </div>
@@ -183,14 +209,6 @@ export function FormsLayout() {
               <Download className="h-4 w-4" />
               Exporteren
             </button>
-          </div>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Zoeken..."
-              className="pl-9 pr-8 py-1.5 border-b border-gray-300 text-sm focus:outline-none focus:border-green-500 bg-transparent w-48"
-            />
           </div>
         </div>
       </div>
@@ -242,7 +260,7 @@ export function FormsLayout() {
                 </tr>
               </thead>
             <tbody>
-              {formItems.map((form, index) => (
+              {filtered.map((form, index) => (
                 <tr key={form.id} className={cn("border-b border-gray-100 hover:bg-gray-50", index % 2 === 0 ? "bg-white" : "bg-gray-50/50")}>
                   <td className="p-3 text-center">
                     <input type="checkbox" className="rounded border-gray-300 text-green-600 focus:ring-green-500" />
@@ -267,23 +285,23 @@ export function FormsLayout() {
                     {form.planningsregel}
                   </td>
                   <td className="p-3 text-sm text-gray-600 whitespace-nowrap">
-                    {form.createdAt}
+                    {formatTimestamp(form.createdAt)}
                   </td>
                   <td className="p-3 text-sm text-gray-600">
                     <div className="flex items-center gap-2 min-w-0">
                       <div className="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden shrink-0">
-                        <UserCircleIcon name={form.createdBy} />
+                        <UserCircleIcon name={form.createdBy || ''} />
                       </div>
                       <span className="truncate" title={form.createdBy}>{form.createdBy}</span>
                     </div>
                   </td>
                   <td className="p-3 text-sm text-gray-600 whitespace-nowrap">
-                    {form.updatedAt}
+                    {formatTimestamp(form.updatedAt)}
                   </td>
                   <td className="p-3 text-sm text-gray-600">
                     <div className="flex items-center gap-2 min-w-0">
                       <div className="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden shrink-0">
-                        <UserCircleIcon name={form.updatedBy} />
+                        <UserCircleIcon name={form.updatedBy || ''} />
                       </div>
                       <span className="truncate" title={form.updatedBy}>{form.updatedBy}</span>
                     </div>
@@ -295,6 +313,13 @@ export function FormsLayout() {
                   </td>
                 </tr>
               ))}
+              {filtered.length === 0 && (
+                <tr>
+                  <td colSpan={10} className="p-12 text-center text-sm text-gray-500">
+                    Geen formulieren gevonden.
+                  </td>
+                </tr>
+              )}
             </tbody>
             </table>
           </div>
@@ -304,13 +329,13 @@ export function FormsLayout() {
         <div className="flex items-center justify-end py-4 text-sm text-gray-600 gap-4">
           <div className="flex items-center gap-2">
             <span>Regels per pagina:</span>
-            <select className="border-none bg-transparent font-medium focus:ring-0 cursor-pointer">
-              <option>25</option>
-              <option>50</option>
-              <option>100</option>
+            <select className="border-none bg-transparent font-medium focus:ring-0 cursor-pointer" defaultValue="25">
+              <option value="25">25</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
             </select>
           </div>
-          <span>1–19 of 421</span>
+          <span>1–{filtered.length} of {formItems.length}</span>
           <div className="flex items-center gap-2">
             <button className="p-1 text-gray-400 hover:text-gray-600 cursor-not-allowed"><ChevronLeft className="h-5 w-5" /></button>
             <button className="p-1 text-gray-600 hover:text-gray-900"><ChevronRight className="h-5 w-5" /></button>

@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { planningCards, currentUser } from '@/data/mockData';
-import { PlanningCard, PlanningStatus } from '@/types';
+import React, { useState, useEffect } from 'react';
+import { currentUser } from '@/data/mockData';
+import { planningService, PlanningCard } from '@/lib/planningService';
+import { PlanningStatus } from '@/types';
 import { ProjectCard } from './ProjectCard';
 import { cn } from '@/lib/utils';
 import { Columns3, SlidersHorizontal, BookmarkCheck, ChevronDown, LayoutGrid, Search, Plus } from 'lucide-react';
@@ -127,6 +128,13 @@ interface KanbanBoardProps {
 export function KanbanBoard({ scope = 'all', onViewProject }: KanbanBoardProps) {
   const [activeTab, setActiveTab] = useState<'Alles' | 'Installatie' | 'Service'>('Alles');
   const [typeFilter, setTypeFilter] = useState<'Installatie' | 'Service' | 'both'>('both');
+  const [planningCards, setPlanningCards] = useState<PlanningCard[]>([]);
+
+  useEffect(() => {
+    return planningService.subscribeToPlanningCards((data) => {
+      setPlanningCards(data);
+    });
+  }, []);
 
   const scopedCards = scope === 'mine'
     ? planningCards.filter((c) => c.accountManager === currentUser.name)
@@ -139,7 +147,7 @@ export function KanbanBoard({ scope = 'all', onViewProject }: KanbanBoardProps) 
   };
 
   const getCardsForColumn = (colId: PlanningStatus): PlanningCard[] =>
-    scopedCards.filter(c => c.status === colId);
+    scopedCards.filter(c => c.status === (colId as string));
 
   const columns = getColumns();
 

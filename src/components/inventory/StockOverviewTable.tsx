@@ -1,7 +1,7 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { stockOverviewRows } from '@/data/mockData';
+import { inventoryService, StockOverviewRow } from '@/lib/inventoryService';
 import { cn } from '@/lib/utils';
 import { Calendar, Columns3, Download, Filter, Search, Settings, SlidersHorizontal } from 'lucide-react';
 
@@ -44,6 +44,11 @@ const columns: StockOverviewColumnDef[] = [
 export function StockOverviewTable() {
   const [mode, setMode] = useState<'artikel' | 'magazijn'>('artikel');
   const [query, setQuery] = useState('');
+  const [stockOverviewRows, setStockOverviewRows] = useState<StockOverviewRow[]>([]);
+
+  useEffect(() => {
+    return inventoryService.subscribeToStockOverview(setStockOverviewRows);
+  }, []);
 
   const [columnWidths, setColumnWidths] = useState<Record<StockOverviewColumnKey, number>>(() => {
     return columns.reduce((acc, col) => {
@@ -113,7 +118,7 @@ export function StockOverviewTable() {
         r.status.toLowerCase().includes(q)
       );
     });
-  }, [query]);
+  }, [query, stockOverviewRows]);
 
   return (
     <div className="flex flex-col h-full">

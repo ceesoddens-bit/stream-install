@@ -1,14 +1,25 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Search, Plus, Settings, Filter } from 'lucide-react';
 import { CompaniesTable } from './CompaniesTable';
 import { ContactsTable } from './ContactsTable';
-import { companies, contacts } from '@/data/mockData';
+import { crmService, Company, Contact } from '@/lib/crmService';
 
 export function CRMModule() {
   const [activeTab, setActiveTab] = useState('bedrijven');
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [contacts, setContacts] = useState<Contact[]>([]);
+
+  useEffect(() => {
+    const unsubCompanies = crmService.subscribeToCompanies(setCompanies);
+    const unsubContacts = crmService.subscribeToContacts(setContacts);
+    return () => {
+      unsubCompanies();
+      unsubContacts();
+    };
+  }, []);
 
   return (
     <div className="h-full flex flex-col space-y-6">

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   Table,
   TableBody,
@@ -10,19 +10,32 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { Edit, Link, Eye, MoreHorizontal } from 'lucide-react';
-import { companies, projects } from '@/data/mockData';
-import { Company } from '@/types';
+import { crmService, Company } from '@/lib/crmService';
+import { projectService, Project } from '@/lib/projectService';
 
 export function CompaniesTable() {
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
+
+  useEffect(() => {
+    const unsubCompanies = crmService.subscribeToCompanies(setCompanies);
+    const unsubProjects = projectService.subscribeToProjects(setProjects);
+    return () => {
+      unsubCompanies();
+      unsubProjects();
+    };
+  }, []);
 
   const projectsByCompany = useMemo(() => {
     const map: Record<string, number> = {};
     for (const p of projects) {
-      map[p.companyId] = (map[p.companyId] || 0) + 1;
+      if (p.companyId) {
+        map[p.companyId] = (map[p.companyId] || 0) + 1;
+      }
     }
     return map;
-  }, []);
+  }, [projects]);
 
   const renderTags = (tags?: string[]) => {
     if (!tags || tags.length === 0) return <span className="text-gray-300">-</span>;
@@ -41,7 +54,7 @@ export function CompaniesTable() {
   };
 
   const renderProjects = (company: Company) => {
-    const count = projectsByCompany[company.id] ?? company.projectsCount ?? 0;
+    const count = projectsByCompany[company.id!] ?? company.projectsCount ?? 0;
     if (!count) return <span className="text-gray-300">-</span>;
     return <span className="text-sm font-semibold text-gray-700">{count}</span>;
   };
@@ -56,7 +69,7 @@ export function CompaniesTable() {
     if (selectedRows.length === companies.length) {
       setSelectedRows([]);
     } else {
-      setSelectedRows(companies.map((c) => c.id));
+      setSelectedRows(companies.map((c) => c.id!).filter(Boolean));
     }
   };
 
@@ -89,8 +102,8 @@ export function CompaniesTable() {
             <TableRow key={company.id} className="hover:bg-gray-50/50 transition-colors group">
               <TableCell>
                 <Checkbox 
-                  checked={selectedRows.includes(company.id)}
-                  onCheckedChange={() => toggleRow(company.id)}
+                  checked={selectedRows.includes(company.id!)}
+                  onCheckedChange={() => toggleRow(company.id!)}
                 />
               </TableCell>
               <TableCell className="font-medium text-sm text-blue-600">{company.referenceNumber}</TableCell>
@@ -118,6 +131,13 @@ export function CompaniesTable() {
               </TableCell>
             </TableRow>
           ))}
+          {companies.length === 0 && (
+            <TableRow>
+              <TableCell colSpan={12} className="h-24 text-center text-gray-500">
+                Geen bedrijven gevonden.
+              </TableCell>
+            </TableRow>
+          )}
         </TableBody>
       </Table>
       <div className="px-4 py-3 border-t bg-gray-50/30 flex items-center justify-between text-xs text-gray-500 font-medium">

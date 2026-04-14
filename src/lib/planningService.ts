@@ -18,10 +18,27 @@ export interface PlanningEntry {
   createdAt?: Timestamp;
 }
 
+export interface PlanningCard {
+  id?: string;
+  projectRef: string;
+  clientName: string;
+  address: string;
+  amount: number;
+  status: string;
+  projectType: 'Installatie' | 'Service';
+  clientType: 'Residentieel' | 'Commercieel';
+  accountManager: string;
+  installGroup: string;
+  productTags: string[];
+  imageUrl?: string;
+  createdAt?: Timestamp;
+}
+
 const PLANNING_COLLECTION = 'planning';
+const PLANNING_CARDS_COLLECTION = 'planning_cards';
 
 export const planningService = {
-  // Subscribe to all planning entries for a specific date range or all
+  // --- Planning Entries (for calendar/list) ---
   subscribeToPlanning: (callback: (entries: PlanningEntry[]) => void) => {
     const q = query(collection(db, PLANNING_COLLECTION), orderBy('date', 'asc'));
     return onSnapshot(q, (snapshot) => {
@@ -57,6 +74,45 @@ export const planningService = {
       await deleteDoc(doc(db, PLANNING_COLLECTION, id));
     } catch (error) {
       console.error("Error deleting planning: ", error);
+    }
+  },
+
+  // --- Planning Cards (for Kanban) ---
+  subscribeToPlanningCards: (callback: (cards: PlanningCard[]) => void) => {
+    const q = query(collection(db, PLANNING_CARDS_COLLECTION), orderBy('createdAt', 'desc'));
+    return onSnapshot(q, (snapshot) => {
+      const cards = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as PlanningCard[];
+      callback(cards);
+    });
+  },
+
+  addPlanningCard: async (card: Omit<PlanningCard, 'id' | 'createdAt'>) => {
+    try {
+      await addDoc(collection(db, PLANNING_CARDS_COLLECTION), {
+        ...card,
+        createdAt: Timestamp.now(),
+      });
+    } catch (error) {
+      console.error("Error adding planning card: ", error);
+    }
+  },
+
+  updatePlanningCard: async (id: string, updates: Partial<PlanningCard>) => {
+    try {
+      await updateDoc(doc(db, PLANNING_CARDS_COLLECTION, id), updates);
+    } catch (error) {
+      console.error("Error updating planning card: ", error);
+    }
+  },
+
+  deletePlanningCard: async (id: string) => {
+    try {
+      await deleteDoc(doc(db, PLANNING_CARDS_COLLECTION, id));
+    } catch (error) {
+      console.error("Error deleting planning card: ", error);
     }
   }
 };

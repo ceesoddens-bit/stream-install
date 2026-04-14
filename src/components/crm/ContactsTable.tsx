@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Table,
   TableBody,
@@ -11,11 +11,21 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Edit, Link, Eye, Mail, Phone, Smartphone } from 'lucide-react';
-import { contacts, companies } from '@/data/mockData';
-import { Contact } from '@/types';
+import { crmService, Contact, Company } from '@/lib/crmService';
 
 export function ContactsTable() {
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [companies, setCompanies] = useState<Company[]>([]);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
+
+  useEffect(() => {
+    const unsubContacts = crmService.subscribeToContacts(setContacts);
+    const unsubCompanies = crmService.subscribeToCompanies(setCompanies);
+    return () => {
+      unsubContacts();
+      unsubCompanies();
+    };
+  }, []);
 
   const toggleRow = (id: string) => {
     setSelectedRows((prev) =>
@@ -27,7 +37,7 @@ export function ContactsTable() {
     if (selectedRows.length === contacts.length) {
       setSelectedRows([]);
     } else {
-      setSelectedRows(contacts.map((c) => c.id));
+      setSelectedRows(contacts.map((c) => c.id!).filter(Boolean));
     }
   };
 
@@ -60,8 +70,8 @@ export function ContactsTable() {
             <TableRow key={contact.id} className="hover:bg-gray-50/50 transition-colors group">
               <TableCell>
                 <Checkbox 
-                  checked={selectedRows.includes(contact.id)}
-                  onCheckedChange={() => toggleRow(contact.id)}
+                  checked={selectedRows.includes(contact.id!)}
+                  onCheckedChange={() => toggleRow(contact.id!)}
                 />
               </TableCell>
               <TableCell className="text-sm font-medium text-gray-900">{contact.firstName} {contact.lastName}</TableCell>
@@ -107,6 +117,13 @@ export function ContactsTable() {
               </TableCell>
             </TableRow>
           ))}
+          {contacts.length === 0 && (
+            <TableRow>
+              <TableCell colSpan={7} className="h-24 text-center text-gray-500">
+                Geen contacten gevonden.
+              </TableCell>
+            </TableRow>
+          )}
         </TableBody>
       </Table>
       <div className="px-4 py-3 border-t bg-gray-50/30 flex items-center justify-between text-xs text-gray-500 font-medium">

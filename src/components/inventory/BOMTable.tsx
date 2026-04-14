@@ -1,8 +1,8 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { bomItems, articles } from '@/data/mockData';
+import { inventoryService, BOMItem, Article } from '@/lib/inventoryService';
 import { cn } from '@/lib/utils';
 import { useResizableColumns } from '@/lib/useResizableColumns';
 import {
@@ -76,7 +76,17 @@ const bomColumns: BomColumnDef[] = [
 
 export function BOMTable() {
   const [query, setQuery] = useState('');
-  const totalCount = 643;
+  const [bomItems, setBomItems] = useState<BOMItem[]>([]);
+  const [articles, setArticles] = useState<Article[]>([]);
+
+  useEffect(() => {
+    const unsubBOM = inventoryService.subscribeToBOMItems(setBomItems);
+    const unsubArticles = inventoryService.subscribeToArticles(setArticles);
+    return () => {
+      unsubBOM();
+      unsubArticles();
+    };
+  }, []);
 
   const { columnWidths, startResize, tableMinWidth } = useResizableColumns(bomColumns);
 
@@ -87,14 +97,14 @@ export function BOMTable() {
       const aankoopprijs = article?.purchasePrice ?? 0;
 
       return {
-        id: item.id,
-        offerteNaam: 'naam',
-        projectCode: `250000${2 + (idx % 3)}-Cer`,
-        projectStatusLabel: 'Projectafg',
-        planningBadgeLabel: `Installatie ${2 + (idx % 2)}`,
-        planningDate1: item.plannedDate,
-        planningDate2: item.plannedDate,
-        planningDate3: item.plannedDate,
+        id: item.id!,
+        offerteNaam: item.quoteName || 'Naam',
+        projectCode: item.projectCode || `250000${2 + (idx % 3)}-Cer`,
+        projectStatusLabel: item.projectStatus || 'Projectafg',
+        planningBadgeLabel: item.planningStatus || `Installatie ${2 + (idx % 2)}`,
+        planningDate1: item.plannedDate || '-',
+        planningDate2: item.plannedDate || '-',
+        planningDate3: item.plannedDate || '-',
         artikel: item.articleName,
         sku: item.sku || '-',
         definitie: item.requiredQuantity,
@@ -102,7 +112,7 @@ export function BOMTable() {
         aankoopprijs,
       };
     });
-  }, []);
+  }, [bomItems, articles]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -137,7 +147,7 @@ export function BOMTable() {
             >
               Alles
               <span className="inline-flex items-center justify-center min-w-7 h-6 px-2 rounded-full bg-emerald-600 text-white text-xs font-extrabold">
-                {formatNumberNl(totalCount)}
+                {formatNumberNl(rows.length)}
               </span>
             </button>
 
@@ -235,6 +245,13 @@ export function BOMTable() {
                 <td className="p-3 pr-6 text-sm text-gray-900 text-right">{formatNumberNl(row.aankoopprijs)}</td>
               </tr>
             ))}
+            {filtered.length === 0 && (
+              <tr>
+                <td colSpan={bomColumns.length} className="p-12 text-center text-sm text-gray-500">
+                  Geen resultaten.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
@@ -244,7 +261,7 @@ export function BOMTable() {
           <span className="font-semibold">Regels per pagina:</span>
           <span className="text-gray-800 font-bold">25</span>
         </div>
-        <span className="text-gray-800 font-semibold">1–25 of {formatNumberNl(totalCount)}</span>
+        <span className="text-gray-800 font-semibold">1–{filtered.length} of {formatNumberNl(rows.length)}</span>
         <div className="flex items-center gap-2">
           <button className="h-8 w-8 rounded-md border border-gray-200 text-gray-500 hover:text-gray-900 hover:bg-gray-50">
             ‹

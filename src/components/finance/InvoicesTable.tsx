@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Badge } from '@/components/ui/badge';
-import { invoices } from '@/data/mockData';
+import { financeService, Invoice } from '@/lib/financeService';
 import { cn } from '@/lib/utils';
 import { 
   CheckCircle2, 
@@ -27,6 +27,13 @@ const tabs = ['Concept', 'In Afwachting', 'Geweigerd', 'Goedgekeurd', 'Afgerond'
 
 export function InvoicesTable() {
   const [activeTab, setActiveTab] = useState('Goedgekeurd');
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+
+  useEffect(() => {
+    return financeService.subscribeToInvoices((data) => {
+      setInvoices(data);
+    });
+  }, []);
 
   const filteredInvoices = invoices.filter(i => i.status === activeTab);
 
@@ -108,6 +115,13 @@ export function InvoicesTable() {
                 </td>
               </tr>
             ))}
+            {filteredInvoices.length === 0 && (
+              <tr>
+                <td colSpan={8} className="p-8 text-center text-gray-500 text-sm">
+                  Geen facturen gevonden voor deze status.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

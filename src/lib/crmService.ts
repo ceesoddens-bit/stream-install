@@ -4,41 +4,28 @@ import { db } from './firebase';
 export interface Company {
   id?: string;
   name: string;
-  referenceNumber?: string;
+  contactPerson: string;
+  type: 'Residential' | 'Commercial';
+  referenceNumber: string;
+  phone: string;
+  kvkNumber: string;
+  address: string;
   tags?: string[];
   projectsCount?: number;
-  phone?: string;
-  kvkNumber?: string;
-  primaryContactPerson?: string;
   parentCompany?: string;
-  address?: string;
-  city?: string;
   vatNumber?: string;
-
-  email?: string;
-  status?: string;
-  type?: string;
   createdAt?: Timestamp;
 }
 
 export interface Contact {
   id?: string;
-  name: string;
-  firstName?: string;
-  lastName?: string;
-  tags?: string[];
-  priority?: number;
-  address?: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
   mobile?: string;
-  telephone?: string;
-  email?: string;
-  phone?: string;
-  company?: string;
-  role?: string;
-  status?: string;
-  createdByName?: string;
-  updatedByName?: string;
-  updatedAt?: Timestamp;
+  companyId?: string;
+  tags: string[];
   createdAt?: Timestamp;
 }
 
@@ -79,7 +66,7 @@ export const crmService = {
 
   // --- Contacts ---
   subscribeToContacts: (callback: (contacts: Contact[]) => void) => {
-    const q = query(collection(db, CONTACTS_COLLECTION), orderBy('name', 'asc'));
+    const q = query(collection(db, CONTACTS_COLLECTION), orderBy('lastName', 'asc'));
     return onSnapshot(q, (snapshot) => {
       const contacts = snapshot.docs.map((doc) => ({
         id: doc.id,

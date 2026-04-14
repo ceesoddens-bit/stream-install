@@ -1,7 +1,7 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { suppliers } from '@/data/mockData';
+import { inventoryService, Supplier } from '@/lib/inventoryService';
 import { cn } from '@/lib/utils';
 import {
   ChevronDown,
@@ -53,11 +53,12 @@ const suppliersColumns: SuppliersColumnDef[] = [
   { key: 'actions', width: 64, minWidth: 56, resizable: false, thClassName: 'p-3 pr-4' },
 ];
 
-function UserBadge({ initials, name }: { initials: string; name: string }) {
+function UserBadge({ initials, name }: { initials?: string; name?: string }) {
+  if (!name) return <span className="text-gray-300">-</span>;
   return (
     <div className="flex items-center gap-2 min-w-0">
       <div className="h-6 w-6 rounded-full bg-amber-200 text-amber-950 flex items-center justify-center text-[11px] font-extrabold">
-        {initials}
+        {initials || name.charAt(0)}
       </div>
       <span className="text-sm text-gray-800 truncate">{name}</span>
     </div>
@@ -65,6 +66,7 @@ function UserBadge({ initials, name }: { initials: string; name: string }) {
 }
 
 export function SuppliersTable() {
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [query, setQuery] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
 
@@ -81,6 +83,10 @@ export function SuppliersTable() {
     minWidth: number;
   } | null>(null);
 
+  useEffect(() => {
+    return inventoryService.subscribeToSuppliers(setSuppliers);
+  }, []);
+
   const tableMinWidth = useMemo(() => {
     return suppliersColumns.reduce((total, col) => total + (columnWidths[col.key] ?? col.width), 0);
   }, [columnWidths]);
@@ -94,23 +100,22 @@ export function SuppliersTable() {
         (s.currency ?? '').toLowerCase().includes(q) ||
         (s.address ?? '').toLowerCase().includes(q) ||
         (s.kvk ?? '').toLowerCase().includes(q) ||
-        s.createdAt.toLowerCase().includes(q) ||
-        s.updatedAt.toLowerCase().includes(q)
+        (typeof s.createdAt === 'string' ? s.createdAt : '').toLowerCase().includes(q)
       );
     });
-  }, [query]);
+  }, [query, suppliers]);
 
   const count = filtered.length;
   const page = 1;
   const start = count === 0 ? 0 : 1;
   const end = Math.min(pageSize, count);
 
-  const allOnPageSelected = count > 0 && filtered.slice(0, pageSize).every((s) => selectedIds.has(s.id));
+  const allOnPageSelected = count > 0 && filtered.slice(0, pageSize).every((s) => selectedIds.has(s.id!));
 
   const toggleSelectAll = () => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
-      const pageIds = filtered.slice(0, pageSize).map((s) => s.id);
+      const pageIds = filtered.slice(0, pageSize).map((s) => s.id!).filter(Boolean);
       if (pageIds.every((id) => next.has(id))) {
         pageIds.forEach((id) => next.delete(id));
       } else {
@@ -155,6 +160,13 @@ export function SuppliersTable() {
 
     window.addEventListener('pointermove', onPointerMove);
     window.addEventListener('pointerup', onPointerUp, { once: true });
+  };
+
+  const formatTimestamp = (ts: any) => {
+    if (!ts) return '-';
+    if (typeof ts === 'string') return ts;
+    if (ts.toDate) return ts.toDate().toLocaleString('nl-NL');
+    return '-';
   };
 
   return (
@@ -271,14 +283,14 @@ export function SuppliersTable() {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {filtered.slice(0, pageSize).map((row) => {
-                const isSelected = selectedIds.has(row.id);
+                const isSelected = selectedIds.has(row.id!);
                 return (
                   <tr key={row.id} className={cn('transition-colors', isSelected ? 'bg-emerald-50/40' : 'hover:bg-gray-50/60')}>
                     <td className="p-3 px-4">
                       <input
                         type="checkbox"
                         checked={isSelected}
-                        onChange={() => toggleSelectOne(row.id)}
+                        onChange={() => toggleSelectOne(row.id!)}
                         className="rounded border-gray-300"
                       />
                     </td>
@@ -290,13 +302,13 @@ export function SuppliersTable() {
                     <td className="p-3 text-sm text-gray-700">{row.currency || '-'}</td>
                     <td className="p-3 text-sm text-gray-700 truncate" title={row.address || '-'}>{row.address || '-'}</td>
                     <td className="p-3 text-sm text-gray-700">{row.kvk || '-'}</td>
-                    <td className="p-3 text-sm text-gray-700">{row.createdAt}</td>
+                    <td className="p-3 text-sm text-gray-700">{formatTimestamp(row.createdAt)}</td>
                     <td className="p-3">
                       <UserBadge initials={row.createdByInitials} name={row.createdByName} />
                     </td>
-                    <td className="p-3 text-sm text-gray-700">{row.updatedAt}</td>
+                    <td className="p-3 text-sm text-gray-700">{formatTimestamp(row.updatedAt)}</td>
                     <td className="p-3">
-                      <UserBadge initials={row.updatedByInitials} name={row.updatedByName} />
+                      <UserBadge name={row.updatedByName} />
                     </td>
                     <td className="p-3 pr-4 text-right">
                       <Button
