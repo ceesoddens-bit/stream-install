@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ExternalLink, Search, Filter, Columns, SlidersHorizontal, LayoutList, Pin, Bell, MoreHorizontal, User, Plus } from 'lucide-react';
+import { ExternalLink, Search, Filter, Columns, SlidersHorizontal, LayoutList, Pin, Bell, MoreHorizontal, User } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -16,31 +16,11 @@ export function TicketsWidget() {
     return () => unsubscribe();
   }, []);
 
-  const handleAddSample = async () => {
-    const titles = ["Factureren", "Offerte nabellen", "Project opstellen", "Klantcontact"];
-    const users = ["u1", "u2", "u3"];
-    
-    await ticketService.addTicket({
-      title: titles[Math.floor(Math.random() * titles.length)],
-      date: "vandaag",
-      type: "To-do",
-      status: "Nieuw",
-      priority: "Low",
-      userId: users[Math.floor(Math.random() * users.length)],
-      userImage: `https://i.pravatar.cc/150?u=${users[Math.floor(Math.random() * users.length)]}`
-    });
-  };
   return (
     <Card className="border border-gray-100 shadow-sm flex flex-col h-full bg-white overflow-hidden">
       <CardHeader className="py-3.5 px-4 border-b border-gray-50 flex flex-row items-center justify-between space-y-0 shrink-0">
         <CardTitle className="text-base font-bold text-gray-800">Uw tickets</CardTitle>
         <div className="flex items-center gap-1">
-          <button 
-           onClick={handleAddSample}
-           className="h-8 w-8 rounded-md flex items-center justify-center text-gray-400 hover:text-emerald-700 hover:bg-emerald-50 transition-all duration-200"
-          >
-            <Plus className="h-[18px] w-[18px]" />
-          </button>
           <button className="h-8 w-8 rounded-md flex items-center justify-center text-gray-400 hover:text-emerald-700 hover:bg-emerald-50 transition-all duration-200" title="Alle tickets bekijken">
             <ExternalLink className="h-[18px] w-[18px]" />
           </button>
@@ -101,7 +81,7 @@ export function TicketsWidget() {
               {loading ? (
                 <tr><td colSpan={10} className="p-10 text-center text-gray-300 italic">Laden...</td></tr>
               ) : tickets.length === 0 ? (
-                <tr><td colSpan={10} className="p-10 text-center text-gray-300 italic text-[10px]">Geen tickets. Druk op +</td></tr>
+                <tr><td colSpan={10} className="p-10 text-center text-gray-300 italic text-[10px]">Geen tickets gevonden.</td></tr>
               ) : tickets.map((ticket) => (
                 <tr key={ticket.id} className="border-b border-gray-50 hover:bg-emerald-50/20 transition-colors group cursor-pointer">
                   <td className="p-2 pl-4"><input type="checkbox" className="rounded-sm border-gray-200" /></td>

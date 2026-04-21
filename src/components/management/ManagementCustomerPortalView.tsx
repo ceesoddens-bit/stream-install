@@ -22,6 +22,8 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { useTenant } from '@/lib/tenantContext';
+import { settingsService } from '@/lib/settingsService';
 
 type CustomerPortalTabId = 'layout' | 'content';
 
@@ -49,12 +51,6 @@ function CustomerPortalSection({
       </div>
       <div className="px-6 pb-5 pt-4">
         {children}
-        <div className="mt-4 flex justify-end">
-          <Button variant="secondary" className="gap-2" disabled>
-            <Lock className="h-4 w-4" />
-            Opslaan
-          </Button>
-        </div>
       </div>
     </section>
   );
@@ -95,31 +91,41 @@ type ManagementCustomerPortalViewProps = {
 };
 
 export function ManagementCustomerPortalView({ initialTab = 'layout' }: ManagementCustomerPortalViewProps) {
+  const { tenant, tenantId } = useTenant();
   const [activeTab, setActiveTab] = useState<CustomerPortalTabId>(initialTab);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [bannerFileName, setBannerFileName] = useState<string>('');
 
   const [primaryColor, setPrimaryColor] = useState<string>('#076735');
-  const [logoFile, setLogoFile] = useState<File | null>(null);
-  const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
-  const logoInputRef = useRef<HTMLInputElement | null>(null);
+  const [logoUrl, setLogoUrl] = useState<string>('');
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     setActiveTab(initialTab);
   }, [initialTab]);
 
   useEffect(() => {
-    if (!logoFile) {
-      if (logoPreviewUrl) URL.revokeObjectURL(logoPreviewUrl);
-      setLogoPreviewUrl(null);
-      return;
+    if (tenant?.branding) {
+      if (tenant.branding.kleur) setPrimaryColor(tenant.branding.kleur);
+      if (tenant.branding.logoUrl) setLogoUrl(tenant.branding.logoUrl);
     }
-    const url = URL.createObjectURL(logoFile);
-    setLogoPreviewUrl(url);
-    return () => {
-      URL.revokeObjectURL(url);
-    };
-  }, [logoFile]);
+  }, [tenant]);
+
+  const handleSave = async () => {
+    if (!tenantId) return;
+    setSaving(true);
+    try {
+      await settingsService.updateBranding(tenantId, {
+        ...(tenant?.branding || {}),
+        kleur: normalizeHexColor(primaryColor),
+        logoUrl: logoUrl
+      });
+    } catch (error) {
+      console.error('Error saving branding', error);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const activeLabel = useMemo(() => {
     return tabs.find(t => t.id === activeTab)?.label ?? '';
@@ -128,11 +134,6 @@ export function ManagementCustomerPortalView({ initialTab = 'layout' }: Manageme
   const onSelectFiles = (files: FileList | null) => {
     const file = files?.[0];
     setBannerFileName(file?.name ?? '');
-  };
-
-  const onSelectLogo = (files: FileList | null) => {
-    const file = files?.[0];
-    setLogoFile(file ?? null);
   };
 
   const primaryColorValue = normalizeHexColor(primaryColor);
@@ -168,7 +169,7 @@ export function ManagementCustomerPortalView({ initialTab = 'layout' }: Manageme
         })}
       </div>
 
-      <div className="flex-1 overflow-auto pt-5">
+      <div className="flex-1 overflow-auto pt-5 pb-12">
         {activeTab === 'layout' ? (
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <section className="rounded-xl border border-gray-200 bg-white shadow-sm">
@@ -248,8 +249,7 @@ export function ManagementCustomerPortalView({ initialTab = 'layout' }: Manageme
                   </div>
 
                   <div className="flex justify-end">
-                    <Button variant="secondary" className="gap-2" disabled>
-                      <Lock className="h-4 w-4" />
+                    <Button onClick={handleSave} disabled={saving || !primaryColorValid} className="gap-2">
                       Opslaan
                     </Button>
                   </div>
@@ -262,52 +262,27 @@ export function ManagementCustomerPortalView({ initialTab = 'layout' }: Manageme
                 <h2 className="text-base font-bold text-gray-900">Logo</h2>
               </div>
               <div className="px-6 pb-5 pt-4">
-                <div
-                  className="relative rounded-xl border border-dashed border-gray-300 bg-gray-50 p-4"
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => logoInputRef.current?.click()}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') logoInputRef.current?.click();
-                  }}
-                >
-                  <input
-                    ref={logoInputRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => onSelectLogo(e.target.files)}
-                  />
-
-                  {logoPreviewUrl ? (
-                    <div className="relative h-36 w-full overflow-hidden rounded-lg bg-white">
-                      <img src={logoPreviewUrl} alt="Logo preview" className="h-full w-full object-contain" />
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setLogoFile(null);
-                        }}
-                        className="absolute right-2 top-2 inline-flex h-7 w-7 items-center justify-center rounded-full bg-white/90 text-gray-600 shadow hover:bg-white"
-                        aria-label="Verwijder logo"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex h-36 w-full items-center justify-center rounded-lg bg-white text-sm text-gray-500">
-                      Klik om een logo te uploaden
-                    </div>
-                  )}
-
-                  <div className="absolute -right-2 bottom-10 inline-flex h-8 w-8 items-center justify-center rounded-full bg-white text-gray-500 shadow">
-                    <LinkIcon className="h-4 w-4" />
+                <div className="space-y-4">
+                  <div className="h-36 w-full rounded-xl border border-dashed border-gray-300 bg-gray-50 flex items-center justify-center overflow-hidden p-4">
+                    {logoUrl ? (
+                      <img src={logoUrl} alt="Logo preview" className="h-full w-full object-contain" />
+                    ) : (
+                      <div className="text-sm text-gray-500">Geen logo URL ingesteld</div>
+                    )}
+                  </div>
+                  <div>
+                    <div className="text-sm font-semibold text-gray-700 mb-2">Logo URL</div>
+                    <input
+                      value={logoUrl}
+                      onChange={(e) => setLogoUrl(e.target.value)}
+                      placeholder="https://example.com/logo.png"
+                      className="w-full h-10 rounded-lg border border-gray-300 px-3 text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                    />
                   </div>
                 </div>
 
-                <div className="mt-4 flex justify-end">
-                  <Button className="gap-2" disabled={!logoFile && !logoPreviewUrl}>
-                    <Lock className="h-4 w-4" />
+                <div className="mt-6 flex justify-end">
+                  <Button onClick={handleSave} disabled={saving} className="gap-2">
                     Opslaan
                   </Button>
                 </div>

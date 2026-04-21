@@ -1,5 +1,7 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { Columns3, SlidersHorizontal, AlignJustify, Download, Search, Calendar as CalendarIcon } from 'lucide-react';
+import { financeService } from '../../lib/financeService';
+import { Quote } from '../../types';
 
 type SalesTotalColumnKey =
   | 'accountManager'
@@ -53,6 +55,95 @@ const salesOfferColumns: SalesColumnDef<SalesOfferColumnKey>[] = [
 ];
 
 export function SalesLayout() {
+  const [quotes, setQuotes] = useState<Quote[]>([]);
+  const [activeSegment, setActiveSegment] = useState<'Alles' | 'Residentieel' | 'Commercieel'>('Alles');
+
+  useEffect(() => {
+    const unsubscribe = financeService.subscribeToQuotes((data) => {
+      setQuotes(data);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const formatCurrency = (val: number) =>
+    new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR' }).format(val);
+
+  const { totaalData, perOfferteData, totals } = useMemo(() => {
+    // Only accepted quotes (or we could show all, but usually sales dashboard shows sold)
+    const filteredQuotes = quotes.filter(q => q.status === 'Geaccepteerd');
+    
+    // In real app, segment filter would check q.clientType if it existed.
+    // For now we don't have clientType on Quote, so segment filter might just show all unless we map it.
+
+    const offData = filteredQuotes.map(q => {
+      const verkoopprijs = q.amount || 0;
+      const inkoopprijs = verkoopprijs * 0.6; // mocked 60% cost for now
+      const marge = verkoopprijs - inkoopprijs;
+      const marginPerc = verkoopprijs > 0 ? ((marge / verkoopprijs) * 100).toFixed(2) : '0.00';
+      const verkoopmarge = verkoopprijs > 0 ? ((marge / inkoopprijs) * 100).toFixed(2) : '0.00';
+
+      return {
+        id: q.quoteNumber || q.id.slice(0, 5),
+        project: q.projectName || 'Onbekend project',
+        manager: q.contactName || 'Onbekende manager',
+        margeVal: marge,
+        inkoopVal: inkoopprijs,
+        verkoopVal: verkoopprijs,
+        marge: formatCurrency(marge),
+        marginPerc,
+        verkoopmarge,
+        inkoopprijs: formatCurrency(inkoopprijs),
+        verkoopprijs: formatCurrency(verkoopprijs),
+        datum: q.date || q.sentDate || 'Onbekend'
+      };
+    });
+
+    const grouped = offData.reduce((acc, curr) => {
+      if (!acc[curr.manager]) {
+        acc[curr.manager] = { manager: curr.manager, leads: 0, margeVal: 0, inkoopVal: 0, verkoopVal: 0 };
+      }
+      acc[curr.manager].leads += 1;
+      acc[curr.manager].margeVal += curr.margeVal;
+      acc[curr.manager].inkoopVal += curr.inkoopVal;
+      acc[curr.manager].verkoopVal += curr.verkoopVal;
+      return acc;
+    }, {} as Record<string, { manager: string; leads: number; margeVal: number; inkoopVal: number; verkoopVal: number; }>);
+
+    const totData = Object.values(grouped).map(g => {
+      const marginPerc = g.verkoopVal > 0 ? ((g.margeVal / g.verkoopVal) * 100).toFixed(2) : '0.00';
+      const verkoopmarge = g.verkoopVal > 0 ? ((g.margeVal / g.inkoopVal) * 100).toFixed(2) : '0.00';
+      return {
+        manager: g.manager,
+        leads: g.leads,
+        marge: formatCurrency(g.margeVal),
+        marginPerc,
+        verkoopmarge,
+        inkoopprijs: formatCurrency(g.inkoopVal),
+        verkoopprijs: formatCurrency(g.verkoopVal)
+      };
+    });
+
+    const totalsObj = {
+      leads: offData.length,
+      margeVal: offData.reduce((sum, q) => sum + q.margeVal, 0),
+      inkoopVal: offData.reduce((sum, q) => sum + q.inkoopVal, 0),
+      verkoopVal: offData.reduce((sum, q) => sum + q.verkoopVal, 0),
+    };
+
+    const overallMarginPerc = totalsObj.verkoopVal > 0 ? ((totalsObj.margeVal / totalsObj.verkoopVal) * 100).toFixed(2) : '0.00';
+    const overallVerkoopmarge = totalsObj.inkoopVal > 0 ? ((totalsObj.margeVal / totalsObj.inkoopVal) * 100).toFixed(2) : '0.00';
+
+    return { 
+      totaalData: totData, 
+      perOfferteData: offData,
+      totals: {
+        ...totalsObj,
+        marginPerc: overallMarginPerc,
+        verkoopmarge: overallVerkoopmarge
+      }
+    };
+  }, [quotes, activeSegment]);
+
   const [totalColumnWidths, setTotalColumnWidths] = useState<Record<SalesTotalColumnKey, number>>(() => {
     return salesTotalColumns.reduce((acc, col) => {
       acc[col.key] = col.width;
@@ -142,39 +233,33 @@ export function SalesLayout() {
     window.addEventListener('pointerup', onPointerUp, { once: true });
   };
 
-  const totaalData = [
-    { manager: 'Installatiegroep...', leads: 6, marge: '€ 5.747,78', marginPerc: '66.19', verkoopmarge: '39.83', inkoopprijs: '€ 8.684,00', verkoopprijs: '€ 14.431,78' },
-    { manager: 'Sandra Brader', leads: 1, marge: '€ 1.612,00', marginPerc: '76.91', verkoopmarge: '43.47', inkoopprijs: '€ 2.096,00', verkoopprijs: '€ 3.708,00' }
-  ];
-
-  const perOfferteData = [
-    { id: 498, project: '2600145-Centrad-1', manager: 'Sven | Installatiegroep', marge: '€ 1.089,00', marginPerc: '58.52', verkoopmarge: '36.92', inkoopprijs: '€ 1.861,00', verkoopprijs: '€ 2.950,00', datum: '03-03-2026' },
-    { id: 508, project: '2600160-Centrad-1', manager: 'Sandra Brader', marge: '€ 1.612,00', marginPerc: '76.91', verkoopmarge: '43.47', inkoopprijs: '€ 2.096,00', verkoopprijs: '€ 3.708,00', datum: '12-03-2026' },
-    { id: 496, project: '2600136-Centrad-1', manager: 'Sven | Installatiegroep', marge: '€ 1.089,00', marginPerc: '58.52', verkoopmarge: '36.92', inkoopprijs: '€ 1.861,00', verkoopprijs: '€ 2.950,00', datum: '27-02-2026' },
-    { id: 526, project: '2600210-Centrad-1', manager: 'Sven | Installatiegroep', marge: '€ 1.089,00', marginPerc: '58.52', verkoopmarge: '36.92', inkoopprijs: '€ 1.861,00', verkoopprijs: '€ 2.950,00', datum: '25-03-2026' },
-    { id: 503, project: '2600157-Edwin Hols', manager: 'Sven | Installatiegroep', marge: '€ 545,00', marginPerc: '54500', verkoopmarge: '100', inkoopprijs: '€ 0,00', verkoopprijs: '€ 545,00', datum: '05-03-2026' },
-    { id: 499, project: '2600117-Nathalie Ba', manager: 'Sven | Installatiegroep', marge: '€ 846,78', marginPerc: '68.29', verkoopmarge: '40.58', inkoopprijs: '€ 1.240,00', verkoopprijs: '€ 2.086,78', datum: '03-03-2026' },
-    { id: 501, project: '2600153-Centrad-1', manager: 'Sven | Installatiegroep', marge: '€ 1.089,00', marginPerc: '58.52', verkoopmarge: '36.92', inkoopprijs: '€ 1.861,00', verkoopprijs: '€ 2.950,00', datum: '05-03-2026' },
-  ];
-
   return (
     <div className="flex flex-col h-full bg-slate-50 space-y-4 px-2 overflow-auto pb-8">
       
       {/* Date Picker mimicking input */}
       <div className="bg-white border text-sm border-gray-200 rounded-lg p-3 flex justify-between items-center text-gray-700 shadow-sm">
-        <span>26-02-2026 – 27-03-2026</span>
+        <span>1 Jan 2026 – 31 Dec 2026</span>
         <CalendarIcon className="h-5 w-5 text-gray-400" />
       </div>
 
       {/* Tabs */}
       <div className="flex items-center bg-white rounded-lg border border-gray-100 p-1 w-max shadow-sm">
-        <button className="px-6 py-2 text-sm font-semibold rounded-md bg-green-50 text-green-700">
+        <button 
+          onClick={() => setActiveSegment('Alles')}
+          className={`px-6 py-2 text-sm font-semibold rounded-md ${activeSegment === 'Alles' ? 'bg-green-50 text-green-700' : 'text-gray-600 hover:text-gray-900'}`}
+        >
           Alles
         </button>
-        <button className="px-6 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 rounded-md">
+        <button 
+          onClick={() => setActiveSegment('Residentieel')}
+          className={`px-6 py-2 text-sm font-medium rounded-md ${activeSegment === 'Residentieel' ? 'bg-green-50 text-green-700' : 'text-gray-600 hover:text-gray-900'}`}
+        >
           Residentieel
         </button>
-        <button className="px-6 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 rounded-md">
+        <button 
+          onClick={() => setActiveSegment('Commercieel')}
+          className={`px-6 py-2 text-sm font-medium rounded-md ${activeSegment === 'Commercieel' ? 'bg-green-50 text-green-700' : 'text-gray-600 hover:text-gray-900'}`}
+        >
           Commercieel
         </button>
       </div>
@@ -247,15 +332,15 @@ export function SalesLayout() {
           <div className="bg-white border-t border-gray-200 p-4 shrink-0">
             <div className="flex justify-between items-center text-sm font-bold text-green-700 border-t-4 border-gray-300 pt-2 pb-1">
               <span className="w-1/5"></span>
-              <span className="w-1/12">7</span>
-              <span className="w-1/6 text-right">€ 7.359,78</span>
-              <span className="w-1/12 text-right">68.27</span>
-              <span className="w-1/6 text-right">40.57</span>
-              <span className="w-1/6 text-right">€ 10.780,00</span>
-              <span className="w-1/6 text-right">€ 18.139,78</span>
+              <span className="w-1/12">{totals.leads}</span>
+              <span className="w-1/6 text-right">{formatCurrency(totals.margeVal)}</span>
+              <span className="w-1/12 text-right">{totals.marginPerc}</span>
+              <span className="w-1/6 text-right">{totals.verkoopmarge}</span>
+              <span className="w-1/6 text-right">{formatCurrency(totals.inkoopVal)}</span>
+              <span className="w-1/6 text-right">{formatCurrency(totals.verkoopVal)}</span>
             </div>
             <div className="text-right text-xs text-gray-500 mt-2 font-medium">
-              Totaal: 2
+              Totaal: {totaalData.length}
             </div>
           </div>
         </div>
@@ -331,11 +416,11 @@ export function SalesLayout() {
           <div className="bg-white border-t border-gray-200 p-4 shrink-0">
             <div className="flex justify-between items-center text-sm font-bold text-green-700 border-t-4 border-gray-300 pt-2 pb-1 pr-[10%]">
               <span className="w-1/4"></span>
-              <span className="w-1/6 text-right">€ 7.359,78</span>
-              <span className="w-1/12 text-right">68.27</span>
-              <span className="w-1/6 text-right">40.57</span>
-              <span className="w-1/6 text-right">€ 10.780,00</span>
-              <span className="w-1/6 text-right">€ 18.139,78</span>
+              <span className="w-1/6 text-right">{formatCurrency(totals.margeVal)}</span>
+              <span className="w-1/12 text-right">{totals.marginPerc}</span>
+              <span className="w-1/6 text-right">{totals.verkoopmarge}</span>
+              <span className="w-1/6 text-right">{formatCurrency(totals.inkoopVal)}</span>
+              <span className="w-1/6 text-right">{formatCurrency(totals.verkoopVal)}</span>
             </div>
             <div className="text-right text-xs text-gray-500 mt-2 font-medium">
               Totaal: {perOfferteData.length}

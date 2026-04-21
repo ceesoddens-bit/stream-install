@@ -1,12 +1,12 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { formTemplateListRows } from '@/data/managementMockData';
 import { cn } from '@/lib/utils';
 import { Columns3, Copy, Eye, Filter, Lock, Pencil, Plus, Search, Trash2, ChevronDown } from 'lucide-react';
+import { templateService, FormTemplate } from '@/lib/templateService';
 
 const badgeClassByValue = (value: string) => {
   const v = value.toLowerCase();
@@ -56,6 +56,15 @@ const formTemplatesColumns: FormTemplatesColumnDef[] = [
 
 export function ManagementFormTemplatesListView() {
   const [query, setQuery] = useState('');
+  const [templates, setTemplates] = useState<FormTemplate[]>([]);
+
+  useEffect(() => {
+    const unsubscribe = templateService.subscribeToFormTemplates((data) => {
+      setTemplates(data);
+    });
+    return () => unsubscribe();
+  }, []);
+
   const [columnWidths, setColumnWidths] = useState<Record<FormTemplatesColumnKey, number>>(() => {
     return formTemplatesColumns.reduce((acc, col) => {
       acc[col.key] = col.width;
@@ -71,17 +80,30 @@ export function ManagementFormTemplatesListView() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return formTemplateListRows;
-    return formTemplateListRows.filter((r) => {
+    const mapped = templates.map(t => ({
+      id: t.id,
+      name: t.name,
+      types: [t.type],
+      planningTypes: ['Installatie', 'Service'],
+      standaard: 'Nee',
+      bewerker: 'Alle',
+      beheer: 'Alle',
+      hulpverlening: 'Alle',
+      updatedAt: t.updatedAt?.toDate ? t.updatedAt.toDate().toLocaleDateString('nl-NL') : 'Onbekend',
+      updatedBy: 'Systeem'
+    }));
+
+    if (!q) return mapped;
+    return mapped.filter((r) => {
       return (
         r.name.toLowerCase().includes(q) ||
         r.updatedBy.toLowerCase().includes(q) ||
         r.planningTypes.join(' ').toLowerCase().includes(q)
       );
     });
-  }, [query]);
+  }, [query, templates]);
 
-  const totalCount = 12;
+  const totalCount = templates.length;
 
   const tableMinWidth = useMemo(() => {
     return formTemplatesColumns.reduce((total, col) => total + (columnWidths[col.key] ?? col.width), 0);
@@ -175,108 +197,103 @@ export function ManagementFormTemplatesListView() {
               <tr className="bg-white border-b border-gray-200">
                 {formTemplatesColumns.map(col => (
                   <th
-                    key={col.key}
-                    className={cn('relative select-none overflow-hidden whitespace-nowrap', col.thClassName)}
-                  >
-                    {col.key === 'select' ? (
-                      <Checkbox checked={false} aria-label="Selecteer alles" />
-                    ) : col.key === 'actions' ? null : (
-                      <span className="truncate block">{col.label}</span>
-                    )}
+                      key={col.key}
+                      className={cn('relative select-none overflow-hidden whitespace-nowrap', col.thClassName)}
+                    >
+                      {col.key === 'actions' ? null : (
+                        <span className="truncate block">{col.label}</span>
+                      )}
 
-                    {col.resizable ? (
-                      <div
-                        onPointerDown={startResize(col.key)}
-                        className="absolute right-0 top-0 h-full w-2 cursor-col-resize group"
-                        role="separator"
-                        aria-orientation="vertical"
-                        aria-label={`Resize column ${col.label ?? col.key}`}
-                      >
-                        <div className="absolute right-0 top-0 h-full w-px bg-transparent group-hover:bg-gray-300" />
-                      </div>
-                    ) : null}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {filtered.map((r) => {
-                const initials = r.updatedBy
-                  .split(' ')
-                  .filter(Boolean)
-                  .slice(0, 2)
-                  .map((p) => p[0]?.toUpperCase())
-                  .join('');
+                      {col.resizable ? (
+                        <div
+                          onPointerDown={startResize(col.key)}
+                          className="absolute right-0 top-0 h-full w-2 cursor-col-resize group"
+                          role="separator"
+                          aria-orientation="vertical"
+                          aria-label={`Resize column ${col.label ?? col.key}`}
+                        >
+                          <div className="absolute right-0 top-0 h-full w-px bg-transparent group-hover:bg-gray-300" />
+                        </div>
+                      ) : null}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {filtered.map((r) => {
+                  const initials = r.updatedBy
+                    .split(' ')
+                    .filter(Boolean)
+                    .slice(0, 2)
+                    .map((p) => p[0]?.toUpperCase())
+                    .join('');
 
-                return (
-                  <tr key={r.id} className="hover:bg-emerald-50/20 transition-colors">
-                    <td className="p-3 px-4">
-                      <Checkbox checked={false} aria-label="Selecteer" />
-                    </td>
-                    <td className="p-3 text-sm font-medium text-emerald-700 truncate" title={r.name}>{r.name}</td>
-                    <td className="p-3">
-                      <div className="flex flex-wrap gap-1">
-                        {r.types.map((t, idx) => (
-                          <Badge
-                            key={`${r.id}-t-${idx}`}
-                            variant="outline"
-                            className={cn('text-[10px] font-extrabold px-2 py-0.5 rounded-full', badgeClassByValue(t))}
-                          >
-                            {t}
-                          </Badge>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="p-3">
-                      <div className="flex flex-wrap gap-1">
-                        {r.planningTypes.map((pt, idx) => (
-                          <Badge
-                            key={`${r.id}-pt-${idx}`}
-                            variant="outline"
-                            className={cn('text-[10px] font-extrabold px-2 py-0.5 rounded-full', badgeClassByValue(pt))}
-                          >
-                            {pt}
-                          </Badge>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="p-3 text-sm text-gray-700">{r.standaard}</td>
-                    <td className="p-3 text-sm text-gray-700">{r.bewerker}</td>
-                    <td className="p-3 text-sm text-gray-700">{r.beheer}</td>
-                    <td className="p-3 text-sm text-gray-700">{r.hulpverlening}</td>
-                    <td className="p-3 text-sm text-gray-600">{r.updatedAt}</td>
-                    <td className="p-3">
-                      <div className="flex items-center gap-2">
-                        <Avatar className="h-7 w-7">
-                          <AvatarFallback className="bg-blue-600 text-white text-[10px]">{initials || 'U'}</AvatarFallback>
-                        </Avatar>
-                        <span className="text-sm text-gray-800">{r.updatedBy}</span>
-                      </div>
-                    </td>
-                    <td className="p-3 pr-4">
-                      <div className="flex items-center justify-end gap-2">
-                        <button className="h-8 w-8 rounded-md hover:bg-gray-100 text-emerald-700">
-                          <Eye className="h-4 w-4" />
-                        </button>
-                        <button className="h-8 w-8 rounded-md hover:bg-gray-100 text-emerald-700">
-                          <Lock className="h-4 w-4" />
-                        </button>
-                        <button className="h-8 w-8 rounded-md hover:bg-gray-100 text-blue-600">
-                          <Copy className="h-4 w-4" />
-                        </button>
-                        <button className="h-8 w-8 rounded-md hover:bg-gray-100 text-emerald-700">
-                          <Pencil className="h-4 w-4" />
-                        </button>
-                        <button className="h-8 w-8 rounded-md hover:bg-gray-100 text-red-600">
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                  return (
+                    <tr key={r.id} className="hover:bg-emerald-50/20 transition-colors">
+                      <td className="p-3 px-4 text-sm font-medium text-emerald-700 truncate" title={r.name}>{r.name}</td>
+                      <td className="p-3">
+                        <div className="flex flex-wrap gap-1">
+                          {r.types.map((t, idx) => (
+                            <Badge
+                              key={`${r.id}-t-${idx}`}
+                              variant="outline"
+                              className={cn('text-[10px] font-extrabold px-2 py-0.5 rounded-full', badgeClassByValue(t))}
+                            >
+                              {t}
+                            </Badge>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="p-3">
+                        <div className="flex flex-wrap gap-1">
+                          {r.planningTypes.map((pt, idx) => (
+                            <Badge
+                              key={`${r.id}-pt-${idx}`}
+                              variant="outline"
+                              className={cn('text-[10px] font-extrabold px-2 py-0.5 rounded-full', badgeClassByValue(pt))}
+                            >
+                              {pt}
+                            </Badge>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="p-3 text-sm text-gray-700">{r.standaard}</td>
+                      <td className="p-3 text-sm text-gray-700">{r.bewerker}</td>
+                      <td className="p-3 text-sm text-gray-700">{r.beheer}</td>
+                      <td className="p-3 text-sm text-gray-700">{r.hulpverlening}</td>
+                      <td className="p-3 text-sm text-gray-600">{r.updatedAt}</td>
+                      <td className="p-3">
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-7 w-7">
+                            <AvatarFallback className="bg-blue-600 text-white text-[10px]">{initials || 'U'}</AvatarFallback>
+                          </Avatar>
+                          <span className="text-sm text-gray-800">{r.updatedBy}</span>
+                        </div>
+                      </td>
+                      <td className="p-3 pr-4">
+                        <div className="flex items-center justify-end gap-2">
+                          <button className="h-8 w-8 rounded-md hover:bg-gray-100 text-emerald-700">
+                            <Eye className="h-4 w-4" />
+                          </button>
+                          <button className="h-8 w-8 rounded-md hover:bg-gray-100 text-emerald-700">
+                            <Lock className="h-4 w-4" />
+                          </button>
+                          <button className="h-8 w-8 rounded-md hover:bg-gray-100 text-blue-600">
+                            <Copy className="h-4 w-4" />
+                          </button>
+                          <button className="h-8 w-8 rounded-md hover:bg-gray-100 text-emerald-700">
+                            <Pencil className="h-4 w-4" />
+                          </button>
+                          <button className="h-8 w-8 rounded-md hover:bg-gray-100 text-red-600">
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
         </div>
 
         <div className="px-6 py-3 border-t border-gray-100 flex items-center justify-end gap-6 text-xs text-gray-500 shrink-0">

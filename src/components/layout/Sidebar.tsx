@@ -31,13 +31,20 @@ import {
   CheckCircle2,
   Play,
   Square,
-  X as XIcon
+  X as XIcon,
+  Lock,
+  LogOut
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { currentUser } from '@/data/mockData';
 import { formatSeconds } from '@/lib/timeUtils';
+import { useTenant } from '@/lib/tenantContext';
+import { VIEW_REGISTRY } from '@/lib/viewRegistry';
+import { ModuleKey } from '@/lib/modules';
+import { signOut } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 
 interface SidebarProps {
   collapsed: boolean;
@@ -56,6 +63,7 @@ type NavItem = {
   icon: any;
   label: string;
   id: string;
+  requiredModule?: ModuleKey;
   subItems?: { 
     label: string; 
     id: string; 
@@ -92,6 +100,7 @@ const navItems: NavItem[] = [
     icon: Map,
     label: 'PLANNING',
     id: 'planning_parent',
+    requiredModule: 'planning',
     subItems: [
       { label: 'Planner', id: 'planning', icon: Calendar },
       { label: 'Planner', id: 'planning_beta', icon: Calendar, badge: 'BETA' },
@@ -103,6 +112,7 @@ const navItems: NavItem[] = [
     icon: Users,
     label: 'CRM',
     id: 'crm_parent',
+    requiredModule: 'crm',
     subItems: [
       { label: 'Contacten', id: 'crm', icon: Users },
       { label: 'Bedrijven', id: 'crm_companies', icon: Building2 },
@@ -112,6 +122,7 @@ const navItems: NavItem[] = [
     icon: KanbanSquare, 
     label: 'PROJECTEN', 
     id: 'projects_parent',
+    requiredModule: 'projectmanagement',
     subItems: [
       { label: 'Alle Projecten', id: 'projects', icon: ListTodo },
       { label: 'Mijn Projecten', id: 'my_projects', icon: UserCircle2 }
@@ -121,6 +132,7 @@ const navItems: NavItem[] = [
     icon: Target,
     label: 'FORMULIEREN',
     id: 'formulieren_parent',
+    requiredModule: 'formulieren',
     subItems: [
       { label: 'Alles', id: 'forms', icon: FileText }
     ]
@@ -129,6 +141,7 @@ const navItems: NavItem[] = [
     icon: CreditCard,
     label: 'ADMINISTRATIE',
     id: 'finance_parent',
+    requiredModule: 'facturering', // or 'offertes'
     subItems: [
       { label: 'Offertes', id: 'administratie_offertes', icon: FileText },
       { label: 'Facturen', id: 'administratie_facturen', icon: CreditCard },
@@ -139,6 +152,7 @@ const navItems: NavItem[] = [
     icon: Package,
     label: 'VOORRAAD',
     id: 'logistiek_parent',
+    requiredModule: 'voorraadbeheer',
     subItems: [
       { label: 'Overzicht', id: 'inventory_overview', icon: LayoutDashboard },
       { label: 'Mutaties', id: 'inventory_mutaties', icon: List },
@@ -202,6 +216,7 @@ const navItems: NavItem[] = [
     id: 'settings_parent',
     subItems: [
       { label: 'Beheer', id: 'settings', icon: Settings },
+      { label: 'Abonnement', id: 'settings_subscription', icon: CreditCard },
     ]
   }
 ];
@@ -218,6 +233,11 @@ export function Sidebar({
   onToggleTimer,
   onResetTimer
 }: SidebarProps) {
+  const { tenant, heeftToegang, userDoc, authUser } = useTenant();
+  const userName = userDoc?.displayName || authUser?.displayName || 'Gebruiker';
+  const userRole = userDoc?.role || 'Gebruiker';
+  const userAvatar = authUser?.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(userName)}&background=random`;
+
   const [expandedItems, setExpandedItems] = useState<string[]>([
     'mijn_omgeving', 
     'planning_parent', 
@@ -257,10 +277,14 @@ export function Sidebar({
 
       <div className="flex items-center h-16 px-4 border-b border-white/10 shrink-0">
         <div className="flex items-center gap-2 overflow-hidden">
-          <div className="bg-blue-600 p-1.5 rounded-lg shrink-0">
-            <Zap className="h-5 w-5 text-white" />
+          <div className="bg-blue-600 p-1.5 rounded-lg shrink-0 overflow-hidden">
+            {tenant?.branding?.logoUrl ? (
+              <img src={tenant.branding.logoUrl} alt={tenant.naam} className="h-full w-full object-cover" />
+            ) : (
+              <Zap className="h-5 w-5 text-white" />
+            )}
           </div>
-          {!collapsed && <span className="font-bold text-lg whitespace-nowrap">Stream Install</span>}
+          {!collapsed && <span className="font-bold text-lg whitespace-nowrap truncate">{tenant?.naam || 'Stream Install'}</span>}
         </div>
       </div>
 
@@ -269,6 +293,7 @@ export function Sidebar({
           const isExpanded = expandedItems.includes(item.id);
           const hasSubItems = item.subItems && item.subItems.length > 0;
           const isActive = activeView === item.id || (hasSubItems && item.subItems?.some(sub => sub.id === activeView || sub.subItems?.some(s => s.id === activeView)));
+          const isParentLocked = item.requiredModule && !heeftToegang(item.requiredModule);
 
           return (
             <div key={item.id} className="flex flex-col space-y-1">
@@ -294,9 +319,14 @@ export function Sidebar({
                 )}
                 title={collapsed ? item.label : undefined}
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 flex-1 min-w-0">
                   <item.icon className={cn('h-5 w-5 shrink-0', isActive ? 'text-white' : 'text-white/55')} />
-                  {!collapsed && <span className={cn(isActive && hasSubItems ? 'text-white font-semibold' : '')}>{item.label}</span>}
+                  {!collapsed && <span className={cn("truncate", isActive && hasSubItems ? 'text-white font-semibold' : '')}>{item.label}</span>}
+                  {!collapsed && isParentLocked && (
+                    <span className="ml-auto text-[8px] font-black bg-white/10 text-white/40 px-1 py-0.5 rounded border border-white/5 shrink-0">
+                      UPGRADE
+                    </span>
+                  )}
                 </div>
                 {!collapsed && hasSubItems && (
                   <ChevronDown className={cn('h-4 w-4 text-white/45 transition-transform', isExpanded && 'rotate-180')} />
@@ -309,6 +339,9 @@ export function Sidebar({
                     const hasSubSubItems = subItem.subItems && subItem.subItems.length > 0;
                     const isSubExpanded = expandedItems.includes(subItem.id);
                     const isSubActive = activeView === subItem.id || (hasSubSubItems && subItem.subItems?.some(s => s.id === activeView));
+                    
+                    const meta = VIEW_REGISTRY[subItem.id];
+                    const isLocked = meta?.requiredModule && !heeftToegang(meta.requiredModule as ModuleKey);
 
                     return (
                       <div key={subItem.id} className="flex flex-col space-y-1">
@@ -331,11 +364,17 @@ export function Sidebar({
                             !hasSubSubItems && isSubActive
                               ? 'bg-white/10 text-white'
                               : 'text-white/65 hover:bg-white/5 hover:text-white',
+                            isLocked && "opacity-80"
                           )}
                         >
                           <div className="flex items-center gap-2 flex-1 min-w-0">
                             {subItem.icon && <subItem.icon className={cn('h-4 w-4 shrink-0', (isSubActive && !hasSubSubItems) ? 'text-white' : 'text-white/45')} />}
                             <span className={cn("truncate", hasSubSubItems && isSubActive ? "text-white font-semibold" : "")}>{subItem.label}</span>
+                            {isLocked && (
+                              <span className="ml-auto text-[9px] font-black bg-blue-600 text-white px-1.5 py-0.5 rounded shadow-sm shrink-0">
+                                UPGRADE
+                              </span>
+                            )}
                           </div>
                           
                           <div className="flex items-center gap-2">
@@ -382,17 +421,31 @@ export function Sidebar({
 
       <div className="p-4 border-t border-white/10 shrink-0 space-y-4 bg-[var(--sidebar)] relative z-10">
         <button 
-          onClick={() => onChatOpenChange(!isChatOpen)}
+          onClick={() => {
+            if (heeftToegang('ai_assistent')) {
+              onChatOpenChange(!isChatOpen);
+            } else {
+              onViewChange('settings_subscription');
+            }
+          }}
           className={cn(
             "flex items-center gap-3 w-full px-3 py-2.5 rounded-lg border border-white/10 hover:bg-white/5 transition-all text-left group shadow-sm bg-white/5",
-            collapsed && "justify-center px-0"
+            collapsed && "justify-center px-0",
+            !heeftToegang('ai_assistent') && "opacity-80"
           )}
         >
           <div className="p-1 px-1.5 bg-white/10 rounded-md ring-1 ring-white/15 group-hover:scale-110 transition-transform">
-            <Sparkles className="h-4 w-4 text-white/80" />
+            {heeftToegang('ai_assistent') ? (
+              <Sparkles className="h-4 w-4 text-white/80" />
+            ) : (
+              <Lock className="h-4 w-4 text-white/45" />
+            )}
           </div>
           {!collapsed && (
-            <span className="text-[13px] font-bold text-white tracking-tight">Chat met AI</span>
+            <div className="flex flex-col">
+              <span className="text-[13px] font-bold text-white tracking-tight">Chat met AI</span>
+              {!heeftToegang('ai_assistent') && <span className="text-[10px] text-blue-400 font-bold uppercase tracking-tighter">Upgrade</span>}
+            </div>
           )}
         </button>
 
@@ -446,15 +499,25 @@ export function Sidebar({
         
         <div className={cn('flex items-center gap-3', collapsed && 'justify-center')}>
           <Avatar className="h-9 w-9 shrink-0">
-            <AvatarImage src={currentUser.avatarUrl} alt={currentUser.name} />
-            <AvatarFallback>{currentUser.name.charAt(0)}</AvatarFallback>
+            <AvatarImage src={userAvatar} alt={userName} />
+            <AvatarFallback>{userName.charAt(0)}</AvatarFallback>
           </Avatar>
           {!collapsed && (
             <div className="flex flex-col overflow-hidden">
-              <span className="text-sm font-medium truncate text-white">{currentUser.name}</span>
-              <span className="text-xs text-white/55 truncate">{currentUser.role}</span>
+              <span className="text-sm font-medium truncate text-white">{userName}</span>
+              <span className="text-xs text-white/55 truncate capitalize">{userRole}</span>
             </div>
           )}
+          <button
+            onClick={() => signOut(auth)}
+            className={cn(
+              "ml-auto p-2 text-white/40 hover:text-white hover:bg-white/10 rounded-lg transition-colors",
+              collapsed && "ml-0"
+            )}
+            title="Uitloggen"
+          >
+            <LogOut className="h-4 w-4" />
+          </button>
         </div>
 
         {/* Operationeel Footer Bar */}

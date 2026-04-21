@@ -1,24 +1,22 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { managementUsers } from '@/data/managementMockData';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Columns3, Filter, Search, Users, Mail, Plus } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { userService, InviteDoc } from '@/lib/userService';
+import { useTenant } from '@/lib/tenantContext';
+import { UserDoc } from '@/lib/tenantTypes';
 
 const formatRangeLabel = (from: number, to: number, total: number) => `${from}–${to} of ${total}`;
 
 type UsersColumnKey =
   | 'foto'
   | 'naam'
-  | 'adres'
   | 'email'
-  | 'afdelingen'
   | 'rol'
-  | 'uurtarief1'
-  | 'uurtarief2'
-  | 'gearchiveerd'
+  | 'status'
   | 'actions';
 
 type UsersColumnDef = {
@@ -31,20 +29,40 @@ type UsersColumnDef = {
 };
 
 const usersColumns: UsersColumnDef[] = [
-  { key: 'foto', label: 'Foto', width: 96, minWidth: 80, resizable: false, thClassName: 'p-3 px-4 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider' },
+  { key: 'foto', label: 'Foto', width: 80, minWidth: 80, resizable: false, thClassName: 'p-3 px-4 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider' },
   { key: 'naam', label: 'Naam', width: 240, minWidth: 180, resizable: true, thClassName: 'p-3 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider' },
-  { key: 'adres', label: 'Adres', width: 240, minWidth: 180, resizable: true, thClassName: 'p-3 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider' },
   { key: 'email', label: 'Email', width: 260, minWidth: 200, resizable: true, thClassName: 'p-3 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider' },
-  { key: 'afdelingen', label: 'Afdeling(en)', width: 200, minWidth: 160, resizable: true, thClassName: 'p-3 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider' },
   { key: 'rol', label: 'Rol', width: 160, minWidth: 140, resizable: true, thClassName: 'p-3 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider' },
-  { key: 'uurtarief1', label: 'Uurtarief (1)', width: 160, minWidth: 140, resizable: true, thClassName: 'p-3 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider' },
-  { key: 'uurtarief2', label: 'Uurtarief (2)', width: 160, minWidth: 140, resizable: true, thClassName: 'p-3 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider' },
-  { key: 'gearchiveerd', label: 'Gearchiveerd', width: 120, minWidth: 110, resizable: true, thClassName: 'p-3 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider' },
+  { key: 'status', label: 'Status', width: 160, minWidth: 140, resizable: true, thClassName: 'p-3 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider' },
   { key: 'actions', width: 64, minWidth: 56, resizable: false, thClassName: 'p-3 pr-4 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider' },
 ];
 
+type CombinedUserRow = {
+  id: string;
+  isInvite: boolean;
+  name: string;
+  email: string;
+  role: string;
+  status: string;
+  initials: string;
+};
+
 export function ManagementUsersView() {
+  const { tenantId } = useTenant();
   const [query, setQuery] = useState('');
+  const [users, setUsers] = useState<UserDoc[]>([]);
+  const [invites, setInvites] = useState<InviteDoc[]>([]);
+
+  useEffect(() => {
+    if (!tenantId) return;
+    const unsubUsers = userService.subscribeToUsers(tenantId, (data) => setUsers(data));
+    const unsubInvites = userService.subscribeToInvites((data) => setInvites(data));
+
+    return () => {
+      unsubUsers();
+      unsubInvites();
+    };
+  }, [tenantId]);
 
   const [columnWidths, setColumnWidths] = useState<Record<UsersColumnKey, number>>(() => {
     return usersColumns.reduce((acc, col) => {
@@ -65,19 +83,40 @@ export function ManagementUsersView() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return managementUsers;
-    return managementUsers.filter((u) => {
+    
+    const combined: CombinedUserRow[] = [
+      ...users.map(u => ({
+        id: u.uid,
+        isInvite: false,
+        name: u.displayName || 'Geen naam',
+        email: u.email,
+        role: u.role,
+        status: 'Actief',
+        initials: u.displayName ? u.displayName.substring(0, 2).toUpperCase() : u.email.substring(0, 2).toUpperCase()
+      })),
+      ...invites.map(i => ({
+        id: i.id || crypto.randomUUID(),
+        isInvite: true,
+        name: 'Uitgenodigd',
+        email: i.email,
+        role: i.role,
+        status: 'Wachtend',
+        initials: i.email.substring(0, 2).toUpperCase()
+      }))
+    ];
+
+    if (!q) return combined;
+    return combined.filter((u) => {
       return (
         u.name.toLowerCase().includes(q) ||
         u.email.toLowerCase().includes(q) ||
-        u.role.toLowerCase().includes(q) ||
-        u.departments.toLowerCase().includes(q)
+        u.role.toLowerCase().includes(q)
       );
     });
-  }, [query]);
+  }, [query, users, invites]);
 
-  const activeCount = managementUsers.length;
-  const invitedCount = 0;
+  const activeCount = users.length;
+  const invitedCount = invites.length;
   const perPage = 50;
   const shownFrom = filtered.length ? 1 : 0;
   const shownTo = filtered.length;
@@ -227,19 +266,20 @@ export function ManagementUsersView() {
                 <tr key={u.id} className="hover:bg-emerald-50/20 transition-colors">
                   <td className="p-3 px-4">
                     <Avatar className="h-8 w-8">
-                      <AvatarFallback className="bg-gray-100 text-gray-500 text-xs"> </AvatarFallback>
+                      <AvatarFallback className="bg-gray-100 text-gray-500 text-xs">{u.initials}</AvatarFallback>
                     </Avatar>
                   </td>
-                  <td className="p-3 text-sm font-medium text-gray-900">{u.name}</td>
-                  <td className="p-3 text-sm text-gray-600 truncate" title={u.address}>{u.address}</td>
+                  <td className="p-3 text-sm font-medium text-gray-900">
+                    {u.name}
+                    {u.isInvite && <span className="ml-2 px-2 py-0.5 text-[10px] font-bold uppercase bg-amber-100 text-amber-800 rounded-full">Invite</span>}
+                  </td>
                   <td className="p-3 text-sm text-gray-700 truncate" title={u.email}>{u.email}</td>
-                  <td className="p-3 text-sm text-gray-600">{u.departments}</td>
-                  <td className="p-3 text-sm text-gray-800">{u.role}</td>
-                  <td className="p-3 text-sm text-gray-600">{u.hourlyRate1}</td>
-                  <td className="p-3 text-sm text-gray-600">{u.hourlyRate2}</td>
+                  <td className="p-3 text-sm text-gray-800 capitalize">{u.role}</td>
                   <td className="p-3">
-                    <div className={cn('h-5 w-5 rounded-full flex items-center justify-center border', u.archived ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-gray-200 bg-gray-50 text-gray-400')}>
-                      ×
+                    <div className={cn('inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold', 
+                      u.status === 'Actief' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'
+                    )}>
+                      {u.status}
                     </div>
                   </td>
                   <td className="p-3 pr-4">

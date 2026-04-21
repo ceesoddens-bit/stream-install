@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   AlignJustify,
   Columns3,
@@ -13,18 +13,51 @@ import {
   SlidersHorizontal,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { invoicesData } from './mock';
 import { InvoicesTable } from './InvoicesTable';
-import { StatusFilter, statusFilters, InvoiceStatus } from './types';
+import { StatusFilter, statusFilters, InvoiceStatus, InvoiceRow } from './types';
 import { computeInvoiceCounts, filterInvoices, toneClasses } from './utils';
+import { financeService } from '@/lib/financeService';
 
 export function InvoicesTab() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('Alles');
   const [query, setQuery] = useState('');
   const [pageSize, setPageSize] = useState(25);
   const [page, setPage] = useState(1);
+  const [invoicesData, setInvoicesData] = useState<InvoiceRow[]>([]);
 
-  const counts = useMemo(() => computeInvoiceCounts(invoicesData), []);
+  useEffect(() => {
+    const unsubscribe = financeService.subscribeToInvoices((data) => {
+      const mapped: InvoiceRow[] = data.map(inv => ({
+        id: inv.id,
+        jaarcode: inv.invoiceCode,
+        code: parseInt(inv.invoiceNumber) || 0,
+        status: (['Concept', 'In Afwachting', 'Geweigerd', 'Goedgekeurd', 'Afgerond', 'Creditfactuur'].includes(inv.status) ? inv.status : 'Concept') as InvoiceStatus,
+        project: inv.projectName || 'Onbekend',
+        offerte: null,
+        volledigBetaald: inv.fullyPaid || false,
+        totaalExcl: inv.totalExcl || 0,
+        totaalIncl: inv.totalIncl || inv.amount || 0,
+        totaalBetaald: inv.fullyPaid ? (inv.totalIncl || inv.amount || 0) : 0,
+        totaalVoorschot: 0,
+        kredietOorspr: '',
+        bedrijfsnaam: inv.clientName || 'Onbekend',
+        contactName: inv.contactName || '',
+        emailAddress: '',
+        emailIndicators: 0,
+        sentIndicator: inv.status === 'Verstuurd' || inv.status === 'Betaald',
+        reference: '',
+        paymentTermDays: 14,
+        createdAt: inv.date || new Date().toISOString().split('T')[0],
+        createdBy: { name: 'Systeem', initials: 'SY', kind: 'Systeem' },
+        updatedAt: inv.date || new Date().toISOString().split('T')[0],
+        updatedBy: { name: 'Systeem', initials: 'SY', kind: 'Systeem' },
+      }));
+      setInvoicesData(mapped);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const counts = useMemo(() => computeInvoiceCounts(invoicesData), [invoicesData]);
 
   const filtered = useMemo(() => {
     return filterInvoices({ rows: invoicesData, statusFilter, query });

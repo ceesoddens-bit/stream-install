@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { BarChart3, Building2, FileText, Globe, LayoutDashboard, Map, Settings, Sparkles, Users, ListTodo } from 'lucide-react';
 import { ManagementUsersView } from './ManagementUsersView';
+import { ModuleGuard } from '@/components/auth/ModuleGuard';
 import { ManagementCustomersView } from './ManagementCustomersView';
 import { ManagementAutomationView } from './ManagementAutomationView';
 import { ManagementAutomationLiteView } from './ManagementAutomationLiteView';
@@ -40,8 +41,16 @@ const managementViews = [
 export function ManagementLayout({ activeView }: ManagementLayoutProps) {
   if (activeView === 'management_users') return <ManagementUsersView />;
   if (activeView === 'management_customers') return <ManagementCustomersView />;
-  if (activeView === 'management_automation') return <ManagementAutomationView />;
-  if (activeView === 'management_automation_lite') return <ManagementAutomationLiteView />;
+  if (activeView === 'management_automation') return (
+    <ModuleGuard module="automatiseringen">
+      <ManagementAutomationView />
+    </ModuleGuard>
+  );
+  if (activeView === 'management_automation_lite') return (
+    <ModuleGuard module="automatiseringen">
+      <ManagementAutomationLiteView />
+    </ModuleGuard>
+  );
   if (activeView === 'management_pv_designer') return <ManagementPVDesignerSettingsView />;
   if (activeView === 'management_templates_automation_email') return <ManagementAutomationEmailView />;
   if (activeView === 'management_templates_email') return <ManagementEmailTemplatesView />;
@@ -49,9 +58,13 @@ export function ManagementLayout({ activeView }: ManagementLayoutProps) {
   if (activeView === 'management_templates_pdf') return <ManagementPdfTemplatesListView />;
   if (activeView === 'management_templates_workflows') return <ManagementWorkflowsView />;
   if (activeView === 'management_projectgroups') return <ManagementProjectGroupsView />;
-  if (activeView === 'management_customer_portal') return <ManagementCustomerPortalView initialTab="layout" />;
-  if (activeView === 'management_customer_portal_layout') return <ManagementCustomerPortalView initialTab="layout" />;
-  if (activeView === 'management_customer_portal_content') return <ManagementCustomerPortalView initialTab="content" />;
+  if (activeView === 'management_customer_portal' || activeView === 'management_customer_portal_layout' || activeView === 'management_customer_portal_content') {
+    return (
+      <ModuleGuard module="klantportaal">
+        <ManagementCustomerPortalView initialTab={activeView === 'management_customer_portal_content' ? 'content' : 'layout'} />
+      </ModuleGuard>
+    );
+  }
 
   const current = useMemo(() => {
     return managementViews.find(v => v.id === activeView) ?? {

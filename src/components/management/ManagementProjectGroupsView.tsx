@@ -1,11 +1,26 @@
-import React from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { CheckSquare, ChevronDown, Columns3, Filter, Pencil, Plus, Search, Users } from 'lucide-react';
+import { projectGroupService, ProjectGroup } from '@/lib/projectGroupService';
 
 export function ManagementProjectGroupsView() {
-  const rows: Array<{ id: string; name: string; projectCount: number; updatedBy: string }> = [];
+  const [groups, setGroups] = useState<ProjectGroup[]>([]);
+  const [query, setQuery] = useState('');
   const perPage = 25;
+
+  useEffect(() => {
+    const unsubscribe = projectGroupService.subscribeToProjectGroups((data) => {
+      setGroups(data);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return groups;
+    return groups.filter(g => g.name.toLowerCase().includes(q));
+  }, [groups, query]);
 
   return (
     <div className="flex flex-col h-full">
@@ -61,7 +76,12 @@ export function ManagementProjectGroupsView() {
 
           <div className="relative w-72 shrink-0">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-            <Input placeholder="Zoeken…" className="pl-9 h-9 bg-white border-gray-200 text-sm" />
+            <Input 
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              placeholder="Zoeken…" 
+              className="pl-9 h-9 bg-white border-gray-200 text-sm" 
+            />
           </div>
         </div>
 
@@ -80,12 +100,12 @@ export function ManagementProjectGroupsView() {
                 </th>
                 <th className="p-3 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider">Naam</th>
                 <th className="p-3 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider text-right"># Projecten</th>
-                <th className="p-3 pr-4 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider">Bijgewerkt door</th>
+                <th className="p-3 pr-4 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider">Type / Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {rows.length === 0 ? null :
-                rows.map((r) => (
+              {filtered.length === 0 ? null :
+                filtered.map((r) => (
                   <tr key={r.id} className="hover:bg-emerald-50/20 transition-colors">
                     <td className="p-3 pl-4">
                       <input type="checkbox" className="h-4 w-4" />
@@ -93,16 +113,16 @@ export function ManagementProjectGroupsView() {
                     <td className="p-3 text-sm font-medium text-gray-900 truncate" title={r.name}>
                       {r.name}
                     </td>
-                    <td className="p-3 text-sm text-gray-700 text-right">{r.projectCount}</td>
-                    <td className="p-3 pr-4 text-sm text-gray-700 truncate" title={r.updatedBy}>
-                      {r.updatedBy}
+                    <td className="p-3 text-sm text-gray-700 text-right">{r.members || 0}</td>
+                    <td className="p-3 pr-4 text-sm text-gray-700 truncate" title={r.type}>
+                      {r.type} - {r.status}
                     </td>
                   </tr>
                 ))}
             </tbody>
           </table>
 
-          {rows.length === 0 ? (
+          {filtered.length === 0 ? (
             <div className="h-full min-h-[320px] flex items-center justify-center text-sm text-gray-400">
               Geen rijen
             </div>

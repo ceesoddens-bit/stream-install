@@ -5,7 +5,8 @@ import { cn } from '@/lib/utils';
 import { Search, Filter, Plus, Download, FileText, CreditCard } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { financeService, Quote } from '@/lib/financeService';
+import { financeService } from '@/lib/financeService';
+import { Quote } from '@/types';
 
 const tabs = [
   { id: 'offertes', label: 'Offertes', icon: FileText },
@@ -27,22 +28,8 @@ export function FinanceLayout() {
     return () => unsubscribe();
   }, []);
 
-  const handleAddSample = async () => {
-    const clients = ["Jan van Doore", "Zonnig Huis B.V.", "Gijs Noort", "Miranda de Vries"];
-    const statuses: ('Draft' | 'Sent' | 'Accepted' | 'Declined')[] = ['Draft', 'Sent', 'Accepted', 'Declined'];
-    
-    await financeService.addQuote({
-      quoteNumber: `OFF-${Math.floor(Math.random() * 9000) + 1000}`,
-      client: clients[Math.floor(Math.random() * clients.length)],
-      amount: Math.floor(Math.random() * 5000) + 500,
-      status: statuses[Math.floor(Math.random() * statuses.length)],
-      date: new Date().toLocaleDateString('nl-NL')
-    });
-  };
-
   return (
-    <div className="flex flex-col h-full gap-6">
-      {/* Sub-navigation */}
+    <div className="flex flex-col h-full bg-gray-50/50 p-6 gap-6 overflow-hidden">
       <div className="flex items-center justify-between border-b bg-white -mx-6 px-6 -mt-6 py-2 sticky top-0 z-10">
         <div className="flex gap-1 overflow-x-auto no-scrollbar">
           {tabs.map((tab) => (
@@ -70,11 +57,10 @@ export function FinanceLayout() {
             Exporteren
           </Button>
           <Button 
-            onClick={activeTab === 'offertes' ? handleAddSample : undefined}
             size="sm" className="h-9 gap-2 bg-blue-600 hover:bg-blue-700 shadow-sm transition-all"
           >
             <Plus className="h-4 w-4" />
-            Nieuwe {activeTab === 'offertes' ? 'Offerte (Sample)' : 'Factuur'}
+            Nieuwe {activeTab === 'offertes' ? 'Offerte' : 'Factuur'}
           </Button>
         </div>
       </div>

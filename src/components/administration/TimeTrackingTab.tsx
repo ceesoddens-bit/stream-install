@@ -1,6 +1,7 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Columns3, Download, Search, SlidersHorizontal, Clock, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { hoursService, HourEntry } from '@/lib/hoursService';
 
 type TimeEntry = {
   id: string;
@@ -11,35 +12,27 @@ type TimeEntry = {
   uren: string;
 };
 
-const timeEntries: TimeEntry[] = [
-  {
-    id: 'te-1',
-    datum: '26-03-2026',
-    medewerker: 'Sven',
-    klantProject: 'Centrada — Installatie',
-    omschrijving: 'Voorbereiding werkbon',
-    uren: '01:15',
-  },
-  {
-    id: 'te-2',
-    datum: '26-03-2026',
-    medewerker: 'Cees',
-    klantProject: 'OpusFlow — Support',
-    omschrijving: 'Afstemming klant',
-    uren: '00:45',
-  },
-  {
-    id: 'te-3',
-    datum: '25-03-2026',
-    medewerker: 'Sandra',
-    klantProject: 'Fam. van den Brink — Warmtepomp',
-    omschrijving: 'Inmeten en check onderdelen',
-    uren: '02:30',
-  },
-];
-
 export function TimeTrackingTab() {
   const [query, setQuery] = useState('');
+  const [hoursData, setHoursData] = useState<HourEntry[]>([]);
+
+  useEffect(() => {
+    const unsubscribe = hoursService.subscribeToHours((data) => {
+      setHoursData(data);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const timeEntries: TimeEntry[] = useMemo(() => {
+    return hoursData.map(h => ({
+      id: h.id || crypto.randomUUID(),
+      datum: h.date ? h.date.split('-').reverse().join('-') : 'Onbekend',
+      medewerker: h.userName || 'Onbekend',
+      klantProject: h.project || h.ticketId || 'Geen project/ticket',
+      omschrijving: h.type || 'Geen omschrijving',
+      uren: h.duur || '00:00'
+    }));
+  }, [hoursData]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();

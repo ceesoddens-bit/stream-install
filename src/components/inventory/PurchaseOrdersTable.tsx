@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { inventoryService, PurchaseOrder } from '@/lib/inventoryService';
 import { cn } from '@/lib/utils';
 import { Boxes, Columns3, Download, Filter, Plus, Settings, SlidersHorizontal, ZoomIn } from 'lucide-react';
 
@@ -9,7 +10,18 @@ const pageSize = 25;
 export function PurchaseOrdersTable() {
   const [subTab, setSubTab] = useState<'inkooporders' | 'regels'>('inkooporders');
   const [query, setQuery] = useState('');
-  const count = 0;
+  const [orders, setOrders] = useState<PurchaseOrder[]>([]);
+
+  useEffect(() => {
+    return inventoryService.subscribeToPurchaseOrders(setOrders);
+  }, []);
+
+  const filteredOrders = orders.filter((o) => 
+    o.orderNumber.toLowerCase().includes(query.toLowerCase()) || 
+    o.supplierName.toLowerCase().includes(query.toLowerCase())
+  );
+
+  const count = filteredOrders.length;
 
   return (
     <div className="flex flex-col h-full">
@@ -130,11 +142,39 @@ export function PurchaseOrdersTable() {
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td colSpan={11} className="p-12 text-center text-sm text-gray-500">
-                  Geen resultaten.
-                </td>
-              </tr>
+              {filteredOrders.length === 0 ? (
+                <tr>
+                  <td colSpan={11} className="p-12 text-center text-sm text-gray-500">
+                    Geen inkooporders gevonden.
+                  </td>
+                </tr>
+              ) : (
+                filteredOrders.map(order => (
+                  <tr key={order.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="p-3 px-4">
+                      <input type="checkbox" className="rounded border-gray-300 shadow-sm" />
+                    </td>
+                    <td className="p-3 font-semibold text-gray-900">{order.orderNumber}</td>
+                    <td className="p-3 text-sm text-gray-700">{order.orderNumber}</td>
+                    <td className="p-3 text-sm text-gray-900 font-medium">{order.supplierName}</td>
+                    <td className="p-3 text-sm text-gray-700">-</td>
+                    <td className="p-3 text-sm text-gray-700">-</td>
+                    <td className="p-3">
+                      <span className={cn(
+                        "px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wider",
+                        order.status === 'Concept' ? "bg-gray-100 text-gray-800" :
+                        order.status === 'Verzonden' ? "bg-blue-100 text-blue-800" :
+                        order.status === 'Ontvangen' ? "bg-emerald-100 text-emerald-800" :
+                        "bg-red-100 text-red-800"
+                      )}>{order.status}</span>
+                    </td>
+                    <td className="p-3 text-sm font-bold text-gray-900">€ {order.totalAmount.toFixed(2)}</td>
+                    <td className="p-3 text-sm text-gray-700">-</td>
+                    <td className="p-3 text-sm text-gray-700">{new Date(order.orderDate).toLocaleDateString()}</td>
+                    <td className="p-3 pr-6 text-sm text-gray-700">-</td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

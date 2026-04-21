@@ -8,8 +8,10 @@ import { currentUser } from '@/data/mockData';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
+import { useTenant } from '@/lib/tenantContext';
 
 export function Header() {
+  const { tenant } = useTenant();
   return (
     <header className="h-16 border-b border-border/70 bg-white/70 backdrop-blur flex items-center justify-between px-6 shrink-0 relative z-20">
       <div className="flex-1 max-w-md">
@@ -41,11 +43,15 @@ export function Header() {
         {/* Company Profile Area */}
         <div className="flex items-center gap-3 pl-2 group cursor-pointer hover:bg-gray-100/60 p-1 px-2 rounded-lg transition-all">
           <div className="flex items-center gap-2.5">
-             <div className="h-8 w-8 bg-emerald-500 rounded-lg flex items-center justify-center shadow-sm shadow-emerald-200/60">
-                <Zap className="h-5 w-5 text-white fill-current" />
+             <div className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-sm shadow-blue-200/60 overflow-hidden">
+                {tenant?.branding?.logoUrl ? (
+                  <img src={tenant.branding.logoUrl} alt={tenant.naam} className="h-full w-full object-cover" />
+                ) : (
+                  <Zap className="h-5 w-5 text-white fill-current" />
+                )}
              </div>
              <div className="flex flex-col items-start leading-tight">
-                <span className="text-xs font-bold text-gray-800 tracking-tight">Installatiegroep Duurzaam</span>
+                <span className="text-xs font-bold text-gray-800 tracking-tight">{tenant?.naam || 'Stream Install'}</span>
              </div>
           </div>
           

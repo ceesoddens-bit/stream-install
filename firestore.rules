@@ -1,0 +1,246 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // === Helpers ===
+    function isSignedIn() { return request.auth != null; }
+    function tenantId() { return request.auth.token.tenantId; }
+    function sameTenant(t) { return isSignedIn() && tenantId() == t; }
+    function role() { return request.auth.token.role; }
+    function hasRole(roles) { return isSignedIn() && role() in roles; }
+
+    function tenantData(tId) {
+      return get(/databases/$(database)/documents/tenants/$(tId)).data;
+    }
+
+    function hasModule(tId, moduleKey) {
+      let inbegrepen = moduleKey in ['crm', 'dashboarding'];
+      return inbegrepen || moduleKey in tenantData(tId).actiefModules;
+    }
+
+    function isOwnContact(contactId) {
+      let user = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      return user.contactId == contactId;
+    }
+
+    function isCustomer() {
+      return role() == 'customer';
+    }
+
+    // === Tenants ===
+    match /tenants/{tId} {
+      allow read: if sameTenant(tId);
+      allow update: if sameTenant(tId) && hasRole(['owner','admin']);
+      // Self-service: user creating the tenant must also be its owner.
+      allow create: if isSignedIn() && request.resource.data.ownerUid == request.auth.uid;
+      allow delete: if false;
+
+      // ----- CRM -----
+      match /companies/{docId} {
+        allow read: if sameTenant(tId) && hasRole(['owner','admin','manager','sales','finance','technician']);
+        allow create, update, delete: if sameTenant(tId) && hasRole(['owner','admin','manager','sales']);
+      }
+
+      match /contacts/{docId} {
+        allow read: if sameTenant(tId) && (
+          hasRole(['owner','admin','manager','sales','finance','technician']) ||
+          (role() == 'customer' && isOwnContact(docId))
+        );
+        allow create, update, delete: if sameTenant(tId) && hasRole(['owner','admin','manager','sales']);
+      }
+
+      match /tags/{docId} {
+        allow read: if sameTenant(tId);
+        allow write: if sameTenant(tId) && hasRole(['owner','admin','manager']);
+      }
+
+      // ----- Projects -----
+      match /projects/{docId} {
+        allow read: if sameTenant(tId);
+        allow create, update, delete: if sameTenant(tId)
+          && hasRole(['owner','admin','manager','sales'])
+          && hasModule(tId,'projectmanagement');
+      }
+
+      match /project_groups/{docId} {
+        allow read: if sameTenant(tId);
+        allow write: if sameTenant(tId) && hasRole(['owner','admin','manager']);
+      }
+
+      // ----- Finance -----
+      match /quotes/{docId} {
+        allow read: if sameTenant(tId) && (
+          hasRole(['owner','admin','manager','sales','finance']) ||
+          (isCustomer() && resource.data.contactId != null && isOwnContact(resource.data.contactId))
+        );
+        allow create: if sameTenant(tId) && hasRole(['owner','admin','manager','sales']) && hasModule(tId,'offertes');
+        allow update: if sameTenant(tId) && (
+          (hasRole(['owner','admin','manager','sales']) && hasModule(tId,'offertes')) ||
+          (isCustomer() && resource.data.status == 'Verstuurd' && request.resource.data.status == 'Geaccepteerd')
+        );
+        allow delete: if sameTenant(tId) && hasRole(['owner','admin']) && hasModule(tId,'offertes');
+      }
+
+      match /invoices/{docId} {
+        allow read: if sameTenant(tId) && (
+          hasRole(['owner','admin','manager','finance']) ||
+          (isCustomer() && resource.data.contactId != null && isOwnContact(resource.data.contactId))
+        );
+        allow create, update, delete: if sameTenant(tId) && hasRole(['owner','admin','finance']) && hasModule(tId,'facturering');
+      }
+
+      match /purchase_invoices/{docId} {
+        allow read: if sameTenant(tId) && hasRole(['owner','admin','finance','manager']);
+        allow write: if sameTenant(tId) && hasRole(['owner','admin','finance']) && hasModule(tId,'facturering');
+      }
+
+      match /payments/{docId} {
+        allow read: if sameTenant(tId) && hasRole(['owner','admin','finance','manager']);
+        allow write: if sameTenant(tId) && hasRole(['owner','admin','finance']) && hasModule(tId,'facturering');
+      }
+
+      match /counters/{docId} {
+        allow read, write: if sameTenant(tId) && hasRole(['owner','admin','finance','manager','sales']);
+      }
+
+      // ----- Tickets -----
+      match /tickets/{docId} {
+        allow read: if sameTenant(tId) && (
+          hasRole(['owner','admin','manager','technician','sales']) ||
+          (isCustomer() && resource.data.contactId != null && isOwnContact(resource.data.contactId))
+        );
+        allow create: if sameTenant(tId)
+          && (hasRole(['owner','admin','manager','technician','sales']) || isCustomer())
+          && hasModule(tId,'projectmanagement');
+        allow update, delete: if sameTenant(tId)
+          && hasRole(['owner','admin','manager','technician'])
+          && hasModule(tId,'projectmanagement');
+
+        match /comments/{commentId} {
+          allow read: if sameTenant(tId);
+          allow create: if sameTenant(tId);
+          allow update, delete: if sameTenant(tId) && request.auth.uid == resource.data.authorId;
+        }
+      }
+
+      // ----- Hours / Tasks -----
+      match /hours/{docId} {
+        allow read: if sameTenant(tId);
+        allow create, update: if sameTenant(tId) && hasModule(tId,'projectmanagement');
+        allow delete: if sameTenant(tId) && hasRole(['owner','admin','manager']) && hasModule(tId,'projectmanagement');
+      }
+
+      match /tasks/{docId} {
+        allow read: if sameTenant(tId);
+        allow write: if sameTenant(tId) && hasModule(tId,'projectmanagement');
+      }
+
+      // ----- Planning -----
+      match /planning/{docId} {
+        allow read: if sameTenant(tId);
+        allow write: if sameTenant(tId) && hasRole(['owner','admin','manager','sales']) && hasModule(tId,'planning');
+      }
+
+      match /planning_cards/{docId} {
+        allow read: if sameTenant(tId);
+        allow write: if sameTenant(tId) && hasRole(['owner','admin','manager']) && hasModule(tId,'planning');
+      }
+
+      match /teams/{docId} {
+        allow read: if sameTenant(tId);
+        allow write: if sameTenant(tId) && hasRole(['owner','admin','manager']) && hasModule(tId,'planning');
+      }
+
+      // ----- Inventory -----
+      match /inventory/{docId} {
+        allow read: if sameTenant(tId);
+        allow write: if sameTenant(tId) && hasRole(['owner','admin','manager','technician']) && hasModule(tId,'voorraadbeheer');
+      }
+      match /suppliers/{docId} {
+        allow read: if sameTenant(tId);
+        allow write: if sameTenant(tId) && hasRole(['owner','admin','manager']) && hasModule(tId,'voorraadbeheer');
+      }
+      match /warehouses/{docId} {
+        allow read: if sameTenant(tId);
+        allow write: if sameTenant(tId) && hasRole(['owner','admin','manager']) && hasModule(tId,'voorraadbeheer');
+      }
+      match /bom_items/{docId} {
+        allow read: if sameTenant(tId);
+        allow write: if sameTenant(tId) && hasRole(['owner','admin','manager']) && hasModule(tId,'voorraadbeheer');
+      }
+      match /purchase_orders/{docId} {
+        allow read: if sameTenant(tId);
+        allow write: if sameTenant(tId) && hasRole(['owner','admin','manager']) && hasModule(tId,'voorraadbeheer');
+      }
+      match /mutations/{docId} {
+        allow read: if sameTenant(tId);
+        allow write: if sameTenant(tId) && hasRole(['owner','admin','manager','technician']) && hasModule(tId,'voorraadbeheer');
+      }
+      match /stock_overview/{docId} {
+        allow read: if sameTenant(tId);
+        allow write: if false; // server-aggregated
+      }
+
+      // ----- Forms -----
+      match /form_templates/{docId} {
+        allow read: if sameTenant(tId);
+        allow write: if sameTenant(tId) && hasRole(['owner','admin','manager']) && hasModule(tId,'formulieren');
+      }
+      match /form_items/{docId} {
+        allow read: if sameTenant(tId);
+        allow create, update: if sameTenant(tId) && hasModule(tId,'formulieren');
+        allow delete: if sameTenant(tId) && hasRole(['owner','admin','manager']) && hasModule(tId,'formulieren');
+      }
+
+      // ----- Settings / Invites -----
+      match /settings/{docId} {
+        allow read: if sameTenant(tId);
+        allow write: if sameTenant(tId) && hasRole(['owner','admin']);
+      }
+      match /invites/{token} {
+        allow read: if true; // token itself acts as the secret
+        allow create, delete: if sameTenant(tId) && hasRole(['owner','admin']);
+        // Owners/admins manage; the invited user may mark `used` during accept flow.
+        allow update: if (sameTenant(tId) && hasRole(['owner','admin']))
+          || (isSignedIn() && request.resource.data.used == true
+              && request.resource.data.usedByUid == request.auth.uid);
+      }
+    }
+
+    // === Users ===
+    match /users/{uid} {
+      allow read: if isSignedIn() && (
+        request.auth.uid == uid ||
+        (sameTenant(resource.data.tenantId) && hasRole(['owner','admin','manager']))
+      );
+      // Self-create during registration/accept-invite; Cloud Function syncs custom claims.
+      allow create: if isSignedIn() && request.auth.uid == uid
+        && request.resource.data.tenantId is string
+        && request.resource.data.role is string;
+      allow update: if request.auth.uid == uid ||
+        (isSignedIn() && sameTenant(resource.data.tenantId) && hasRole(['owner','admin']));
+      allow delete: if false;
+    }
+
+
+    // === Storage ===
+    // Note: storage rules are in storage.rules, these are firestore rules
+    // But we should ensure the frontend has permission to write to storage
+    match /mail/{id} {
+      allow read, write: if false;
+    }
+
+    // === Stripe Payments Extension ===
+    match /customers/{uid} {
+      allow read: if isSignedIn() && request.auth.uid == uid;
+      match /{document=**} {
+        allow read: if isSignedIn() && request.auth.uid == uid;
+      }
+    }
+    match /products/{id} {
+      allow read: if true;
+      match /prices/{priceId} { allow read: if true; }
+      match /tax_rates/{taxId} { allow read: if true; }
+    }
+  }
+}

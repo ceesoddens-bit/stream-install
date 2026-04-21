@@ -81,27 +81,6 @@ export function PlanningListLayout() {
     return () => unsubscribe();
   }, []);
 
-  const handleAddSample = async () => {
-    const types: ('Service' | 'Installatie' | 'Onderhoud')[] = ['Service', 'Installatie', 'Onderhoud'];
-    const names = ["Jan van Doore", "Gijs Noort", "Ricardo Zoon", "J.M. Dam"];
-    const accountManagers = ["Sandra Brader", "Sven", "Lars", "Nina"];
-    const techs = ["Sven", "Lars", "Sandra"];
-    
-    await planningService.addPlanningEntry({
-      projectId: `PRJ-${Math.floor(Math.random() * 1000)}`,
-      projectName: `Project ${Math.floor(Math.random() * 100)}`,
-      accountManager: accountManagers[Math.floor(Math.random() * accountManagers.length)],
-      client: names[Math.floor(Math.random() * names.length)],
-      contactMobile: "06-41186342",
-      createdBy: "Sandra Brader",
-      technician: techs[Math.floor(Math.random() * techs.length)],
-      startTime: "09:00",
-      endTime: "11:00",
-      date: new Date().toISOString().split('T')[0],
-      status: 'Ingepland',
-      type: types[Math.floor(Math.random() * types.length)]
-    });
-  };
 
   const handleDelete = async (id: string) => {
     if (window.confirm("Afspraak verwijderen?")) {
@@ -322,7 +301,6 @@ export function PlanningListLayout() {
           
           <div className="flex items-center gap-3">
              <button 
-                onClick={handleAddSample}
                 className="flex items-center gap-2 px-4 py-2 bg-emerald-800 text-white font-medium text-xs rounded-md shadow-sm hover:bg-emerald-700 transition-all"
               >
               <Plus className="h-4 w-4" /> Afspraak Maken
@@ -429,7 +407,7 @@ export function PlanningListLayout() {
               ) : entries.length === 0 ? (
                 <tr>
                   <td colSpan={tableColSpan} className="p-20 text-center text-gray-400 italic">
-                    Geen afspraken gevonden. Gebruik "Afspraak Maken".
+                    Geen afspraken gevonden.
                   </td>
                 </tr>
               ) : entries.map((row) => (

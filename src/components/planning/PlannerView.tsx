@@ -7,31 +7,60 @@ import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { planningService, PlanningEntry } from '@/lib/planningService';
 import { projectService, Project } from '@/lib/projectService';
+import { teamService, Technician } from '@/lib/teamService';
+import { format, addDays, subDays } from 'date-fns';
+import { nl } from 'date-fns/locale';
+import { PlanProjectDialog } from './PlanningDialogs';
+import { toast } from 'sonner';
 
 const HOURS = Array.from({ length: 12 }, (_, i) => i + 7); // 07 to 18
 
 export function PlannerView() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [entries, setEntries] = useState<PlanningEntry[]>([]);
+  const [techs, setTechs] = useState<Technician[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [dateLabel, setDateLabel] = useState('vandaag');
+  const [selectedDate, setSelectedDate] = useState(new Date());
   const [copied, setCopied] = useState(false);
+
+  const [isPlanOpen, setIsPlanOpen] = useState(false);
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
 
   useEffect(() => {
     const unsubProjects = projectService.subscribeToProjects(setProjects);
-    const unsubPlanning = planningService.subscribeToPlanning(setEntries);
+    const unsubTechs = teamService.subscribeToTechnicians(setTechs);
     setIsLoading(false);
     return () => {
       unsubProjects();
-      unsubPlanning();
+      unsubTechs();
     };
   }, []);
 
-  // Process entries into team rows
-  const technicians = Array.from(new Set(entries.map(e => e.technician).filter(t => !!t)));
-  // Ensure we show at least some default techs if empty
-  const defaultTechs = ["Connor van Dreemen", "Damian Tobolski", "Daniel Leutscher", "Sven"];
-  const displayTechs = (technicians.length > 0 ? technicians : defaultTechs) as string[];
+  const dateKey = format(selectedDate, 'yyyy-MM-dd');
+
+  useEffect(() => {
+    const unsubPlanning = planningService.subscribeToPlanning(setEntries, { date: dateKey });
+    return () => unsubPlanning();
+  }, [dateKey]);
+
+  // Use real techs or fallback
+  const displayTechs = techs.length > 0 ? techs.map(t => t.name) : [];
+
+  const handlePlan = (project: Project) => {
+    setSelectedProject(project);
+    setIsPlanOpen(true);
+  };
+
+  const handleDeleteEntry = async (id: string) => {
+    if (window.confirm("Weet je zeker dat je deze planning wilt verwijderen?")) {
+      try {
+        await planningService.deletePlanningEntry(id);
+        toast.success('Planning verwijderd');
+      } catch (err) {
+        toast.error('Fout bij verwijderen');
+      }
+    }
+  };
 
   const getRows = () => {
     return displayTechs.map(tech => {
@@ -43,6 +72,7 @@ export function PlannerView() {
           const start = parseInt(e.startTime.split(':')[0]) + (parseInt(e.startTime.split(':')[1]) / 60);
           const end = parseInt(e.endTime.split(':')[0]) + (parseInt(e.endTime.split(':')[1]) / 60);
           return {
+            id: e.id,
             title: `${e.client} - ${e.projectName}`,
             start,
             end,
@@ -104,6 +134,7 @@ export function PlannerView() {
           {projects.map((p) => (
             <div 
               key={p.id} 
+              onClick={() => handlePlan(p)}
               className="min-w-[180px] w-[180px] bg-white border border-gray-200 rounded-xl p-3 shadow-sm snap-start hover:border-emerald-300 transition-all cursor-pointer group"
             >
               <div className="text-xs text-gray-500 font-medium mb-0.5">{p.client}</div>
@@ -127,10 +158,20 @@ export function PlannerView() {
             <button className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-900"><List className="h-4 w-4" /></button>
           </div>
 
-          <div className="flex items-center gap-4 text-gray-800 font-bold">
-            <button className="p-1 hover:bg-gray-100 rounded text-emerald-600"><ChevronLeft className="h-5 w-5" /></button>
-            <span>{dateLabel}</span>
-            <button className="p-1 hover:bg-gray-100 rounded text-emerald-600"><ChevronRight className="h-5 w-5" /></button>
+          <div className="flex items-center gap-4 text-gray-800 font-bold min-w-[200px] justify-center">
+            <button 
+              onClick={() => setSelectedDate(prev => subDays(prev, 1))}
+              className="p-1 hover:bg-gray-100 rounded text-emerald-600 transition-colors"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <span className="capitalize">{format(selectedDate, 'EEEE d MMMM', { locale: nl })}</span>
+            <button 
+              onClick={() => setSelectedDate(prev => addDays(prev, 1))}
+              className="p-1 hover:bg-gray-100 rounded text-emerald-600 transition-colors"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </button>
           </div>
 
           <div className="flex gap-2">
@@ -151,7 +192,7 @@ export function PlannerView() {
               {copied ? 'Gekopieerd' : 'Exporteren Als URL'}
             </button>
             <button
-              onClick={() => setDateLabel('vandaag')}
+              onClick={() => setSelectedDate(new Date())}
               className="px-4 py-2 bg-emerald-800 hover:bg-emerald-900 text-white font-semibold text-sm rounded-md shadow-sm transition-colors"
             >
               Vandaag
@@ -214,7 +255,7 @@ export function PlannerView() {
                           <div 
                             key={bIdx}
                             className={cn(
-                              "absolute top-2 bottom-2 rounded border px-2 flex items-center overflow-hidden cursor-pointer shadow-sm transition-all hover:scale-[1.02]",
+                              "absolute top-2 bottom-2 rounded border px-2 flex items-center overflow-hidden cursor-pointer shadow-sm transition-all hover:scale-[1.02] group",
                               b.color
                             )}
                             style={{ 
@@ -224,6 +265,15 @@ export function PlannerView() {
                             }}
                           >
                             <span className="text-[9px] font-bold truncate flex-1">{b.title}</span>
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (b.id) handleDeleteEntry(b.id);
+                              }}
+                              className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-white/50 rounded transition-opacity"
+                            >
+                              <X className="h-3 w-3 text-red-600" />
+                            </button>
                             <Wrench className="h-2.5 w-2.5 ml-1 shrink-0 opacity-70" />
                           </div>
                         )
@@ -252,6 +302,14 @@ export function PlannerView() {
         </div>
 
       </div>
+
+      <PlanProjectDialog 
+        open={isPlanOpen}
+        onOpenChange={setIsPlanOpen}
+        project={selectedProject}
+        technicians={techs}
+        selectedDate={dateKey}
+      />
     </div>
   );
 }

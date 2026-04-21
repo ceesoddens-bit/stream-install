@@ -92,6 +92,14 @@ export interface BOMItem {
   requiredQuantity: number;
 }
 
+export interface LineItem {
+  id: string;
+  description: string;
+  quantity: number;
+  price: number;
+  vatRate: number; // e.g., 21 for 21%
+}
+
 export interface Quote {
   id: string;
   title: string;
@@ -99,20 +107,34 @@ export interface Quote {
   projectStatus: string;
   projectName: string;
   contactName: string;
+  contactId?: string;
+  clientName: string;
   totalAmount: number;
+  amount: number;
   sentDate: string;
+  date: string;
   openedCount: number;
+  referenceNumber: string;
+  quoteNumber: string;
+  createdAt: any;
+  lineItems?: LineItem[];
 }
 
 export interface Invoice {
   id: string;
   invoiceCode: string;
-  status: 'Concept' | 'In Afwachting' | 'Goedgekeurd' | 'Afgerond' | 'Geweigerd';
+  invoiceNumber: string;
+  status: 'Concept' | 'In Afwachting' | 'Goedgekeurd' | 'Afgerond' | 'Geweigerd' | 'Verstuurd' | 'Betaald' | 'Vervallen';
   projectName: string;
   contactName: string;
+  contactId?: string;
+  clientName: string;
   totalExcl: number;
   totalIncl: number;
+  amount: number;
   fullyPaid: boolean;
+  date: string;
+  lineItems?: LineItem[];
 }
 
 export interface FormTemplate {
@@ -223,7 +245,7 @@ export type ProductTag =
   | 'Onbekend';
 
 export interface PlanningCard {
-  id: string;
+  id?: string;
   projectRef: string;
   clientName: string;
   address: string;

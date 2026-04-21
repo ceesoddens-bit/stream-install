@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { inventoryService, BOMItem, Article } from '@/lib/inventoryService';
+import { inventoryService, BOMItem, InventoryItem } from '@/lib/inventoryService';
 import { cn } from '@/lib/utils';
 import { useResizableColumns } from '@/lib/useResizableColumns';
 import {
@@ -77,11 +77,11 @@ const bomColumns: BomColumnDef[] = [
 export function BOMTable() {
   const [query, setQuery] = useState('');
   const [bomItems, setBomItems] = useState<BOMItem[]>([]);
-  const [articles, setArticles] = useState<Article[]>([]);
+  const [articles, setArticles] = useState<InventoryItem[]>([]);
 
   useEffect(() => {
     const unsubBOM = inventoryService.subscribeToBOMItems(setBomItems);
-    const unsubArticles = inventoryService.subscribeToArticles(setArticles);
+    const unsubArticles = inventoryService.subscribeToInventory(setArticles);
     return () => {
       unsubBOM();
       unsubArticles();
@@ -93,13 +93,13 @@ export function BOMTable() {
   const rows: BomRow[] = useMemo(() => {
     return bomItems.map((item, idx) => {
       const article = articles.find((a) => a.sku === item.sku);
-      const verkoopprijs = article?.salePrice ?? 0;
-      const aankoopprijs = article?.purchasePrice ?? 0;
+      const verkoopprijs = article?.price ?? 0;
+      const aankoopprijs = article?.price ? article.price * 0.7 : 0; // Mock purchase price based on sales price
 
       return {
         id: item.id!,
-        offerteNaam: item.quoteName || 'Naam',
-        projectCode: item.projectCode || `250000${2 + (idx % 3)}-Cer`,
+        offerteNaam: item.projectName || 'Naam',
+        projectCode: item.projectName || `250000${2 + (idx % 3)}-Cer`,
         projectStatusLabel: item.projectStatus || 'Projectafg',
         planningBadgeLabel: item.planningStatus || `Installatie ${2 + (idx % 2)}`,
         planningDate1: item.plannedDate || '-',

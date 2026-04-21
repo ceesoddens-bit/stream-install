@@ -30,8 +30,8 @@ export function CompaniesTable() {
   const projectsByCompany = useMemo(() => {
     const map: Record<string, number> = {};
     for (const p of projects) {
-      if (p.companyId) {
-        map[p.companyId] = (map[p.companyId] || 0) + 1;
+      if ((p as any).companyId) {
+        map[(p as any).companyId] = (map[(p as any).companyId] || 0) + 1;
       }
     }
     return map;
@@ -113,7 +113,6 @@ export function CompaniesTable() {
               <TableCell className="text-sm text-blue-600 font-medium whitespace-nowrap">{company.phone || <span className="text-gray-300">-</span>}</TableCell>
               <TableCell className="text-sm text-gray-600 whitespace-nowrap">{company.kvkNumber || <span className="text-gray-300">-</span>}</TableCell>
               <TableCell className="text-sm text-gray-600 max-w-[220px] truncate">{company.contactPerson || <span className="text-gray-300">-</span>}</TableCell>
-              <TableCell className="text-sm text-gray-600 max-w-[220px] truncate">{company.parentCompany || <span className="text-gray-300">-</span>}</TableCell>
               <TableCell className="text-sm text-gray-600 max-w-[260px] truncate">{company.address || <span className="text-gray-300">-</span>}</TableCell>
               <TableCell className="text-sm text-gray-600 whitespace-nowrap">{company.vatNumber || <span className="text-gray-300">-</span>}</TableCell>
               <TableCell className="text-right">

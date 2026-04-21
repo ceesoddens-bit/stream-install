@@ -1,7 +1,7 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { inventoryMutations } from '@/data/mockData';
+import { inventoryService, StockMutation } from '@/lib/inventoryService';
 import { cn } from '@/lib/utils';
 import { useResizableColumns, type ResizableColumnDef } from '@/lib/useResizableColumns';
 import { ArrowUp, CheckCircle2, ChevronDown, Columns3, Download, Filter, Settings, SlidersHorizontal, ZoomIn } from 'lucide-react';
@@ -50,32 +50,38 @@ export function MutationsTable() {
   const [subTab, setSubTab] = useState<'mutaties' | 'regels'>('mutaties');
   const [segment, setSegment] = useState<'alles' | 'inkomend' | 'voorraadcontrole' | 'intern' | 'uitgaand'>('alles');
   const [query, setQuery] = useState('');
+  const [mutations, setMutations] = useState<StockMutation[]>([]);
+
+  useEffect(() => {
+    const unsubscribe = inventoryService.subscribeToMutations((fetched) => {
+      setMutations(fetched);
+    });
+    return () => unsubscribe();
+  }, []);
 
   const { columnWidths, startResize, tableMinWidth } = useResizableColumns(mutationColumns);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    let rows = inventoryMutations;
+    let rows = mutations;
     if (segment !== 'alles') {
       const map = {
-        inkomend: 'Inkomend',
-        voorraadcontrole: 'Voorraadcontrole',
+        inkomend: 'In',
+        voorraadcontrole: 'Correctie',
         intern: 'Intern',
-        uitgaand: 'Uitgaand',
+        uitgaand: 'Uit',
       } as const;
       rows = rows.filter((r) => r.type === map[segment]);
     }
     if (!q) return rows;
     return rows.filter((r) => {
       return (
-        r.identificatie.toLowerCase().includes(q) ||
-        r.status.toLowerCase().includes(q) ||
-        r.magazijn.toLowerCase().includes(q) ||
-        r.project.toLowerCase().includes(q) ||
-        r.gemaaktDoor.toLowerCase().includes(q)
+        r.itemName.toLowerCase().includes(q) ||
+        r.warehouseName.toLowerCase().includes(q) ||
+        (r.reference && r.reference.toLowerCase().includes(q))
       );
     });
-  }, [query, segment]);
+  }, [query, segment, mutations]);
 
   const count = filtered.length;
   const page = 1;
@@ -283,24 +289,31 @@ export function MutationsTable() {
                   <td className="p-3 px-4">
                     <input type="checkbox" className="rounded border-gray-300" />
                   </td>
-                  <td className="p-3 text-sm text-gray-900 truncate">{row.type}</td>
-                  <td className="p-3 text-sm text-gray-900 truncate">{row.identificatie}</td>
-                  <td className="p-3 text-sm text-gray-700 truncate">{row.status}</td>
-                  <td className="p-3 text-sm text-gray-700 truncate">{row.magazijn}</td>
-                  <td className="p-3 text-sm text-gray-700 truncate">{row.project}</td>
-                  <td className="p-3 text-sm text-gray-700 truncate">{row.regels}</td>
-                  <td className="p-3 text-sm text-gray-700 truncate">{row.totaal}</td>
-                  <td className="p-3 text-sm text-gray-700 truncate">{row.gereserveerd}</td>
-                  <td className="p-3 text-sm text-gray-700 truncate">{row.uitgegeven}</td>
-                  <td className="p-3 text-sm text-gray-700 truncate">{row.gemaaktOp}</td>
-                  <td className="p-3 text-sm text-gray-700 truncate">{row.gemaaktDoor}</td>
-                  <td className="p-3 pr-6 text-sm text-gray-700 truncate">{row.bijgewerktOp}</td>
+                  <td className="p-3 text-sm font-semibold text-gray-900 truncate">
+                    <span className={cn(
+                      "px-2 py-0.5 rounded text-xs uppercase tracking-wider",
+                      row.type === 'In' ? "bg-emerald-100 text-emerald-800" :
+                      row.type === 'Uit' ? "bg-red-100 text-red-800" :
+                      "bg-amber-100 text-amber-800"
+                    )}>{row.type}</span>
+                  </td>
+                  <td className="p-3 text-sm text-gray-900 truncate">{row.itemName}</td>
+                  <td className="p-3 text-sm text-gray-700 truncate">-</td>
+                  <td className="p-3 text-sm text-gray-700 truncate">{row.warehouseName}</td>
+                  <td className="p-3 text-sm text-gray-700 truncate">{row.reference || '-'}</td>
+                  <td className="p-3 text-sm text-gray-700 truncate">-</td>
+                  <td className="p-3 text-sm font-bold text-gray-900 truncate">{row.quantity}</td>
+                  <td className="p-3 text-sm text-gray-700 truncate">-</td>
+                  <td className="p-3 text-sm text-gray-700 truncate">-</td>
+                  <td className="p-3 text-sm text-gray-700 truncate">{new Date(row.date).toLocaleDateString()}</td>
+                  <td className="p-3 text-sm text-gray-700 truncate">-</td>
+                  <td className="p-3 pr-6 text-sm text-gray-700 truncate">-</td>
                 </tr>
               ))}
               {count === 0 && (
                 <tr>
                   <td colSpan={13} className="p-12 text-center text-sm text-gray-500">
-                    Geen resultaten.
+                    Geen mutaties gevonden.
                   </td>
                 </tr>
               )}

@@ -1,5 +1,5 @@
 import { projectService, Project } from '@/lib/projectService';
-import { Plus, Settings, Search, LayoutList, SlidersHorizontal, Columns, LayoutGrid, Edit2, Link, Settings2, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Settings, Search, LayoutList, SlidersHorizontal, Columns, LayoutGrid, Edit2, Link, Settings2, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -18,35 +18,12 @@ export function ProjectsWidget() {
     return () => unsubscribe();
   }, []);
 
-  const handleAddSample = async () => {
-    const idx = projects.length + 1;
-    const base = `26002${(idx % 100).toString().padStart(2, '0')}`;
-    await projectService.addProject({
-      name: `Project ${idx}`,
-      client: "Installatiegroep Duurzaam",
-      customerType: idx % 2 === 0 ? 'Residentieel' : 'Commercieel',
-      reference: `${base}0`,
-      source: `${base}1`,
-      projectNumber: `${base}2`,
-      status: 'Lopend',
-      progress: 45,
-      dueDate: "2026-04-15",
-      team: ["Sven"],
-      priority: projects.length % 2 === 0 ? 'High' : 'Medium'
-    });
-  };
 
   return (
     <Card className="border border-gray-100 shadow-sm flex flex-col h-full bg-white overflow-hidden">
       <CardHeader className="py-2 px-4 border-b border-gray-50 flex flex-row items-center justify-between space-y-0 shrink-0">
         <CardTitle className="text-base font-bold text-gray-800">Uw projecten</CardTitle>
         <div className="flex items-center gap-1">
-          <button 
-            onClick={handleAddSample}
-            className="h-8 w-8 rounded-md bg-emerald-900 text-white flex items-center justify-center hover:bg-emerald-800 transition-all shadow-sm"
-          >
-            <Plus className="h-5 w-5" />
-          </button>
           <button className="h-8 w-8 rounded-md flex items-center justify-center text-gray-400 hover:text-emerald-700 hover:bg-emerald-50 transition-all duration-200" title="Alle projecten bekijken">
             <ExternalLink className="h-[18px] w-[18px]" />
           </button>
@@ -103,7 +80,7 @@ export function ProjectsWidget() {
               {isLoading ? (
                 <tr><td colSpan={6} className="p-10 text-center text-gray-400 italic">Projecten laden...</td></tr>
               ) : projects.length === 0 ? (
-                <tr><td colSpan={6} className="p-10 text-center text-gray-400 italic">Geen projecten. Klik op + om er één te maken.</td></tr>
+                <tr><td colSpan={6} className="p-10 text-center text-gray-400 italic">Geen projecten gevonden.</td></tr>
               ) : projects.map((project, index) => {
                 const rowId = project.id ?? project.reference ?? String(index);
                 const isExpanded = !!expandedProjectIds[rowId];
@@ -128,7 +105,7 @@ export function ProjectsWidget() {
                           "text-[10px] px-2 py-0.5 rounded uppercase font-bold border-0 h-5 flex items-center w-fit shadow-sm",
                           "bg-emerald-50 text-emerald-700"
                         )}>
-                          {project.customerType ?? 'Commercieel'}
+                          {project.customerType ?? '-'}
                         </Badge>
                       </td>
                       <td className="p-2 font-bold text-gray-700 truncate">{project.reference ?? project.id?.slice(-7) ?? '-'}</td>

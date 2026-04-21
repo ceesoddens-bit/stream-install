@@ -54,23 +54,6 @@ export function InventoryLayout({ initialTab }: InventoryLayoutProps) {
     return () => unsubscribe();
   }, [activeTab]);
 
-  const handleAddSample = async () => {
-    const cats = ['Warmtepompen', 'Batterij', 'Airco', 'Zonnepanelen'];
-    const names = ["Daikin Altherma 3", "Enphase Encharge 10", "LG Artcool Mirror", "Longi Solar 405W"];
-    
-    await inventoryService.addItem({
-      sku: `SKU-${Math.floor(Math.random() * 10000)}`,
-      name: names[Math.floor(Math.random() * names.length)],
-      category: cats[Math.floor(Math.random() * cats.length)],
-      stock: Math.floor(Math.random() * 50),
-      minStock: 10,
-      price: Math.floor(Math.random() * 2000) + 100,
-      unit: 'stk',
-      location: 'Magazijn A',
-      status: 'Op voorraad'
-    });
-  };
-
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(amount);
 
@@ -176,12 +159,11 @@ export function InventoryLayout({ initialTab }: InventoryLayoutProps) {
               Exporteren
             </Button>
             <Button
-              onClick={handleAddSample}
               size="sm"
               className="h-8 gap-2 bg-blue-600 hover:bg-blue-700 text-xs font-semibold ml-2 shadow-sm"
             >
               <Plus className="h-3.5 w-3.5" />
-              Nieuw Artikel (Sample)
+              Nieuw Artikel
             </Button>
           </div>
         </div>

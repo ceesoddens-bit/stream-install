@@ -4,6 +4,8 @@ import {
 } from 'lucide-react';
 import { crmService, Company } from '@/lib/crmService';
 import { cn } from '@/lib/utils';
+import { CompanyEditDialog } from './CRMEditDialogs';
+import { toast } from 'sonner';
 
 type CompaniesColumnKey =
   | 'select'
@@ -14,7 +16,6 @@ type CompaniesColumnKey =
   | 'telefoonnummer'
   | 'kvk'
   | 'primaireContactpersoon'
-  | 'moederbedrijf'
   | 'adres'
   | 'btw'
   | 'actions';
@@ -37,7 +38,6 @@ const companiesColumns: CompaniesColumnDef[] = [
   { key: 'telefoonnummer', label: 'Telefoonnummer', width: 160, minWidth: 140, resizable: true, thClassName: 'p-3 whitespace-nowrap' },
   { key: 'kvk', label: 'KVK', width: 120, minWidth: 100, resizable: true, thClassName: 'p-3' },
   { key: 'primaireContactpersoon', label: 'Primaire contactpersoon', width: 250, minWidth: 180, resizable: true, thClassName: 'p-3 whitespace-nowrap' },
-  { key: 'moederbedrijf', label: 'Moederbedrijf', width: 210, minWidth: 160, resizable: true, thClassName: 'p-3' },
   { key: 'adres', label: 'Adres', width: 360, minWidth: 220, resizable: true, thClassName: 'p-3' },
   { key: 'btw', label: 'BTW', width: 160, minWidth: 130, resizable: true, thClassName: 'p-3' },
   { key: 'actions', width: 88, minWidth: 72, resizable: false, thClassName: 'p-3 w-14 sticky right-0 bg-white z-20' },
@@ -47,6 +47,11 @@ export function CompaniesLayout() {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editingCompany, setEditingCompany] = useState<Company | null>(null);
+
   const [columnWidths, setColumnWidths] = useState<Record<CompaniesColumnKey, number>>(() => {
     return companiesColumns.reduce((acc, col) => {
       acc[col.key] = col.width;
@@ -97,6 +102,16 @@ export function CompaniesLayout() {
     return combined || '-';
   };
 
+  const filteredCompanies = useMemo(() => {
+    if (!searchQuery) return companies;
+    const q = searchQuery.toLowerCase();
+    return companies.filter(c => 
+      c.name?.toLowerCase().includes(q) || 
+      c.email?.toLowerCase().includes(q) ||
+      c.kvkNumber?.toLowerCase().includes(q)
+    );
+  }, [companies, searchQuery]);
+
   // Subscribe to real-time updates from Firebase
   useEffect(() => {
     const unsubscribe = crmService.subscribeToCompanies((fetched) => {
@@ -142,53 +157,25 @@ export function CompaniesLayout() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (window.confirm("Weet je zeker dat je dit bedrijf wilt verwijderen?")) {
-      await crmService.deleteCompany(id);
-    }
+  const handleAdd = () => {
+    setEditingCompany(null);
+    setIsEditOpen(true);
   };
 
-  const handleAddSample = async () => {
-    const names = ["Installatiegroep Duurzaam", "Solar Expertise", "Westland Daktechniek", "GroenStroom BV"];
-    const randomName = names[Math.floor(Math.random() * names.length)];
+  const handleEdit = (company: Company) => {
+    setEditingCompany(company);
+    setIsEditOpen(true);
+  };
 
-    const references = ['2600001', '2600010', '2500011', '2500019', '2600003', '2600004', '2600002'];
-    const addresses = [
-      { address: 'Schieland 27, 8245GB', city: 'Lelystad' },
-      { address: 'Apolloweg 138, 8239DA', city: 'Lelystad' },
-      { address: 'Magdalenbrugstraat 5, 7421', city: 'Deventer' },
-      { address: 'A. Hofmanweg 24, 2031 BL', city: 'Haarlem' },
-      { address: 'Industrieweg 13, 8084 GS', city: 't Harde' },
-      { address: 'Haparandweg 13, 1013 BD', city: 'Amsterdam' },
-      { address: 'De Steiger 27, 1351AB', city: 'Almere' },
-    ];
-    const contactNames = ['Sven | Installatiegroep', 'Sandra Brader', 'Lars Albrechts', 'System'];
-    const tagPool = ['Lead', 'Klant', 'Partner', 'Installatie', 'Service'];
-
-    const randomRef = references[Math.floor(Math.random() * references.length)];
-    const randomAddress = addresses[Math.floor(Math.random() * addresses.length)];
-    const randomContact = contactNames[Math.floor(Math.random() * contactNames.length)];
-    const tags = tagPool
-      .filter(() => Math.random() > 0.6)
-      .slice(0, 3);
-
-    const kvk = String(Math.floor(10000000 + Math.random() * 90000000));
-    const vat = Math.random() > 0.5 ? `NL${String(Math.floor(100000000 + Math.random() * 900000000))}B01` : undefined;
-    const projectsCount = Math.random() > 0.55 ? Math.floor(Math.random() * 4) : 0;
-
-    await crmService.addCompany({
-      name: `${randomName} ${Math.floor(Math.random() * 1000)}`,
-      referenceNumber: randomRef,
-      tags,
-      projectsCount,
-      phone: Math.random() > 0.4 ? '06-12345678' : undefined,
-      kvkNumber: Math.random() > 0.5 ? kvk : undefined,
-      primaryContactPerson: Math.random() > 0.45 ? randomContact : undefined,
-      parentCompany: Math.random() > 0.8 ? 'OpusFlow' : undefined,
-      address: randomAddress.address,
-      city: randomAddress.city,
-      vatNumber: vat
-    });
+  const handleDelete = async (id: string) => {
+    if (window.confirm("Weet je zeker dat je dit bedrijf wilt verwijderen?")) {
+      try {
+        await crmService.deleteCompany(id);
+        toast.success('Bedrijf verwijderd');
+      } catch (err) {
+        toast.error('Fout bij verwijderen');
+      }
+    }
   };
 
   return (
@@ -212,10 +199,10 @@ export function CompaniesLayout() {
           
           <div className="flex items-center gap-3">
             <button 
-                onClick={handleAddSample}
+                onClick={handleAdd}
                 className="flex items-center gap-2 px-4 py-2 bg-emerald-800 text-white font-medium text-sm rounded-md shadow-sm opacity-90 hover:opacity-100 transition-opacity"
             >
-              <Plus className="h-4 w-4" /> Sample Toevoegen
+              <Plus className="h-4 w-4" /> Bedrijf Toevoegen
             </button>
             <button className="p-2 border border-gray-200 text-gray-600 rounded-lg shadow-sm hover:bg-gray-50">
               <Settings className="h-4 w-4" />
@@ -230,13 +217,20 @@ export function CompaniesLayout() {
             <button className="flex items-center gap-1.5 hover:text-gray-900"><SlidersHorizontal className="h-4 w-4" /> Filters</button>
             <button className="flex items-center gap-1.5 hover:text-gray-900"><AlignJustify className="h-4 w-4" /> Dichtheid</button>
             <button className="flex items-center gap-1.5 hover:text-gray-900"><Maximize2 className="h-4 w-4" /> Schaal</button>
-            <button className="flex items-center gap-1.5 hover:text-gray-900"><Download className="h-4 w-4" /> Exporteren</button>
+            <button 
+              className="flex items-center gap-1.5 hover:text-gray-900"
+              onClick={() => crmService.exportToCSV(companies, 'bedrijven.csv')}
+            >
+              <Download className="h-4 w-4" /> Exporteren
+            </button>
           </div>
           <div className="relative w-64 flex items-center">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
             <input
               type="text"
               placeholder="Zoeken..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9 pr-8 py-1.5 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50/50 w-full"
             />
           </div>
@@ -288,13 +282,13 @@ export function CompaniesLayout() {
                     Laden van bedrijven...
                   </td>
                 </tr>
-              ) : companies.length === 0 ? (
+              ) : filteredCompanies.length === 0 ? (
                 <tr>
                    <td colSpan={companiesColumns.length} className="p-20 text-center text-gray-400 italic">
-                    Geen bedrijven gevonden. Klik op "+ Sample Toevoegen" om te testen!
+                    Geen bedrijven gevonden.
                   </td>
                 </tr>
-              ) : companies.map((row) => (
+              ) : filteredCompanies.map((row) => (
                 <tr key={row.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors group">
                   <td className="p-3 pl-4 text-center">
                     <input 
@@ -307,7 +301,10 @@ export function CompaniesLayout() {
                   <td className="p-3 text-[13px] text-gray-500 font-mono whitespace-nowrap">
                     {formatReference(row)}
                   </td>
-                  <td className="p-3 text-[13px] font-bold text-emerald-800 hover:underline cursor-pointer truncate">
+                  <td 
+                    className="p-3 text-[13px] font-bold text-emerald-800 hover:underline cursor-pointer truncate"
+                    onClick={() => handleEdit(row)}
+                  >
                     {row.name}
                   </td>
                   <td className="p-3">
@@ -323,10 +320,7 @@ export function CompaniesLayout() {
                     {row.kvkNumber || <span className="text-gray-300">-</span>}
                   </td>
                   <td className="p-3 text-[13px] text-gray-600 truncate">
-                    {row.primaryContactPerson || <span className="text-gray-300">-</span>}
-                  </td>
-                  <td className="p-3 text-[13px] text-gray-600 truncate">
-                    {row.parentCompany || <span className="text-gray-300">-</span>}
+                    {row.contactPerson || <span className="text-gray-300">-</span>}
                   </td>
                   <td className="p-3 text-[13px] text-gray-600 truncate">
                     {formatAddress(row)}
@@ -336,7 +330,10 @@ export function CompaniesLayout() {
                   </td>
                   <td className="p-3 text-right sticky right-0 bg-white/90 backdrop-blur-sm group-hover:bg-gray-50/90 transition-colors z-10">
                     <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button className="text-gray-400 hover:text-emerald-700 p-1 rounded hover:bg-gray-100 transition-colors">
+                      <button 
+                        className="text-gray-400 hover:text-emerald-700 p-1 rounded hover:bg-gray-100 transition-colors"
+                        onClick={() => handleEdit(row)}
+                      >
                         <Edit className="h-4 w-4" />
                       </button>
                       <button
@@ -355,10 +352,16 @@ export function CompaniesLayout() {
 
         {/* Footer */}
         <div className="bg-white border-t border-gray-100 p-3 shrink-0 flex items-center justify-end text-[12px] text-gray-500 font-medium">
-           {companies.length} bedrijven in totaal
+           {filteredCompanies.length} bedrijven getoond van {companies.length} totaal
         </div>
 
       </div>
+      
+      <CompanyEditDialog 
+        open={isEditOpen}
+        onOpenChange={setIsEditOpen}
+        company={editingCompany}
+      />
     </div>
   );
 }

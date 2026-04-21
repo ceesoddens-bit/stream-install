@@ -22,7 +22,7 @@ export function HoursWidget({ timerSeconds, isTimerRunning, onToggleTimer, onRes
     date: new Date().toISOString().split('T')[0],
     start: '09:00',
     end: '10:00',
-    project: 'Solar Expertise'
+    project: 'Selecteer Project'
   });
 
   // Subscribe to real-time updates from Firebase
@@ -39,14 +39,23 @@ export function HoursWidget({ timerSeconds, isTimerRunning, onToggleTimer, onRes
     const [endH, endM] = manualForm.end.split(':').map(Number);
     const durationSeconds = (endH * 3600 + endM * 60) - (startH * 3600 + startM * 60);
 
+    const beginDate = new Date(manualForm.date);
+    beginDate.setHours(startH, startM, 0, 0);
+    const endDate = new Date(manualForm.date);
+    endDate.setHours(endH, endM, 0, 0);
+
     const newEntry = {
+      userId: 'current-user',
+      userName: 'Gebruiker',
       type: 'Handmatig',
-      begin: manualForm.start,
-      einde: manualForm.end,
-      pauze: '0m',
+      begin: beginDate.toISOString(),
+      einde: endDate.toISOString(),
+      pauze: '0',
       duur: formatSeconds(Math.max(0, durationSeconds)),
+      durationMinutes: Math.floor(Math.max(0, durationSeconds) / 60),
       project: manualForm.project,
-      date: manualForm.date
+      date: manualForm.date,
+      status: 'Concept' as const
     };
 
     await hoursService.addEntry(newEntry);
@@ -60,13 +69,17 @@ export function HoursWidget({ timerSeconds, isTimerRunning, onToggleTimer, onRes
     const beginTime = new Date(now.getTime() - timerSeconds * 1000);
     
     const newEntry = {
+      userId: 'current-user',
+      userName: 'Gebruiker',
       type: 'Project',
-      begin: beginTime.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' }),
-      einde: now.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' }),
-      pauze: '0m',
+      begin: beginTime.toISOString(),
+      einde: now.toISOString(),
+      pauze: '0',
       duur: formatSeconds(timerSeconds),
-      project: 'Lopend Project',
-      date: now.toLocaleDateString('nl-NL')
+      durationMinutes: Math.floor(timerSeconds / 60),
+      project: 'Project',
+      date: now.toLocaleDateString('en-CA'), // YYYY-MM-DD
+      status: 'Concept' as const
     };
 
     await hoursService.addEntry(newEntry);
@@ -168,9 +181,9 @@ export function HoursWidget({ timerSeconds, isTimerRunning, onToggleTimer, onRes
                 {entries.map(entry => (
                   <tr key={entry.id} className="hover:bg-gray-50 transition-colors group">
                     <td className="p-2 font-bold text-gray-800">{entry.type}</td>
-                    <td className="p-2 text-gray-500">{entry.begin}</td>
-                    <td className="p-2 text-gray-500">{entry.einde}</td>
-                    <td className="p-2 text-gray-500">{entry.pauze}</td>
+                    <td className="p-2 text-gray-500">{new Date(entry.begin).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })}</td>
+                    <td className="p-2 text-gray-500">{new Date(entry.einde).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })}</td>
+                    <td className="p-2 text-gray-500">{entry.pauze}m</td>
                     <td className="p-2 font-bold text-emerald-800 font-mono">{entry.duur}</td>
                     <td className="p-2 text-right pr-4">
                         <div className="flex items-center justify-end gap-1.5">

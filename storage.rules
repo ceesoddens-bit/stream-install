@@ -1,0 +1,14 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isSignedIn() { return request.auth != null; }
+    function tenantId() { return request.auth.token.tenantId; }
+
+    match /tenants/{tId}/{allPaths=**} {
+      allow read: if isSignedIn() && tenantId() == tId;
+      allow write: if isSignedIn()
+                    && tenantId() == tId
+                    && request.resource.size < 25 * 1024 * 1024;
+    }
+  }
+}

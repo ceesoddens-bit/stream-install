@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formsService, FormItem } from '@/lib/formsService';
+import { useTenant } from '@/lib/tenantContext';
 
 type FormsColumnKey =
   | 'select'
@@ -54,6 +55,7 @@ const formsColumns: FormsColumnDef[] = [
 ];
 
 export function FormsLayout() {
+  const { tenantSettings } = useTenant();
   const [formItems, setFormItems] = useState<FormItem[]>([]);
   const [query, setQuery] = useState('');
 
@@ -156,7 +158,7 @@ export function FormsLayout() {
           </button>
           <div className="flex items-center gap-2 bg-green-50 text-green-700 px-3 py-1.5 rounded-full font-medium text-sm">
             <Zap className="h-4 w-4" />
-            Installatiegroep Duurzaam
+            {tenantSettings.companyName}
           </div>
         </div>
       </div>

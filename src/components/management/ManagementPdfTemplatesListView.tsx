@@ -1,12 +1,13 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { pdfTemplateRows } from '@/data/managementMockData';
-import { Columns3, Filter, Plus, Search } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Columns3, Copy, Download, Filter, Pencil, Plus, Search, Trash2, ZoomIn, SlidersHorizontal } from 'lucide-react';
+import { templateService, PdfTemplate } from '@/lib/templateService';
 
-type PdfTemplatesColumnKey = 'select' | 'naam' | 'categorie' | 'gemaaktOp' | 'gemaaktDoor';
+type PdfTemplatesColumnKey = 'naam' | 'sjabloontype' | 'versie' | 'bijgewerktOp' | 'bijgewerktDoor' | 'actions';
 
 type PdfTemplatesColumnDef = {
   key: PdfTemplatesColumnKey;
@@ -18,15 +19,25 @@ type PdfTemplatesColumnDef = {
 };
 
 const pdfTemplatesColumns: PdfTemplatesColumnDef[] = [
-  { key: 'select', width: 52, minWidth: 44, resizable: false, thClassName: 'p-3 px-4 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider' },
-  { key: 'naam', label: 'Naam', width: 360, minWidth: 260, resizable: true, thClassName: 'p-3 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider' },
-  { key: 'categorie', label: 'Categorie', width: 200, minWidth: 160, resizable: true, thClassName: 'p-3 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider' },
-  { key: 'gemaaktOp', label: 'Gemaakt op', width: 180, minWidth: 150, resizable: true, thClassName: 'p-3 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider' },
-  { key: 'gemaaktDoor', label: 'Gemaakt door', width: 260, minWidth: 190, resizable: true, thClassName: 'p-3 pr-4 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider' },
+  { key: 'naam', label: 'Naam', width: 320, minWidth: 240, resizable: true, thClassName: 'p-3 px-4 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider' },
+  { key: 'sjabloontype', label: 'Sjabloontype', width: 220, minWidth: 170, resizable: true, thClassName: 'p-3 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider' },
+  { key: 'versie', label: 'Versie', width: 110, minWidth: 90, resizable: true, thClassName: 'p-3 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider' },
+  { key: 'bijgewerktOp', label: 'Bijgewerkt op', width: 170, minWidth: 140, resizable: true, thClassName: 'p-3 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider' },
+  { key: 'bijgewerktDoor', label: 'Bijgewerkt door', width: 240, minWidth: 190, resizable: true, thClassName: 'p-3 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider' },
+  { key: 'actions', width: 140, minWidth: 120, resizable: false, thClassName: 'p-3 pr-4 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider' },
 ];
 
 export function ManagementPdfTemplatesListView() {
   const [query, setQuery] = useState('');
+  const [templates, setTemplates] = useState<PdfTemplate[]>([]);
+
+  useEffect(() => {
+    const unsubscribe = templateService.subscribeToPdfTemplates((data) => {
+      setTemplates(data);
+    });
+    return () => unsubscribe();
+  }, []);
+
   const [columnWidths, setColumnWidths] = useState<Record<PdfTemplatesColumnKey, number>>(() => {
     return pdfTemplatesColumns.reduce((acc, col) => {
       acc[col.key] = col.width;
@@ -42,17 +53,26 @@ export function ManagementPdfTemplatesListView() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return pdfTemplateRows;
-    return pdfTemplateRows.filter((r) => {
+    const mapped = templates.map(t => ({
+      id: t.id,
+      name: t.name,
+      templateType: t.type,
+      version: '1.0',
+      updatedAt: t.updatedAt?.toDate ? t.updatedAt.toDate().toLocaleDateString('nl-NL') : 'Onbekend',
+      updatedBy: 'Systeem',
+    }));
+
+    if (!q) return mapped;
+    return mapped.filter((r) => {
       return (
         r.name.toLowerCase().includes(q) ||
-        r.category.toLowerCase().includes(q) ||
-        r.createdBy.toLowerCase().includes(q)
+        r.templateType.toLowerCase().includes(q) ||
+        r.updatedBy.toLowerCase().includes(q)
       );
     });
-  }, [query]);
+  }, [query, templates]);
 
-  const totalCount = 12;
+  const totalCount = templates.length;
 
   const tableMinWidth = useMemo(() => {
     return pdfTemplatesColumns.reduce((total, col) => total + (columnWidths[col.key] ?? col.width), 0);
@@ -143,60 +163,78 @@ export function ManagementPdfTemplatesListView() {
               <tr className="bg-white border-b border-gray-200">
                 {pdfTemplatesColumns.map(col => (
                   <th
-                    key={col.key}
-                    className={`relative select-none overflow-hidden whitespace-nowrap ${col.thClassName ?? ''}`}
-                  >
-                    {col.key === 'select' ? (
-                      <Checkbox checked={false} aria-label="Selecteer alles" />
-                    ) : (
-                      <span className="truncate block">{col.label}</span>
-                    )}
+                      key={col.key}
+                      className={cn('relative select-none overflow-hidden whitespace-nowrap', col.thClassName)}
+                    >
+                      {col.key === 'actions' ? null : (
+                        <span className="truncate block">{col.label}</span>
+                      )}
 
-                    {col.resizable ? (
-                      <div
-                        onPointerDown={startResize(col.key)}
-                        className="absolute right-0 top-0 h-full w-2 cursor-col-resize group"
-                        role="separator"
-                        aria-orientation="vertical"
-                        aria-label={`Resize column ${col.label ?? col.key}`}
-                      >
-                        <div className="absolute right-0 top-0 h-full w-px bg-transparent group-hover:bg-gray-300" />
-                      </div>
-                    ) : null}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {filtered.map((r) => {
-                const initials = r.createdBy
-                  .split(' ')
-                  .filter(Boolean)
-                  .slice(0, 2)
-                  .map((p) => p[0]?.toUpperCase())
-                  .join('');
+                      {col.resizable ? (
+                        <div
+                          onPointerDown={startResize(col.key)}
+                          className="absolute right-0 top-0 h-full w-2 cursor-col-resize group"
+                          role="separator"
+                          aria-orientation="vertical"
+                          aria-label={`Resize column ${col.label ?? col.key}`}
+                        >
+                          <div className="absolute right-0 top-0 h-full w-px bg-transparent group-hover:bg-gray-300" />
+                        </div>
+                      ) : null}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {filtered.map((r) => {
+                  const initials = r.updatedBy
+                    .split(' ')
+                    .filter(Boolean)
+                    .slice(0, 2)
+                    .map((p) => p[0]?.toUpperCase())
+                    .join('');
 
-                return (
-                  <tr key={r.id} className="hover:bg-emerald-50/20 transition-colors">
-                    <td className="p-3 px-4">
-                      <Checkbox checked={false} aria-label="Selecteer" />
-                    </td>
-                    <td className="p-3 text-sm font-medium text-emerald-700 truncate" title={r.name}>{r.name}</td>
-                    <td className="p-3 text-sm text-gray-700">{r.category}</td>
-                    <td className="p-3 text-sm text-gray-600">{r.createdAt}</td>
-                    <td className="p-3 pr-4">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <Avatar className="h-7 w-7">
-                          <AvatarFallback className="bg-emerald-600 text-white text-[10px]">{initials || 'U'}</AvatarFallback>
-                        </Avatar>
-                        <span className="text-sm text-gray-800 truncate">{r.createdBy}</span>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                  return (
+                    <tr key={r.id} className="hover:bg-emerald-50/20 transition-colors">
+                      <td className="p-3 px-4 text-sm font-medium text-emerald-700 truncate" title={r.name}>{r.name}</td>
+                      <td className="p-3">
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            'text-[10px] font-extrabold px-2 py-0.5 rounded-full border-emerald-200 bg-emerald-50 text-emerald-800'
+                          )}
+                        >
+                          {r.templateType}
+                        </Badge>
+                      </td>
+                      <td className="p-3 text-sm text-gray-700">{r.version}</td>
+                      <td className="p-3 text-sm text-gray-600">{r.updatedAt}</td>
+                      <td className="p-3">
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-7 w-7">
+                            <AvatarFallback className="bg-blue-600 text-white text-[10px]">{initials || 'U'}</AvatarFallback>
+                          </Avatar>
+                          <span className="text-sm text-gray-800">{r.updatedBy}</span>
+                        </div>
+                      </td>
+                      <td className="p-3 pr-4">
+                        <div className="flex items-center justify-end gap-2">
+                          <button className="h-8 w-8 rounded-md hover:bg-gray-100 text-emerald-700">
+                            <Pencil className="h-4 w-4" />
+                          </button>
+                          <button className="h-8 w-8 rounded-md hover:bg-gray-100 text-blue-600">
+                            <Copy className="h-4 w-4" />
+                          </button>
+                          <button className="h-8 w-8 rounded-md hover:bg-gray-100 text-red-600">
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
         </div>
 
         <div className="px-6 py-3 border-t border-gray-100 flex items-center justify-end gap-6 text-xs text-gray-500">

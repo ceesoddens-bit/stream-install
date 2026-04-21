@@ -1,35 +1,20 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { 
   Layers, Settings, Columns3, SlidersHorizontal, AlignJustify, Maximize2, Download, Search, Plus, Archive, Edit, Info, ChevronDown, MoreHorizontal, CheckCircle2, FileText, Send, CheckSquare, MessageSquare, Check, X, UserCircle2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+import { financeService } from '@/lib/financeService';
+import { Quote } from '@/types';
+import { QuoteEditDialog } from './FinanceEditDialogs';
+import { toast } from 'sonner';
+
 const eur = new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR' });
 
-const formatEur = (amount: number | null) => {
-  if (amount === null) return '-';
+const formatEur = (amount: number | null | undefined) => {
+  if (amount === null || amount === undefined) return '-';
   return eur.format(amount).replace(/\u00A0/g, ' ');
 };
-
-const quotesData = [
-  { id: 530, naam: 'Nieuwe offerte', status: 'Afgerond', statusColor: 'bg-green-100 text-green-800', geaccept: 'pending', projStatus: 'Offerte verstuurd', projColor: 'bg-green-200 text-green-900', project: '2500179-fam Caeta...', contact: 'fam Caetano', inbeh: '0%', gefac: '0%', totaalOfferte: 6100, totaal: 0, statusWijziging: '-', deadline: '-', handtekeningDeadline: '-', mail: 'check', verstuurd: '26-03-26 11:03', geopend: '-', keren: '0', reden: '', gemaakt_op: '26-03-2026 11:00', gemaakt_door: 'Sven | Ins...' },
-  { id: 529, naam: 'Nieuwe offerte', status: 'Afgerond', statusColor: 'bg-green-100 text-green-800', geaccept: 'pending', projStatus: '-', projColor: 'bg-gray-100 text-gray-800', project: '-', contact: '-', inbeh: '0%', gefac: '0%', totaalOfferte: 6850, totaal: 0, statusWijziging: '-', deadline: '30-03-2026', handtekeningDeadline: '-', mail: 'check', verstuurd: '25-03-26 12:20', geopend: '25-03-26 12:22', keren: '2', reden: '', gemaakt_op: '25-03-2026 12:19', gemaakt_door: 'Sven | Ins...' },
-  { id: 528, naam: 'Nieuwe offerte', status: 'Concept', statusColor: 'bg-orange-100 text-orange-800', geaccept: 'pending', projStatus: 'Offerte maken', projColor: 'bg-green-200 text-green-900', project: '2600135-Fam. van d...', contact: 'Fam. van den Brink', inbeh: '0%', gefac: '0%', totaalOfferte: null, totaal: 0, statusWijziging: '-', deadline: '-', handtekeningDeadline: '-', mail: 'cross', verstuurd: '-', geopend: '-', keren: '0', reden: '', gemaakt_op: '25-03-2026 09:22', gemaakt_door: 'Sven | Ins...' },
-  { id: 527, naam: 'Nieuwe offerte', status: 'Afgerond', statusColor: 'bg-green-100 text-green-800', geaccept: 'pending', projStatus: 'Montage gepland', projColor: 'bg-yellow-200 text-yellow-900', project: '2600124-Mireille de l...', contact: 'Mireille de Haan', inbeh: '0%', gefac: '0%', totaalOfferte: 1277.89, totaal: 0, statusWijziging: '-', deadline: '08-04-2026', handtekeningDeadline: '-', mail: 'check', verstuurd: '25-03-26 09:21', geopend: '-', keren: '0', reden: '', gemaakt_op: '25-03-2026 09:09', gemaakt_door: 'Sven | Ins...' },
-  { id: 526, naam: 'Nieuwe offerte', status: 'Afgerond', statusColor: 'bg-green-100 text-green-800', geaccept: 'accepted', projStatus: 'Oplevering controle', projColor: 'bg-purple-500 text-white', project: '2600210-Centrada-l...', contact: '-', inbeh: '0%', gefac: '0%', totaalOfferte: 2950, totaal: 0, statusWijziging: '25-03-26 08:59', deadline: '-', handtekeningDeadline: '-', mail: 'cross', verstuurd: '-', geopend: '-', keren: '0', reden: 'Woco', gemaakt_op: '25-03-2026 08:58', gemaakt_door: 'Sven | Ins...' },
-  { id: 525, naam: 'Nieuwe offerte', status: 'Concept', statusColor: 'bg-orange-100 text-orange-800', geaccept: 'pending', projStatus: 'Offerte maken', projColor: 'bg-green-200 text-green-900', project: '2600144-Frank van d...', contact: 'Frank van der Drift', inbeh: '0%', gefac: '0%', totaalOfferte: 1050, totaal: 0, statusWijziging: '-', deadline: '-', handtekeningDeadline: '-', mail: 'cross', verstuurd: '-', geopend: '-', keren: '0', reden: '', gemaakt_op: '24-03-2026 15:49', gemaakt_door: 'Sven | Ins...' },
-  { id: 524, naam: 'Nieuwe offerte', status: 'Afgerond', statusColor: 'bg-green-100 text-green-800', geaccept: 'pending', projStatus: 'Offerte verstuurd', projColor: 'bg-green-200 text-green-900', project: '2600207-Martijn van...', contact: 'Martijn van de Laar', inbeh: '0%', gefac: '0%', totaalOfferte: 1698.55, totaal: 0, statusWijziging: '-', deadline: '29-03-2026', handtekeningDeadline: '-', mail: 'check', verstuurd: '24-03-26 15:38', geopend: '26-03-26 10:29', keren: '2', reden: '', gemaakt_op: '24-03-2026 15:28', gemaakt_door: 'Sven | Ins...' },
-  { id: 523, naam: 'Nieuwe offerte', status: 'Afgerond', statusColor: 'bg-green-100 text-green-800', geaccept: 'pending', projStatus: 'Offerte verstuurd', projColor: 'bg-green-200 text-green-900', project: '2600205-V & O Cars...', contact: '-', inbeh: '0%', gefac: '0%', totaalOfferte: 17915, totaal: 0, statusWijziging: '-', deadline: '29-03-2026', handtekeningDeadline: '-', mail: 'check', verstuurd: '24-03-26 10:33', geopend: '-', keren: '0', reden: '', gemaakt_op: '24-03-2026 10:13', gemaakt_door: 'Sven | Ins...' },
-  { id: 522, naam: 'Nieuwe offerte', status: 'Afgerond', statusColor: 'bg-green-100 text-green-800', geaccept: 'pending', projStatus: 'Offerte verstuurd', projColor: 'bg-green-200 text-green-900', project: '2600204-V & O Cars...', contact: '-', inbeh: '0%', gefac: '0%', totaalOfferte: 16215, totaal: 0, statusWijziging: '-', deadline: '-', handtekeningDeadline: '-', mail: 'check', verstuurd: '24-03-26 08:35', geopend: '-', keren: '0', reden: '', gemaakt_op: '24-03-2026 08:24', gemaakt_door: 'Sven | Ins...' },
-  { id: 521, naam: 'Nieuwe offerte', status: 'Afgerond', statusColor: 'bg-green-100 text-green-800', geaccept: 'pending', projStatus: 'Offerte verstuurd', projColor: 'bg-green-200 text-green-900', project: '2600163-Rob Holtsla...', contact: 'Rob Holtslag', inbeh: '0%', gefac: '0%', totaalOfferte: 8362.5, totaal: 0, statusWijziging: '-', deadline: '06-04-2026', handtekeningDeadline: '-', mail: 'check', verstuurd: '23-03-26 14:38', geopend: '23-03-26 21:29', keren: '7', reden: '', gemaakt_op: '23-03-2026 14:03', gemaakt_door: 'Sven | Ins...' },
-  { id: 520, naam: 'Nieuwe offerte', status: 'Afgerond', statusColor: 'bg-green-100 text-green-800', geaccept: 'pending', projStatus: 'Offerte verstuurd', projColor: 'bg-green-200 text-green-900', project: '2600196-Mark MCT...', contact: 'Mark MCT', inbeh: '0%', gefac: '0%', totaalOfferte: 30865, totaal: 0, statusWijziging: '-', deadline: '-', handtekeningDeadline: '-', mail: 'check', verstuurd: '20-03-26 12:36', geopend: '20-03-26 14:07', keren: '4', reden: '', gemaakt_op: '20-03-2026 12:10', gemaakt_door: 'Sven | Ins...' },
-  { id: 519, naam: 'Nieuwe offerte', status: 'Afgerond', statusColor: 'bg-green-100 text-green-800', geaccept: 'pending', projStatus: 'Offerte verstuurd', projColor: 'bg-green-200 text-green-900', project: '2600194-Sylvia van d...', contact: 'Sylvia van den Hoek', inbeh: '0%', gefac: '0%', totaalOfferte: 4391, totaal: 0, statusWijziging: '-', deadline: '02-04-2026', handtekeningDeadline: '-', mail: 'cross', verstuurd: '-', geopend: '-', keren: '0', reden: '', gemaakt_op: '19-03-2026 13:22', gemaakt_door: 'Sven | Ins...' },
-  { id: 518, naam: 'Nieuwe offerte', status: 'Afgerond', statusColor: 'bg-green-100 text-green-800', geaccept: 'pending', projStatus: 'Offerte verstuurd', projColor: 'bg-green-200 text-green-900', project: '2600194-Sylvia van d...', contact: 'Sylvia van den Hoek', inbeh: '0%', gefac: '0%', totaalOfferte: 4391, totaal: 0, statusWijziging: '-', deadline: '23-03-2026', handtekeningDeadline: '-', mail: 'cross', verstuurd: '-', geopend: '-', keren: '0', reden: '', gemaakt_op: '19-03-2026 13:12', gemaakt_door: 'Sven | Ins...' },
-  { id: 515, naam: 'Nieuwe offerte', status: 'Afgerond', statusColor: 'bg-green-100 text-green-800', geaccept: 'pending', projStatus: 'Offerte verstuurd', projColor: 'bg-green-200 text-green-900', project: '2600190-Beauty by ...', contact: '-', inbeh: '0%', gefac: '0%', totaalOfferte: 1697.15, totaal: 0, statusWijziging: '-', deadline: '-', handtekeningDeadline: '-', mail: 'check', verstuurd: '18-03-26 14:43', geopend: '-', keren: '0', reden: '', gemaakt_op: '18-03-2026 14:33', gemaakt_door: 'Sven | Ins...' },
-  { id: 514, naam: 'Nieuwe offerte', status: 'Afgerond', statusColor: 'bg-green-100 text-green-800', geaccept: 'pending', projStatus: 'Montage plannen', projColor: 'bg-yellow-200 text-yellow-900', project: '2600168-Stephan Pr...', contact: 'Stephan Prins', inbeh: '0%', gefac: '0%', totaalOfferte: 2680.6, totaal: 0, statusWijziging: '-', deadline: '-', handtekeningDeadline: '-', mail: 'check', verstuurd: '18-03-26 12:56', geopend: '21-03-26 13:29', keren: '2', reden: '', gemaakt_op: '18-03-2026 12:20', gemaakt_door: 'Sven | Ins...' },
-  { id: 513, naam: 'naam', status: 'Concept', statusColor: 'bg-orange-100 text-orange-800', geaccept: 'pending', projStatus: 'Offerte verstuurd', projColor: 'bg-green-200 text-green-900', project: '2500179-fam Caeta...', contact: 'fam Caetano', inbeh: '0%', gefac: '0%', totaalOfferte: 5600, totaal: 0, statusWijziging: '-', deadline: '-', handtekeningDeadline: '-', mail: 'cross', verstuurd: '-', geopend: '-', keren: '0', reden: '', gemaakt_op: '18-03-2026 11:33', gemaakt_door: 'Sven | Ins...' },
-  { id: 512, naam: 'Nieuwe offerte', status: 'Afgerond', statusColor: 'bg-green-100 text-green-800', geaccept: 'pending', projStatus: 'Offerte verstuurd', projColor: 'bg-green-200 text-green-900', project: '2600186-Almira Kalk...', contact: 'Almira Kalkhoven', inbeh: '0%', gefac: '0%', totaalOfferte: 1819.01, totaal: 0, statusWijziging: '-', deadline: '01-04-2026', handtekeningDeadline: '-', mail: 'check', verstuurd: '18-03-26 11:09', geopend: '18-03-26 11:19', keren: '1', reden: '', gemaakt_op: '18-03-2026 11:04', gemaakt_door: 'Sven | Ins...' },
-];
 
 type QuotesColumnKey =
   | 'select'
@@ -93,32 +78,109 @@ const quotesColumns: QuotesColumnDef[] = [
   { key: 'actions', width: 160, minWidth: 140, resizable: false, thClassName: 'p-3 sticky right-0 bg-white shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)]' },
 ];
 
+import { useTenant } from '@/lib/tenantContext';
+import { pdfService } from '@/lib/pdfService';
+import { automationService } from '@/lib/automationService';
+import { QuoteTemplate } from '../pdf/QuoteTemplate';
+
 export function QuotesLayout() {
-  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const { tenant } = useTenant();
+  const [quotes, setQuotes] = useState<Quote[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editingQuote, setEditingQuote] = useState<Quote | null>(null);
+
+  useEffect(() => {
+    const unsub = financeService.subscribeToQuotes((fetched) => {
+      setQuotes(fetched);
+      setIsLoading(false);
+    });
+    return () => unsub();
+  }, []);
+
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [columnWidths, setColumnWidths] = useState<Record<QuotesColumnKey, number>>(() => {
     return quotesColumns.reduce((acc, col) => {
       acc[col.key] = col.width;
       return acc;
     }, {} as Record<QuotesColumnKey, number>);
   });
-  const resizingRef = useRef<{
-    key: QuotesColumnKey;
-    startX: number;
-    startWidth: number;
-    minWidth: number;
-  } | null>(null);
+
+  const handleAdd = () => {
+    setEditingQuote(null);
+    setIsEditOpen(true);
+  };
+
+  const handleEdit = (quote: Quote) => {
+    setEditingQuote(quote);
+    setIsEditOpen(true);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (window.confirm("Weet je zeker dat je deze offerte wilt verwijderen?")) {
+      try {
+        await financeService.deleteQuote(id);
+        toast.success('Offerte verwijderd');
+      } catch (err) {
+        toast.error('Fout bij verwijderen');
+      }
+    }
+  };
+
+  const handleDownloadPDF = async (quote: Quote) => {
+    if (!tenant) return;
+    const toastId = toast.loading('PDF genereren...');
+    try {
+      const blob = await pdfService.generateBlob(<QuoteTemplate quote={quote} tenant={tenant} />);
+      pdfService.downloadInBrowser(blob, `Offerte-${quote.quoteNumber || quote.id}.pdf`);
+      toast.success('PDF gedownload', { id: toastId });
+    } catch (err) {
+      console.error(err);
+      toast.error('Fout bij genereren PDF', { id: toastId });
+    }
+  };
+
+  const handleSendEmail = async (quote: Quote) => {
+    if (!tenant) return;
+    const email = window.prompt("Stuur offerte naar:", (quote as any).contactEmail || "");
+    if (!email) return;
+
+    const toastId = toast.loading('Offerte verzenden...');
+    try {
+      await automationService.sendQuoteEmail(quote, tenant, email);
+      toast.success('Offerte in de wachtrij geplaatst voor verzending', { id: toastId });
+      
+      // Update status naar 'Verstuurd' indien nog Concept
+      if (quote.status === 'Concept') {
+        await financeService.updateQuote(quote.id!, { 
+          status: 'Verstuurd',
+          sentDate: new Date().toLocaleDateString('nl-NL')
+        });
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('Fout bij verzenden email', { id: toastId });
+    }
+  };
 
   const tableMinWidth = useMemo(() => {
     return quotesColumns.reduce((total, col) => total + (columnWidths[col.key] ?? col.width), 0);
   }, [columnWidths]);
 
-  const toggleSelect = (id: number) => {
+  const toggleSelect = (id: string) => {
     if (selectedIds.includes(id)) {
       setSelectedIds(selectedIds.filter(x => x !== id));
     } else {
       setSelectedIds([...selectedIds, id]);
     }
   };
+
+  const resizingRef = useRef<{
+    key: QuotesColumnKey;
+    startX: number;
+    startWidth: number;
+    minWidth: number;
+  } | null>(null);
 
   const startResize = (key: QuotesColumnKey) => (e: React.PointerEvent) => {
     const col = quotesColumns.find(c => c.key === key);
@@ -163,21 +225,24 @@ export function QuotesLayout() {
         <div className="flex flex-wrap items-center justify-between p-4 border-b border-gray-100 shrink-0">
           <div className="flex items-center gap-6 pb-1 overflow-x-auto scrollbar-hide">
             <button className="flex items-center gap-2 text-sm font-bold text-gray-900 pb-1 border-b-2 border-green-600 shrink-0">
-              Alles <span className="bg-emerald-800 text-white text-[10px] px-1.5 py-0.5 rounded-sm leading-none shrink-0 font-bold">289</span>
+              Alles <span className="bg-emerald-800 text-white text-[10px] px-1.5 py-0.5 rounded-sm leading-none shrink-0 font-bold">{quotes.length}</span>
             </button>
             <button className="flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-gray-900 pb-1 border-b-2 border-transparent hover:border-gray-200 shrink-0">
-              Rejected <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-sm leading-none shrink-0 font-bold">12</span>
+              Rejected <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-sm leading-none shrink-0 font-bold">{quotes.filter(q => q.status === 'Rejected').length}</span>
             </button>
             <button className="flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-gray-900 pb-1 border-b-2 border-transparent hover:border-gray-200 shrink-0">
-              Geaccepteerd <span className="bg-green-500 text-white text-[10px] px-1.5 py-0.5 rounded-sm leading-none shrink-0 font-bold">126</span>
+              Geaccepteerd <span className="bg-green-500 text-white text-[10px] px-1.5 py-0.5 rounded-sm leading-none shrink-0 font-bold">{quotes.filter(q => q.status === 'Geaccepteerd').length}</span>
             </button>
             <button className="flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-gray-900 pb-1 border-b-2 border-transparent hover:border-gray-200 shrink-0">
-              Concept <span className="bg-blue-500 text-white text-[10px] px-1.5 py-0.5 rounded-sm leading-none shrink-0 font-bold">41</span>
+              Concept <span className="bg-blue-500 text-white text-[10px] px-1.5 py-0.5 rounded-sm leading-none shrink-0 font-bold">{quotes.filter(q => q.status === 'Concept').length}</span>
             </button>
           </div>
           
           <div className="flex items-center gap-3">
-            <button className="flex items-center gap-2 px-4 py-2 bg-emerald-800 text-white font-medium text-sm rounded-md shadow-sm opacity-90 hover:opacity-100 transition-opacity">
+            <button 
+              onClick={handleAdd}
+              className="flex items-center gap-2 px-4 py-2 bg-emerald-800 text-white font-medium text-sm rounded-md shadow-sm opacity-90 hover:opacity-100 transition-opacity"
+            >
               <Plus className="h-4 w-4" /> Nieuwe Offerte
             </button>
             <button className="p-2 border border-gray-200 text-gray-600 rounded-lg shadow-sm hover:bg-gray-50">
@@ -194,7 +259,7 @@ export function QuotesLayout() {
             <button className="flex items-center gap-1.5 hover:text-gray-900"><AlignJustify className="h-4 w-4" /> Dichtheid</button>
             <button className="flex items-center gap-1.5 hover:text-gray-900"><Maximize2 className="h-4 w-4" /> Schaal</button>
             <button className="flex items-center gap-1.5 hover:text-gray-900 text-gray-400">
-              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>
+              <FileText className="h-4 w-4" />
               Bulk
             </button>
             <button className="flex items-center gap-1.5 hover:text-gray-900"><Download className="h-4 w-4" /> Exporteren</button>
@@ -259,31 +324,42 @@ export function QuotesLayout() {
               </tr>
             </thead>
             <tbody>
-              {quotesData.map((row, i) => (
-                <tr key={row.id} className="border-b border-gray-100 hover:bg-gray-50/80 transition-colors">
+              {isLoading ? (
+                <tr><td colSpan={quotesColumns.length} className="p-20 text-center text-gray-400 italic">Laden...</td></tr>
+              ) : quotes.length === 0 ? (
+                <tr><td colSpan={quotesColumns.length} className="p-20 text-center text-gray-400 italic">Geen offertes gevonden. Klik op "Nieuwe Offerte" om te starten.</td></tr>
+              ) : quotes.map((row) => (
+                <tr key={row.id} className="border-b border-gray-100 hover:bg-gray-50/80 transition-colors group">
                   <td className="p-3 pl-4 text-center">
                     <input 
                       type="checkbox" 
                       className="rounded border-gray-300 text-green-600 focus:ring-green-500 h-4 w-4 cursor-pointer" 
-                      onClick={() => toggleSelect(row.id)}
+                      onChange={() => toggleSelect(row.id!)}
+                      checked={selectedIds.includes(row.id!)}
                     />
                   </td>
                   <td className="p-3 text-center">
                     <ChevronDown className="h-4 w-4 text-gray-400 cursor-pointer hover:text-gray-700" />
                   </td>
                   <td className="p-3 text-[13px] font-semibold text-emerald-600 hover:underline cursor-pointer">
-                    {row.id}
+                    {row.id?.slice(-5)}
                   </td>
                   <td className="p-3 text-[13px] font-semibold text-emerald-600 hover:underline cursor-pointer truncate">
-                    {row.naam}
+                    {row.title}
                   </td>
                   <td className="p-3 text-[13px] text-gray-700">
-                    <span className={cn("text-[11px] font-bold px-2 py-0.5 border border-transparent rounded-sm", row.statusColor)}>
+                    <span className={cn(
+                      "text-[11px] font-bold px-2 py-0.5 border border-transparent rounded-sm",
+                      row.status === 'Geaccepteerd' ? "bg-green-100 text-green-800" :
+                      row.status === 'Concept' ? "bg-orange-100 text-orange-800" :
+                      row.status === 'Rejected' ? "bg-red-100 text-red-800" :
+                      "bg-blue-100 text-blue-800"
+                    )}>
                       {row.status}
                     </span>
                   </td>
                   <td className="p-3 text-center">
-                    {row.geaccept === 'accepted' ? (
+                    {row.status === 'Geaccepteerd' ? (
                       <CheckCircle2 className="h-4 w-4 text-green-500 mx-auto" />
                     ) : (
                       <div className="h-4 w-4 bg-green-700 rounded-full text-white flex items-center justify-center mx-auto shadow-sm">
@@ -292,96 +368,65 @@ export function QuotesLayout() {
                     )}
                   </td>
                   <td className="p-3 text-[13px] text-gray-700">
-                    {row.projStatus !== '-' ? (
-                      <span className={cn("text-[11px] font-bold px-2 py-0.5 border rounded-sm", row.projColor)}>
-                        {row.projStatus}
+                    {row.projectStatus ? (
+                      <span className="text-[11px] font-bold px-2 py-0.5 border rounded-sm bg-green-200 text-green-900">
+                        {row.projectStatus}
                       </span>
                     ) : (
                        '-' 
                     )}
                   </td>
-                  <td className="p-3 text-[13px] font-semibold text-emerald-600 hover:underline cursor-pointer truncate" title={row.project}>
-                    {row.project}
+                  <td className="p-3 text-[13px] font-semibold text-emerald-600 hover:underline cursor-pointer truncate" title={row.projectName}>
+                    {row.projectName}
                   </td>
-                  <td className="p-3 text-[13px] font-semibold text-emerald-600 hover:underline cursor-pointer truncate" title={row.contact}>
-                    {row.contact}
+                  <td className="p-3 text-[13px] font-semibold text-emerald-600 hover:underline cursor-pointer truncate" title={row.contactName}>
+                    {row.contactName}
                   </td>
-                  <td className="p-3 text-[13px] text-gray-600">
-                    {row.inbeh}
-                  </td>
-                  <td className="p-3 text-[13px] text-gray-600">
-                    {row.gefac}
-                  </td>
+                  <td className="p-3 text-[13px] text-gray-600">0%</td>
+                  <td className="p-3 text-[13px] text-gray-600">0%</td>
                   <td className="p-3 text-[13px] text-gray-900 font-medium">
-                    <span
-                      className="block truncate text-right tabular-nums"
-                      title={formatEur(row.totaalOfferte)}
-                    >
-                      {formatEur(row.totaalOfferte)}
+                    <span className="block truncate text-right tabular-nums">
+                      {formatEur(row.totalAmount)}
                     </span>
                   </td>
                   <td className="p-3 text-[13px] text-gray-900 font-medium">
-                    <span
-                      className="block truncate text-right tabular-nums"
-                      title={formatEur(row.totaal)}
-                    >
-                      {formatEur(row.totaal)}
+                    <span className="block truncate text-right tabular-nums">
+                      € 0,00
                     </span>
                   </td>
-                  <td className="p-3 text-[13px] text-gray-700 whitespace-nowrap truncate" title={row.statusWijziging}>
-                    {row.statusWijziging}
-                  </td>
-                  <td className="p-3 text-[13px] text-gray-700 whitespace-nowrap">
-                    {row.deadline}
-                  </td>
-                  <td className="p-3 text-[13px] text-gray-700 whitespace-nowrap">
-                    {row.handtekeningDeadline}
-                  </td>
+                  <td className="p-3 text-[13px] text-gray-700 whitespace-nowrap truncate">-</td>
+                  <td className="p-3 text-[13px] text-gray-700 whitespace-nowrap">-</td>
+                  <td className="p-3 text-[13px] text-gray-700 whitespace-nowrap">-</td>
                   <td className="p-3 text-[13px] text-gray-600">
-                    {row.mail === 'check' ? (
-                      <Check className="h-4 w-4 text-gray-600" />
-                    ) : (
-                      <X className="h-4 w-4 text-gray-300" />
-                    )}
+                    <Check className="h-4 w-4 text-gray-600" />
                   </td>
                   <td className="p-3 text-[13px] text-gray-700 whitespace-nowrap">
-                    {row.verstuurd}
+                    {row.sentDate || '-'}
                   </td>
-                  <td className="p-3 text-[13px] text-gray-700 whitespace-nowrap">
-                    {row.geopend}
-                  </td>
+                  <td className="p-3 text-[13px] text-gray-700 whitespace-nowrap">-</td>
                   <td className="p-3 text-[13px] text-gray-700 text-right pr-6">
-                    {row.keren}
+                    {row.openedCount || 0}
                   </td>
-                  <td className="p-3 text-[13px] text-gray-700">
-                    {row.reden ? (
-                      <span className="bg-green-500 text-white font-bold text-[11px] px-2 py-0.5 rounded-sm shadow-sm">{row.reden}</span>
-                    ) : ''}
-                  </td>
+                  <td className="p-3 text-[13px] text-gray-700">-</td>
                   <td className="p-3 text-[13px] text-gray-700 whitespace-nowrap">
-                    {row.gemaakt_op}
-                  </td>
+                      {((row as any).createdAt || (row as any).date)?.toDate?.().toLocaleDateString() || '-'}
+                    </td>
                   <td className="p-3 text-[13px] text-gray-600">
                     <div className="flex items-center gap-2 min-w-0">
                       <UserCircle2 className="h-4 w-4 text-gray-400 shrink-0" />
-                      <span className="truncate" title={row.gemaakt_door}>{row.gemaakt_door}</span>
+                      <span className="truncate">{row.createdBy || 'Gebruiker'}</span>
                     </div>
                   </td>
                   <td className="p-3 text-right sticky right-0 bg-white/95 backdrop-blur-sm group-hover:bg-gray-50/95 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.02)] transition-colors">
                      <div className="flex items-center justify-end gap-2 text-emerald-600">
-                      <button className="hover:text-emerald-800 p-0.5"><Edit className="h-3.5 w-3.5" /></button>
-                      <button className="hover:text-emerald-800 p-0.5"><Download className="h-3.5 w-3.5" /></button>
-                      <button className="hover:text-emerald-800 p-0.5"><FileText className="h-3.5 w-3.5" /></button>
-                      <button className="hover:text-emerald-800 p-0.5 text-gray-400"><Send className="h-3.5 w-3.5" /></button>
-                      <button className="hover:text-emerald-800 p-0.5 text-gray-400"><CheckSquare className="h-3.5 w-3.5" /></button>
-                      <button className="hover:text-emerald-800 p-0.5 text-gray-400"><MessageSquare className="h-3.5 w-3.5" /></button>
+                      <button onClick={() => handleEdit(row)} title="Bewerken" className="hover:text-emerald-800 p-0.5"><Edit className="h-3.5 w-3.5" /></button>
+                      <button onClick={() => handleDelete(row.id!)} title="Verwijderen" className="hover:text-red-600 p-0.5"><Archive className="h-3.5 w-3.5" /></button>
+                      <button onClick={() => handleDownloadPDF(row)} title="Download PDF" className="hover:text-emerald-800 p-0.5"><Download className="h-3.5 w-3.5" /></button>
+                      <button onClick={() => handleSendEmail(row)} className="hover:text-emerald-800 p-0.5 text-emerald-600" title="Verzenden"><Send className="h-3.5 w-3.5" /></button>
                     </div>
                   </td>
                 </tr>
               ))}
-              <tr className="h-auto">
-                <td colSpan={quotesColumns.length}></td>
-              </tr>
             </tbody>
           </table>
         </div>
@@ -397,19 +442,17 @@ export function QuotesLayout() {
                 <option>100</option>
               </select>
             </div>
-            <span>1–25 of 289</span>
-            <div className="flex gap-4 items-center pl-2">
-              <button className="text-gray-400 cursor-not-allowed">
-                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-              </button>
-              <button className="text-gray-700 hover:text-gray-900 cursor-pointer">
-                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
-              </button>
-            </div>
+            <span>{quotes.length} offertes totaal</span>
           </div>
         </div>
 
       </div>
+
+      <QuoteEditDialog 
+        open={isEditOpen}
+        onOpenChange={setIsEditOpen}
+        quote={editingQuote}
+      />
     </div>
   );
 }

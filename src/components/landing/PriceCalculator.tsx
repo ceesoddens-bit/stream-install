@@ -1,0 +1,179 @@
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Check, Info } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
+import {
+  MODULES,
+  ModuleKey,
+  berekenMaandprijs,
+  BASIS_PRIJS_PER_GEBRUIKER,
+  INBEGREPEN_MODULES
+} from '@/lib/modules';
+
+export function PriceCalculator() {
+  const navigate = useNavigate();
+  const [users, setUsers] = useState<number>(3);
+  const [selectedModules, setSelectedModules] = useState<ModuleKey[]>([]);
+
+  const handleToggleModule = (key: ModuleKey) => {
+    setSelectedModules(prev =>
+      prev.includes(key) ? prev.filter(m => m !== key) : [...prev, key]
+    );
+  };
+
+  const maandPrijs = berekenMaandprijs(users, selectedModules);
+  const basisPrijsTotaal = users * BASIS_PRIJS_PER_GEBRUIKER;
+
+  const handleStart = () => {
+    const searchParams = new URLSearchParams();
+    searchParams.set('users', users.toString());
+    if (selectedModules.length > 0) {
+      searchParams.set('modules', selectedModules.join(','));
+    }
+    navigate(`/registreren?${searchParams.toString()}`);
+  };
+
+  return (
+    <Card className="w-full max-w-4xl mx-auto shadow-lg ring-1 ring-foreground/10 bg-white">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-0 divide-y md:divide-y-0 md:divide-x divide-border">
+        {/* Left column: Configuration */}
+        <div className="p-6 md:p-8 space-y-8">
+          <div>
+            <h3 className="text-xl font-bold text-gray-900 mb-1">Stel je pakket samen</h3>
+            <p className="text-sm text-gray-500">Kies het aantal gebruikers en de gewenste modules.</p>
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Label className="text-base font-semibold">Aantal gebruikers</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="number"
+                  min={1}
+                  value={users}
+                  onChange={(e) => setUsers(Math.max(1, parseInt(e.target.value) || 1))}
+                  className="w-20 text-center font-semibold bg-gray-50 border-gray-200"
+                />
+              </div>
+            </div>
+            <input
+              type="range"
+              min="1"
+              max="50"
+              value={users}
+              onChange={(e) => setUsers(parseInt(e.target.value))}
+              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-emerald-600"
+            />
+            <div className="flex justify-between text-xs text-gray-500">
+              <span>1</span>
+              <span>50+</span>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <Label className="text-base font-semibold">Kies je modules</Label>
+            <div className="grid grid-cols-1 gap-2">
+              {MODULES.filter(m => !INBEGREPEN_MODULES.includes(m.key)).map((module) => {
+                const isSelected = selectedModules.includes(module.key);
+                return (
+                  <div
+                    key={module.key}
+                    onClick={() => handleToggleModule(module.key)}
+                    className={cn(
+                      "flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all",
+                      isSelected
+                        ? "border-emerald-500 bg-emerald-50/50 ring-1 ring-emerald-500"
+                        : "border-gray-200 hover:border-emerald-300 hover:bg-gray-50"
+                    )}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={cn(
+                        "flex items-center justify-center h-5 w-5 rounded border",
+                        isSelected ? "bg-emerald-600 border-emerald-600" : "bg-white border-gray-300"
+                      )}>
+                        {isSelected && <Check className="h-3 w-3 text-white" />}
+                      </div>
+                      <div>
+                        <div className="text-sm font-semibold text-gray-900">{module.naam}</div>
+                        <div className="text-xs text-gray-500">{module.beschrijving}</div>
+                      </div>
+                    </div>
+                    <div className="text-sm font-semibold text-gray-700">
+                      +€{module.prijsPerGebruiker}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* Right column: Summary */}
+        <div className="p-6 md:p-8 bg-gray-50/50 flex flex-col justify-between">
+          <div>
+            <h3 className="text-xl font-bold text-gray-900 mb-6">Overzicht</h3>
+            
+            <div className="space-y-4">
+              <div className="flex justify-between items-center text-sm">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium text-gray-900">Basisplatform</span>
+                  <Tooltip>
+                    <TooltipTrigger><Info className="h-4 w-4 text-gray-400" /></TooltipTrigger>
+                    <TooltipContent>
+                      <p className="max-w-xs">Inclusief CRM en Dashboarding.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+                <span className="text-gray-600">{users} x €{BASIS_PRIJS_PER_GEBRUIKER}</span>
+              </div>
+              <div className="flex justify-between items-center text-sm font-semibold border-b border-gray-200 pb-4">
+                <span className="text-gray-900">Subtotaal basis</span>
+                <span>€{basisPrijsTotaal},-</span>
+              </div>
+
+              {selectedModules.length > 0 && (
+                <div className="space-y-3 pt-2">
+                  <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Extra modules</div>
+                  {selectedModules.map(key => {
+                    const m = MODULES.find(mod => mod.key === key);
+                    if (!m) return null;
+                    return (
+                      <div key={key} className="flex justify-between items-center text-sm">
+                        <span className="text-gray-700">{m.naam}</span>
+                        <span className="text-gray-600">{users} x €{m.prijsPerGebruiker}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-8 pt-6 border-t border-gray-200">
+            <div className="flex items-end justify-between mb-6">
+              <div>
+                <div className="text-sm text-gray-500 font-medium">Totaal per maand</div>
+                <div className="text-xs text-gray-400">Excl. BTW, maandelijks opzegbaar</div>
+              </div>
+              <div className="text-4xl font-bold text-gray-900">
+                €{maandPrijs},-
+              </div>
+            </div>
+            <Button
+              size="lg"
+              className="w-full h-14 text-lg bg-emerald-700 hover:bg-emerald-800 text-white font-bold"
+              onClick={handleStart}
+            >
+              Start Nu
+            </Button>
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+}

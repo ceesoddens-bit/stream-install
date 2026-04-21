@@ -4,6 +4,9 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { crmService, Contact } from '@/lib/crmService';
+import { ContactEditDialog } from './CRMEditDialogs';
+import { ContactDetailView } from './CRMDetailView';
+import { toast } from 'sonner';
 
 type ContactsColumnKey =
   | 'select'
@@ -45,6 +48,14 @@ export function ContactsLayout() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editingContact, setEditingContact] = useState<Contact | null>(null);
+  
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [detailContact, setDetailContact] = useState<Contact | null>(null);
+
   const [columnWidths, setColumnWidths] = useState<Record<ContactsColumnKey, number>>(() => {
     return contactsColumns.reduce((acc, col) => {
       acc[col.key] = col.width;
@@ -111,6 +122,17 @@ export function ContactsLayout() {
     return undefined;
   };
 
+  const filteredContacts = useMemo(() => {
+    if (!searchQuery) return contacts;
+    const q = searchQuery.toLowerCase();
+    return contacts.filter(c => 
+      c.name?.toLowerCase().includes(q) || 
+      c.email?.toLowerCase().includes(q) ||
+      c.firstName?.toLowerCase().includes(q) ||
+      c.lastName?.toLowerCase().includes(q)
+    );
+  }, [contacts, searchQuery]);
+
   // Subscribe to real-time updates from Firebase
   useEffect(() => {
     const unsubscribe = crmService.subscribeToContacts((fetched) => {
@@ -156,72 +178,30 @@ export function ContactsLayout() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (window.confirm("Weet je zeker dat je dit contact wilt verwijderen?")) {
-      await crmService.deleteContact(id);
-    }
+  const handleAdd = () => {
+    setEditingContact(null);
+    setIsEditOpen(true);
   };
 
-  const handleAddSample = async () => {
-    const samples = [
-      {
-        firstName: 'Cees',
-        lastName: 'Oddens',
-        email: 'cees.oddens@example.com',
-        telephone: '0612345678',
-        mobile: '0612345678',
-        address: 'Joop Gesinkweg 601, 1114AB, Amsterdam',
-        priority: 0,
-        tags: ['Installatie'],
-      },
-      {
-        firstName: 'Sven',
-        lastName: 'Nooij',
-        email: 'sven@example.com',
-        telephone: '053588260',
-        mobile: '0642794218',
-        address: 'Bunschotenlaan 17, 8244DS, Lelystad',
-        priority: 3,
-        tags: ['Service', 'Zakelijk'],
-      },
-      {
-        firstName: 'Johnny',
-        lastName: 'Doe',
-        email: 'johnny.doe@example.com',
-        telephone: '1234567789',
-        address: 'Magdenburgstraat 5, 7421AA, Deventer',
-        priority: 0,
-        tags: [],
-      },
-      {
-        firstName: 'Sandra',
-        lastName: 'Brader',
-        email: 'sandra.brader@example.com',
-        mobile: '0658688851',
-        address: 'Griend 23 65, 8225RW, Lelystad',
-        priority: 1,
-        tags: ['Particulier'],
-      },
-    ];
-    const sample = samples[Math.floor(Math.random() * samples.length)];
-    const randomName = `${sample.firstName} ${sample.lastName}`.trim();
-    await crmService.addContact({
-      name: randomName,
-      firstName: sample.firstName,
-      lastName: sample.lastName,
-      email: sample.email,
-      phone: sample.telephone,
-      telephone: sample.telephone,
-      mobile: sample.mobile,
-      address: sample.address,
-      priority: sample.priority,
-      tags: sample.tags,
-      company: 'Installatiegroep Duurzaam',
-      role: 'Contact',
-      status: 'Actief',
-      createdByName: 'Systeem',
-      updatedByName: 'Systeem',
-    });
+  const handleEdit = (contact: Contact) => {
+    setEditingContact(contact);
+    setIsEditOpen(true);
+  };
+
+  const handleViewDetail = (contact: Contact) => {
+    setDetailContact(contact);
+    setIsDetailOpen(true);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (window.confirm("Weet je zeker dat je dit contact wilt verwijderen?")) {
+      try {
+        await crmService.deleteContact(id);
+        toast.success('Contact verwijderd');
+      } catch (err) {
+        toast.error('Fout bij verwijderen');
+      }
+    }
   };
 
   return (
@@ -245,10 +225,10 @@ export function ContactsLayout() {
           
           <div className="flex items-center gap-3">
             <button 
-                onClick={handleAddSample}
+                onClick={handleAdd}
                 className="flex items-center gap-2 px-4 py-2 bg-emerald-800 text-white font-medium text-sm rounded-md shadow-sm opacity-90 hover:opacity-100 transition-opacity"
             >
-              <Plus className="h-4 w-4" /> Sample Toevoegen
+              <Plus className="h-4 w-4" /> Contact Toevoegen
             </button>
             <button className="p-2 border border-gray-200 text-gray-600 rounded-lg shadow-sm hover:bg-gray-50">
               <Settings className="h-4 w-4" />
@@ -263,13 +243,20 @@ export function ContactsLayout() {
             <button className="flex items-center gap-1.5 hover:text-gray-900"><SlidersHorizontal className="h-4 w-4" /> Filters</button>
             <button className="flex items-center gap-1.5 hover:text-gray-900"><AlignJustify className="h-4 w-4" /> Dichtheid</button>
             <button className="flex items-center gap-1.5 hover:text-gray-900"><Maximize2 className="h-4 w-4" /> Schaal</button>
-            <button className="flex items-center gap-1.5 hover:text-gray-900"><Download className="h-4 w-4" /> Exporteren</button>
+            <button 
+              className="flex items-center gap-1.5 hover:text-gray-900"
+              onClick={() => crmService.exportToCSV(contacts, 'contacten.csv')}
+            >
+              <Download className="h-4 w-4" /> Exporteren
+            </button>
           </div>
           <div className="relative w-64 flex items-center">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
             <input
               type="text"
               placeholder="Zoeken..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9 pr-8 py-1.5 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50/50 w-full"
             />
           </div>
@@ -321,13 +308,13 @@ export function ContactsLayout() {
                     Laden van contacten...
                   </td>
                 </tr>
-              ) : contacts.length === 0 ? (
+              ) : filteredContacts.length === 0 ? (
                 <tr>
                    <td colSpan={contactsColumns.length} className="p-20 text-center text-gray-400 italic">
-                    Geen contacten gevonden. Klik op "+ Sample Toevoegen" om te testen!
+                    Geen contacten gevonden.
                   </td>
                 </tr>
-              ) : contacts.map((row) => {
+              ) : filteredContacts.map((row) => {
                 const { firstName, lastName } = getNameParts(row);
                 const tags = row.tags?.filter(Boolean) ?? [];
 
@@ -341,7 +328,10 @@ export function ContactsLayout() {
                       onChange={() => toggleSelect(row.id!)}
                     />
                   </td>
-                  <td className="p-3 text-[13px] font-bold text-emerald-800 hover:underline cursor-pointer truncate">
+                  <td 
+                    className="p-3 text-[13px] font-bold text-emerald-800 hover:underline cursor-pointer truncate"
+                    onClick={() => handleEdit(row)}
+                  >
                     {renderValue(row.name)}
                   </td>
                   <td className="p-3 text-[13px] text-gray-700 truncate">
@@ -385,7 +375,18 @@ export function ContactsLayout() {
                   </td>
                   <td className="p-3 text-right sticky right-0 bg-white/90 backdrop-blur-sm group-hover:bg-gray-50/90 transition-colors z-10">
                     <div className="flex items-center justify-end gap-3 text-emerald-700">
-                        <button className="hover:text-emerald-900 transition-colors"><UserCircle2 className="h-4 w-4" /></button>
+                        <button 
+                          className="hover:text-emerald-900 transition-colors"
+                          onClick={() => handleEdit(row)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </button>
+                        <button 
+                          className="hover:text-emerald-900 transition-colors"
+                          onClick={() => handleViewDetail(row)}
+                        >
+                          <UserCircle2 className="h-4 w-4" />
+                        </button>
                         <button className="hover:text-emerald-900 transition-colors"><Network className="h-4 w-4" /></button>
                         <button className="hover:text-emerald-900 transition-colors"><FileText className="h-4 w-4" /></button>
                         <button onClick={() => handleDelete(row.id!)} className="text-gray-300 hover:text-red-500 transition-colors ml-1 border-l pl-3 border-gray-100">
@@ -401,10 +402,22 @@ export function ContactsLayout() {
         </div>
 
         <div className="bg-white border-t border-gray-100 p-3 shrink-0 flex items-center justify-end text-[12px] text-gray-500 font-medium">
-           {contacts.length} contacten in totaal
+           {filteredContacts.length} contacten getoond van {contacts.length} totaal
         </div>
 
       </div>
+
+      <ContactEditDialog 
+        open={isEditOpen}
+        onOpenChange={setIsEditOpen}
+        contact={editingContact}
+      />
+
+      <ContactDetailView 
+        open={isDetailOpen}
+        onOpenChange={setIsDetailOpen}
+        contact={detailContact}
+      />
     </div>
   );
 }

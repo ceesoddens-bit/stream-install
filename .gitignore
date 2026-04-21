@@ -1,8 +1,12 @@
 node_modules/
 build/
+functions/lib/
+functions/node_modules/
 dist/
 coverage/
 .DS_Store
 *.log
 .env*
 !.env.example
+screenShotsOpusFlow/
+.firebase/

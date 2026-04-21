@@ -1,11 +1,11 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { managementCustomers } from '@/data/managementMockData';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Columns3, Filter, Search, Users, Mail } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { crmService, Contact } from '@/lib/crmService';
 
 const formatRangeLabel = (from: number, to: number, total: number) => `${from}–${to} of ${total}`;
 
@@ -21,7 +21,7 @@ type CustomersColumnDef = {
 };
 
 const customersColumns: CustomersColumnDef[] = [
-  { key: 'foto', label: 'Foto', width: 96, minWidth: 80, resizable: false, thClassName: 'p-3 px-4 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider' },
+  { key: 'foto', label: 'Foto', width: 80, minWidth: 80, resizable: false, thClassName: 'p-3 px-4 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider' },
   { key: 'naam', label: 'Naam', width: 280, minWidth: 200, resizable: true, thClassName: 'p-3 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider' },
   { key: 'email', label: 'Email', width: 320, minWidth: 220, resizable: true, thClassName: 'p-3 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider' },
   { key: 'rol', label: 'Rol', width: 220, minWidth: 160, resizable: true, thClassName: 'p-3 pr-4 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider' },
@@ -30,6 +30,15 @@ const customersColumns: CustomersColumnDef[] = [
 
 export function ManagementCustomersView() {
   const [query, setQuery] = useState('');
+  const [contacts, setContacts] = useState<Contact[]>([]);
+
+  useEffect(() => {
+    const unsubscribe = crmService.subscribeToContacts((data) => {
+      setContacts(data);
+    });
+    return () => unsubscribe();
+  }, []);
+
   const [columnWidths, setColumnWidths] = useState<Record<CustomersColumnKey, number>>(() => {
     return customersColumns.reduce((acc, col) => {
       acc[col.key] = col.width;
@@ -45,13 +54,16 @@ export function ManagementCustomersView() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return managementCustomers;
-    return managementCustomers.filter((c) => {
-      return c.name.toLowerCase().includes(q) || c.email.toLowerCase().includes(q) || c.role.toLowerCase().includes(q);
+    if (!q) return contacts;
+    return contacts.filter((c) => {
+      const n = c.name?.toLowerCase() || '';
+      const e = c.email?.toLowerCase() || '';
+      const r = c.role?.toLowerCase() || '';
+      return n.includes(q) || e.includes(q) || r.includes(q);
     });
-  }, [query]);
+  }, [query, contacts]);
 
-  const activeCount = 81;
+  const activeCount = contacts.length;
   const invitedCount = 0;
   const perPage = 50;
   const shownFrom = filtered.length ? 1 : 0;
@@ -194,12 +206,14 @@ export function ManagementCustomersView() {
                 <tr key={c.id} className="hover:bg-emerald-50/20 transition-colors">
                   <td className="p-3 px-4">
                     <Avatar className="h-8 w-8">
-                      <AvatarFallback className="bg-gray-100 text-gray-500 text-xs"> </AvatarFallback>
+                      <AvatarFallback className="bg-gray-100 text-gray-500 text-xs">
+                        {c.name ? c.name.substring(0, 2).toUpperCase() : '??'}
+                      </AvatarFallback>
                     </Avatar>
                   </td>
                   <td className="p-3 text-sm font-medium text-gray-900 truncate" title={c.name}>{c.name}</td>
-                  <td className="p-3 text-sm text-gray-700 truncate" title={c.email}>{c.email}</td>
-                  <td className="p-3 pr-4 text-sm text-gray-700 truncate" title={c.role}>{c.role}</td>
+                  <td className="p-3 text-sm text-gray-700 truncate" title={c.email || ''}>{c.email || '-'}</td>
+                  <td className="p-3 pr-4 text-sm text-gray-700 truncate" title={c.role || ''}>{c.role || '-'}</td>
                   <td className="p-3 pr-4">
                     <button className="h-8 w-8 rounded-md hover:bg-gray-100 text-gray-500">⋮</button>
                   </td>

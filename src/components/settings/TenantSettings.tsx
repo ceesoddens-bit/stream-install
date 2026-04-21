@@ -1,158 +1,270 @@
-import React, { useState } from 'react';
-import { tenantSettings } from '@/data/mockData';
+import React, { useEffect, useState, useRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Save, Palette, Building2, Hash, Database, CheckCircle2 } from 'lucide-react';
-import { seedDatabase } from '@/lib/firebaseSeeder';
+import { Save, Palette, Building2, CheckCircle2, MapPin, Building, CreditCard, Image as ImageIcon, Landmark } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { useTenant } from '@/lib/tenantContext';
+import { settingsService } from '@/lib/settingsService';
 
 export function TenantSettings() {
-  const [settings, setSettings] = useState(tenantSettings);
-  const [seeding, setSeeding] = useState(false);
-  const [seeded, setSeeded] = useState(false);
+  const { tenant, tenantId } = useTenant();
+  const [saving, setSaving] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const handleSeed = async () => {
-    setSeeding(true);
+  const [formData, setFormData] = useState({
+    naam: '',
+    bedrijfsnaam: '',
+    kvk: '',
+    btw: '',
+    kleur: '#076735',
+    logoUrl: '',
+    straat: '',
+    nummer: '',
+    postcode: '',
+    plaats: '',
+    land: 'Nederland',
+    iban: '',
+    bic: '',
+    tenaamstelling: '',
+  });
+
+  useEffect(() => {
+    if (tenant) {
+      setFormData({
+        naam: tenant.naam || '',
+        bedrijfsnaam: tenant.branding?.bedrijfsnaam || '',
+        kvk: tenant.kvk || '',
+        btw: tenant.btw || '',
+        kleur: tenant.branding?.kleur || '#076735',
+        logoUrl: tenant.branding?.logoUrl || '',
+        straat: tenant.adres?.straat || '',
+        nummer: tenant.adres?.nummer || '',
+        postcode: tenant.adres?.postcode || '',
+        plaats: tenant.adres?.plaats || '',
+        land: tenant.adres?.land || 'Nederland',
+        iban: tenant.bank?.iban || '',
+        bic: tenant.bank?.bic || '',
+        tenaamstelling: tenant.bank?.tenaamstelling || '',
+      });
+    }
+  }, [tenant]);
+
+  const handleSave = async () => {
+    if (!tenantId) return;
+    setSaving(true);
     try {
-      await seedDatabase();
-      setSeeded(true);
-      setTimeout(() => setSeeded(false), 5000);
+      await settingsService.updateTenant(tenantId, {
+        naam: formData.naam,
+        kvk: formData.kvk,
+        btw: formData.btw,
+        adres: {
+          straat: formData.straat,
+          nummer: formData.nummer,
+          postcode: formData.postcode,
+          plaats: formData.plaats,
+          land: formData.land,
+        },
+        bank: {
+          iban: formData.iban,
+          bic: formData.bic,
+          tenaamstelling: formData.tenaamstelling,
+        },
+        branding: {
+          ...(tenant?.branding || {}),
+          bedrijfsnaam: formData.bedrijfsnaam,
+          kleur: formData.kleur,
+          logoUrl: formData.logoUrl,
+        }
+      });
     } catch (err) {
       console.error(err);
     } finally {
-      setSeeding(false);
+      setSaving(false);
     }
   };
 
+
   return (
-    <div className="max-w-2xl space-y-8 pb-12">
+    <div className="max-w-3xl space-y-8 pb-12">
       <div className="bg-white border rounded-xl p-6 shadow-sm space-y-6">
         <div className="flex items-center gap-2 border-b pb-4">
           <Building2 className="h-5 w-5 text-blue-600" />
-          <h3 className="text-lg font-semibold text-gray-900">Bedrijfsinstellingen</h3>
+          <h3 className="text-lg font-semibold text-gray-900">Bedrijfsgegevens</h3>
         </div>
 
         <div className="grid gap-6">
-          <div className="space-y-2">
-            <Label htmlFor="companyName" className="text-sm font-medium text-gray-700 flex items-center gap-2">
-              Bedrijfsnaam
-            </Label>
-            <Input 
-              id="companyName" 
-              value={settings.companyName} 
-              onChange={(e) => setSettings({...settings, companyName: e.target.value})}
-              className="h-10"
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="naam" className="text-sm font-medium text-gray-700">Systeemnaam (intern)</Label>
+              <Input 
+                id="naam" 
+                value={formData.naam} 
+                onChange={(e) => setFormData({...formData, naam: e.target.value})}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="bedrijfsnaam" className="text-sm font-medium text-gray-700">Bedrijfsnaam (voor documenten/portaal)</Label>
+              <Input 
+                id="bedrijfsnaam" 
+                value={formData.bedrijfsnaam} 
+                onChange={(e) => setFormData({...formData, bedrijfsnaam: e.target.value})}
+              />
+            </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="prefix" className="text-sm font-medium text-gray-700 flex items-center gap-2">
-              Referentie Prefix
-              <Hash className="h-3 w-3 text-gray-400" />
-            </Label>
-            <Input 
-              id="prefix" 
-              value={settings.referencePrefix} 
-              onChange={(e) => setSettings({...settings, referencePrefix: e.target.value})}
-              className="h-10 font-mono"
-            />
-            <p className="text-xs text-gray-500 italic">Gebruikt voor offertes en facturen (bijv. OF-2024-001)</p>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="kvk" className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                <Building className="h-4 w-4 text-gray-400" />
+                KvK Nummer
+              </Label>
+              <Input 
+                id="kvk" 
+                value={formData.kvk} 
+                onChange={(e) => setFormData({...formData, kvk: e.target.value})}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="btw" className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                <CreditCard className="h-4 w-4 text-gray-400" />
+                BTW Nummer
+              </Label>
+              <Input 
+                id="btw" 
+                value={formData.btw} 
+                onChange={(e) => setFormData({...formData, btw: e.target.value})}
+              />
+            </div>
           </div>
 
           <div className="space-y-4">
             <Label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-              Huisstijl Kleur
-              <Palette className="h-3 w-3 text-gray-400" />
+              <MapPin className="h-4 w-4 text-gray-400" />
+              Adres
             </Label>
-            <div className="flex items-center gap-4">
-              <div 
-                className="h-12 w-12 rounded-lg border shadow-inner transition-transform hover:scale-105"
-                style={{ backgroundColor: settings.primaryColor }}
-              />
-              <div className="flex-1 relative">
+            <div className="grid grid-cols-3 gap-4">
+              <div className="col-span-2 space-y-2">
                 <Input 
-                  value={settings.primaryColor} 
-                  onChange={(e) => setSettings({...settings, primaryColor: e.target.value})}
-                  className="h-10 font-mono uppercase pl-10"
+                  placeholder="Straat"
+                  value={formData.straat} 
+                  onChange={(e) => setFormData({...formData, straat: e.target.value})}
                 />
-                <div 
-                  className="absolute left-3 top-2.5 h-5 w-5 rounded border"
-                  style={{ backgroundColor: settings.primaryColor }}
+              </div>
+              <div className="space-y-2">
+                <Input 
+                  placeholder="Huisnummer"
+                  value={formData.nummer} 
+                  onChange={(e) => setFormData({...formData, nummer: e.target.value})}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Input 
+                  placeholder="Postcode"
+                  value={formData.postcode} 
+                  onChange={(e) => setFormData({...formData, postcode: e.target.value})}
+                />
+              </div>
+              <div className="col-span-2 space-y-2">
+                <Input 
+                  placeholder="Plaats"
+                  value={formData.plaats} 
+                  onChange={(e) => setFormData({...formData, plaats: e.target.value})}
                 />
               </div>
             </div>
           </div>
+
+          <div className="space-y-4 pt-4 border-t">
+            <Label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+              <Landmark className="h-4 w-4 text-gray-400" />
+              Bankgegevens
+            </Label>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Input 
+                  placeholder="IBAN"
+                  value={formData.iban} 
+                  onChange={(e) => setFormData({...formData, iban: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Input 
+                  placeholder="BIC"
+                  value={formData.bic} 
+                  onChange={(e) => setFormData({...formData, bic: e.target.value})}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Input 
+                placeholder="Tenaamstelling"
+                value={formData.tenaamstelling} 
+                onChange={(e) => setFormData({...formData, tenaamstelling: e.target.value})}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-4 pt-4 border-t">
+            <Label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+              <ImageIcon className="h-4 w-4 text-gray-400" />
+              Logo
+            </Label>
+            <div className="flex items-center gap-4">
+              <div className="h-16 w-32 rounded-lg border bg-gray-50 flex items-center justify-center overflow-hidden">
+                {formData.logoUrl ? (
+                  <img src={formData.logoUrl} alt="Logo" className="max-h-full max-w-full object-contain" />
+                ) : (
+                  <ImageIcon className="h-6 w-6 text-gray-300" />
+                )}
+              </div>
+              <div className="flex-1">
+                <Input 
+                  placeholder="Logo URL (bijv. https://example.com/logo.png)"
+                  value={formData.logoUrl} 
+                  onChange={(e) => setFormData({...formData, logoUrl: e.target.value})}
+                />
+                <p className="text-xs text-gray-500 mt-1">Plak hier de URL van uw logo. Dit wordt getoond op offertes en facturen.</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4 pt-4 border-t">
+            <Label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+              <Palette className="h-4 w-4 text-gray-400" />
+              Huisstijl Kleur
+            </Label>
+            <div className="flex items-center gap-4">
+              <div 
+                className="h-12 w-12 rounded-lg border shadow-inner transition-transform hover:scale-105"
+                style={{ backgroundColor: formData.kleur }}
+              />
+              <div className="flex-1 max-w-xs relative">
+                <Input 
+                  value={formData.kleur} 
+                  onChange={(e) => setFormData({...formData, kleur: e.target.value})}
+                  className="h-10 font-mono uppercase pl-10"
+                />
+                <div 
+                  className="absolute left-3 top-2.5 h-5 w-5 rounded border"
+                  style={{ backgroundColor: formData.kleur }}
+                />
+              </div>
+            </div>
+            <p className="text-xs text-gray-500">De geselecteerde kleur wordt gebruikt voor knoppen, links en accenten in de klantportal en op documenten.</p>
+          </div>
         </div>
 
         <div className="pt-4 flex justify-end">
-          <Button className="bg-blue-600 hover:bg-blue-700 gap-2">
+          <Button onClick={handleSave} disabled={saving} className="bg-blue-600 hover:bg-blue-700 gap-2">
             <Save className="h-4 w-4" />
-            Wijzigingen Opslaan
+            {saving ? 'Opslaan...' : 'Wijzigingen Opslaan'}
           </Button>
         </div>
       </div>
 
-      {/* Database Seeding Section */}
-      <div className="bg-white border rounded-xl p-6 shadow-sm space-y-6">
-        <div className="flex items-center gap-2 border-b pb-4">
-          <Database className="h-5 w-5 text-emerald-600" />
-          <h3 className="text-lg font-semibold text-gray-900">Database Migratie</h3>
-        </div>
-        
-        <div className="space-y-4">
-          <p className="text-sm text-gray-600">
-            Initialiseer je Firestore database met de huidige mock data. Dit is handig voor de eerste migratie of om een testomgeving te vullen.
-          </p>
-          
-          <div className="bg-amber-50 border border-amber-100 rounded-lg p-3 flex gap-3">
-            <div className="bg-amber-100 p-1.5 rounded h-fit">
-              <Database className="h-4 w-4 text-amber-600" />
-            </div>
-            <p className="text-xs text-amber-800 leading-normal">
-              <strong>Let op:</strong> Dit voegt alleen data toe aan lege collecties. Bestaande data wordt niet overschreven om dataduplicatie te voorkomen.
-            </p>
-          </div>
-
-          <Button 
-            variant="outline" 
-            onClick={handleSeed}
-            disabled={seeding || seeded}
-            className={cn(
-              "w-full h-11 transition-all gap-2",
-              seeded ? "border-emerald-500 text-emerald-600 bg-emerald-50" : "border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:border-emerald-300"
-            )}
-          >
-            {seeding ? (
-              <>
-                <div className="h-4 w-4 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
-                Synchroniseren...
-              </>
-            ) : seeded ? (
-              <>
-                <CheckCircle2 className="h-4 w-4" />
-                Synchronisatie Voltooid
-              </>
-            ) : (
-              <>
-                <Database className="h-4 w-4" />
-                Start Database Seeding
-              </>
-            )}
-          </Button>
-        </div>
-      </div>
-
-      <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 flex gap-3">
-        <div className="bg-blue-100 p-2 rounded-lg h-fit">
-          <Palette className="h-5 w-5 text-blue-600" />
-        </div>
-        <div>
-          <h4 className="text-sm font-semibold text-blue-900">Portal Preview</h4>
-          <p className="text-xs text-blue-700 mt-1">
-            De geselecteerde kleur wordt gebruikt voor knoppen, links en accenten in de klantportal en op documenten.
-          </p>
-        </div>
-      </div>
     </div>
   );
 }

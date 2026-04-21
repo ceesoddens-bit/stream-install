@@ -1,11 +1,11 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { emailTemplateRows } from '@/data/managementMockData';
 import { cn } from '@/lib/utils';
 import { Columns3, Copy, Download, Filter, Pencil, Plus, Search, Trash2, ZoomIn, SlidersHorizontal } from 'lucide-react';
+import { templateService, EmailTemplate } from '@/lib/templateService';
 
 type EmailTemplatesColumnKey = 'naam' | 'sjabloontype' | 'versie' | 'bijgewerktOp' | 'bijgewerktDoor' | 'actions';
 
@@ -29,6 +29,15 @@ const emailTemplatesColumns: EmailTemplatesColumnDef[] = [
 
 export function ManagementEmailTemplatesView() {
   const [query, setQuery] = useState('');
+  const [templates, setTemplates] = useState<EmailTemplate[]>([]);
+
+  useEffect(() => {
+    const unsubscribe = templateService.subscribeToEmailTemplates((data) => {
+      setTemplates(data);
+    });
+    return () => unsubscribe();
+  }, []);
+
   const [columnWidths, setColumnWidths] = useState<Record<EmailTemplatesColumnKey, number>>(() => {
     return emailTemplatesColumns.reduce((acc, col) => {
       acc[col.key] = col.width;
@@ -44,17 +53,26 @@ export function ManagementEmailTemplatesView() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return emailTemplateRows;
-    return emailTemplateRows.filter((r) => {
+    const mapped = templates.map(t => ({
+      id: t.id,
+      name: t.name,
+      templateType: t.type,
+      version: '1.0',
+      updatedAt: t.updatedAt?.toDate ? t.updatedAt.toDate().toLocaleDateString('nl-NL') : 'Onbekend',
+      updatedBy: 'Systeem',
+    }));
+
+    if (!q) return mapped;
+    return mapped.filter((r) => {
       return (
         r.name.toLowerCase().includes(q) ||
         r.templateType.toLowerCase().includes(q) ||
         r.updatedBy.toLowerCase().includes(q)
       );
     });
-  }, [query]);
+  }, [query, templates]);
 
-  const totalCount = 3;
+  const totalCount = templates.length;
 
   const tableMinWidth = useMemo(() => {
     return emailTemplatesColumns.reduce((total, col) => total + (columnWidths[col.key] ?? col.width), 0);

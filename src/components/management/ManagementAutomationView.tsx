@@ -1,11 +1,11 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { automationRows } from '@/data/managementMockData';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Columns3, Copy, Filter, Pencil, Plus, Search, Trash2 } from 'lucide-react';
+import { automationService, AutomationRule } from '@/lib/automationService';
 
 type RowSelection = Record<string, boolean>;
 
@@ -48,6 +48,15 @@ const automationColumns: AutomationColumnDef[] = [
 export function ManagementAutomationView() {
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState<RowSelection>({});
+  const [automations, setAutomations] = useState<AutomationRule[]>([]);
+
+  useEffect(() => {
+    const unsubscribe = automationService.subscribeToRules((data) => {
+      setAutomations(data);
+    });
+    return () => unsubscribe();
+  }, []);
+
   const [columnWidths, setColumnWidths] = useState<Record<AutomationColumnKey, number>>(() => {
     return automationColumns.reduce((acc, col) => {
       acc[col.key] = col.width;
@@ -63,8 +72,20 @@ export function ManagementAutomationView() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return automationRows;
-    return automationRows.filter((r) => {
+    const mapped = automations.map(a => ({
+      id: a.id || crypto.randomUUID(),
+      name: a.name,
+      description: a.description,
+      version: a.version,
+      location: a.triggerEvent,
+      createdAt: a.createdAt?.toDate ? a.createdAt.toDate().toLocaleDateString('nl-NL') : 'Onbekend',
+      createdBy: a.createdBy,
+      updatedAt: a.updatedAt?.toDate ? a.updatedAt.toDate().toLocaleDateString('nl-NL') : 'Onbekend',
+      updatedBy: a.updatedBy,
+    }));
+
+    if (!q) return mapped;
+    return mapped.filter((r) => {
       return (
         r.id.toLowerCase().includes(q) ||
         r.name.toLowerCase().includes(q) ||
@@ -75,7 +96,7 @@ export function ManagementAutomationView() {
         r.updatedBy.toLowerCase().includes(q)
       );
     });
-  }, [query]);
+  }, [query, automations]);
 
   const allChecked = filtered.length > 0 && filtered.every((r) => selected[r.id]);
 

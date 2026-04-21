@@ -4,6 +4,8 @@ import { cn } from '@/lib/utils';
 import { QuotesLayout } from '@/components/finance/QuotesLayout';
 import { InvoicesTab } from '@/components/administration/invoices/InvoicesTab';
 import { TimeTrackingTab } from '@/components/administration/TimeTrackingTab';
+import { ModuleGuard } from '@/components/auth/ModuleGuard';
+import { ModuleKey } from '@/lib/modules';
 
 type AdministratieTab = 'offertes' | 'facturen' | 'urenregistratie';
 
@@ -90,9 +92,21 @@ export function AdministrationLayout({
       </div>
 
       <div className="flex-1 overflow-hidden">
-        {activeTab === 'offertes' && <QuotesLayout />}
-        {activeTab === 'facturen' && <InvoicesTab />}
-        {activeTab === 'urenregistratie' && <TimeTrackingTab />}
+        {activeTab === 'offertes' && (
+          <ModuleGuard module="offertes">
+            <QuotesLayout />
+          </ModuleGuard>
+        )}
+        {activeTab === 'facturen' && (
+          <ModuleGuard module="facturering">
+            <InvoicesTab />
+          </ModuleGuard>
+        )}
+        {activeTab === 'urenregistratie' && (
+          <ModuleGuard module="projectmanagement">
+            <TimeTrackingTab />
+          </ModuleGuard>
+        )}
       </div>
     </div>
   );

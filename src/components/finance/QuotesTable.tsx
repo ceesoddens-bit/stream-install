@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { financeService, Quote } from '@/lib/financeService';
+import { financeService } from '@/lib/financeService';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { 
@@ -14,15 +14,15 @@ import {
 import { Button } from '@/components/ui/button';
 
 interface QuotesTableProps {
-  quotes: Quote[];
+  quotes: any[];
 }
 
 const getStatusColor = (status: string) => {
   switch (status) {
-    case 'Draft': return 'bg-blue-50 text-blue-700 border-blue-100';
-    case 'Sent': return 'bg-purple-50 text-purple-700 border-purple-100';
-    case 'Accepted': return 'bg-green-50 text-green-700 border-green-100';
-    case 'Declined': return 'bg-red-50 text-red-700 border-red-100';
+    case 'Concept': return 'bg-blue-50 text-blue-700 border-blue-100';
+    case 'Verstuurd': return 'bg-purple-50 text-purple-700 border-purple-100';
+    case 'Geaccepteerd': return 'bg-green-50 text-green-700 border-green-100';
+    case 'Afgewezen': return 'bg-red-50 text-red-700 border-red-100';
     default: return 'bg-gray-50 text-gray-700 border-gray-100';
   }
 };
@@ -36,9 +36,9 @@ export function QuotesTable({ quotes }: QuotesTableProps) {
 
   const counts = {
     Alles: quotes.length,
-    Sent: quotes.filter(q => q.status === 'Sent').length,
-    Accepted: quotes.filter(q => q.status === 'Accepted').length,
-    Draft: quotes.filter(q => q.status === 'Draft').length,
+    Verstuurd: quotes.filter(q => q.status === 'Verstuurd').length,
+    Geaccepteerd: quotes.filter(q => q.status === 'Geaccepteerd').length,
+    Concept: quotes.filter(q => q.status === 'Concept').length,
   };
 
   const handleDelete = async (id: string) => {
@@ -96,7 +96,7 @@ export function QuotesTable({ quotes }: QuotesTableProps) {
                   <div className="text-xs font-mono font-bold text-blue-600">{quote.quoteNumber}</div>
                 </td>
                 <td className="p-3">
-                  <div className="text-sm font-bold text-gray-900">{quote.client}</div>
+                  <div className="text-sm font-bold text-gray-900">{quote.clientName || quote.client}</div>
                 </td>
                 <td className="p-3">
                   <Badge variant="outline" className={cn("text-[10px] font-bold px-2 py-0.5 uppercase tracking-tighter", getStatusColor(quote.status))}>
@@ -104,9 +104,9 @@ export function QuotesTable({ quotes }: QuotesTableProps) {
                   </Badge>
                 </td>
                 <td className="p-3 text-sm font-bold text-gray-900 text-right pr-6">
-                  €{quote.amount.toLocaleString('nl-NL', { minimumFractionDigits: 2 })}
+                  €{(quote.totalAmount || quote.amount || 0).toLocaleString('nl-NL', { minimumFractionDigits: 2 })}
                 </td>
-                <td className="p-3 text-xs font-medium text-gray-500">{quote.date}</td>
+                <td className="p-3 text-xs font-medium text-gray-500">{quote.date || (quote.createdAt?.toDate ? quote.createdAt.toDate().toLocaleDateString() : '')}</td>
                 <td className="p-3 text-right">
                   <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-all">
                     <button className="p-2 text-gray-400 hover:text-blue-600 transition-colors"><Edit2 className="h-4 w-4" /></button>

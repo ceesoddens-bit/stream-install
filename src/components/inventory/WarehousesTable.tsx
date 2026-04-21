@@ -301,7 +301,7 @@ export function WarehousesTable() {
                     </td>
                     <td className="p-3 text-sm text-gray-700">{formatTimestamp(row.updatedAt)}</td>
                     <td className="p-3">
-                      <UserBadge initials={row.updatedByInitials} name={row.updatedByName} />
+                      <UserBadge initials={row.updatedByInitials} name={row.updatedByName}/>
                     </td>
                     <td className="p-3 pr-4">
                       <div className="flex items-center justify-end gap-1">

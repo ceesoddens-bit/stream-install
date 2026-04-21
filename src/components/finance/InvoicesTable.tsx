@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Badge } from '@/components/ui/badge';
-import { financeService, Invoice } from '@/lib/financeService';
+import { financeService } from '@/lib/financeService';
 import { cn } from '@/lib/utils';
 import { 
   CheckCircle2, 
@@ -8,9 +8,14 @@ import {
   FileText, 
   Download, 
   Send, 
-  MoreHorizontal 
+  MoreHorizontal,
+  Plus,
+  Trash2,
+  Edit
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { InvoiceEditDialog } from './FinanceEditDialogs';
+import { toast } from 'sonner';
 
 const getStatusColor = (status: string) => {
   switch (status) {
@@ -23,11 +28,19 @@ const getStatusColor = (status: string) => {
   }
 };
 
-const tabs = ['Concept', 'In Afwachting', 'Geweigerd', 'Goedgekeurd', 'Afgerond'];
+const tabs = ['Alles', 'Concept', 'In Afwachting', 'Geweigerd', 'Goedgekeurd', 'Afgerond'];
+
+import { useTenant } from '@/lib/tenantContext';
+import { pdfService } from '@/lib/pdfService';
+import { automationService } from '@/lib/automationService';
+import { InvoiceTemplate } from '../pdf/InvoiceTemplate';
 
 export function InvoicesTable() {
-  const [activeTab, setActiveTab] = useState('Goedgekeurd');
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const { tenant } = useTenant();
+  const [activeTab, setActiveTab] = useState('Alles');
+  const [invoices, setInvoices] = useState<any[]>([]);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editingInvoice, setEditingInvoice] = useState<any | null>(null);
 
   useEffect(() => {
     return financeService.subscribeToInvoices((data) => {
@@ -35,27 +48,88 @@ export function InvoicesTable() {
     });
   }, []);
 
-  const filteredInvoices = invoices.filter(i => i.status === activeTab);
+  const filteredInvoices = invoices.filter(i => activeTab === 'Alles' || i.status === activeTab);
+
+  const handleAdd = () => {
+    setEditingInvoice(null);
+    setIsEditOpen(true);
+  };
+
+  const handleEdit = (inv: any) => {
+    setEditingInvoice(inv);
+    setIsEditOpen(true);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (window.confirm("Factuur verwijderen?")) {
+      try {
+        await financeService.deleteInvoice(id);
+        toast.success('Factuur verwijderd');
+      } catch (err) {
+        toast.error('Fout bij verwijderen');
+      }
+    }
+  };
+
+  const handleDownloadPDF = async (invoice: any) => {
+    if (!tenant) return;
+    const toastId = toast.loading('Factuur PDF genereren...');
+    try {
+      const blob = await pdfService.generateBlob(<InvoiceTemplate invoice={invoice} tenant={tenant} />);
+      pdfService.downloadInBrowser(blob, `Factuur-${invoice.invoiceNumber || invoice.invoiceCode}.pdf`);
+      toast.success('Factuur gedownload', { id: toastId });
+    } catch (err) {
+      console.error(err);
+      toast.error('Fout bij genereren PDF', { id: toastId });
+    }
+  };
+
+  const handleSendEmail = async (invoice: any) => {
+    if (!tenant) return;
+    const email = window.prompt("Stuur factuur naar:", invoice.contactEmail || "");
+    if (!email) return;
+
+    const toastId = toast.loading('Factuur verzenden...');
+    try {
+      await automationService.sendInvoiceEmail(invoice, tenant, email);
+      toast.success('Factuur in de wachtrij geplaatst voor verzending', { id: toastId });
+      
+      // Update status naar 'Verstuurd' indien nog Concept/In Afwachting
+      if (invoice.status === 'Concept' || invoice.status === 'In Afwachting') {
+        await financeService.updateInvoice(invoice.id!, { 
+          status: 'Verstuurd'
+        });
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('Fout bij verzenden email', { id: toastId });
+    }
+  };
 
   return (
     <div className="space-y-4">
-      {/* Tabs */}
-      <div className="flex gap-4 border-b">
-        {tabs.map((label) => (
-          <button
-            key={label}
-            onClick={() => setActiveTab(label)}
-            className={cn(
-              "pb-2 px-1 text-sm font-medium transition-colors relative",
-              activeTab === label ? "text-blue-600" : "text-gray-500 hover:text-gray-900"
-            )}
-          >
-            {label}
-            {activeTab === label && (
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-full" />
-            )}
-          </button>
-        ))}
+      {/* Header with Search/Action */}
+      <div className="flex justify-between items-center">
+        <div className="flex gap-4 border-b flex-1">
+          {tabs.map((label) => (
+            <button
+              key={label}
+              onClick={() => setActiveTab(label)}
+              className={cn(
+                "pb-2 px-1 text-sm font-medium transition-colors relative",
+                activeTab === label ? "text-blue-600" : "text-gray-500 hover:text-gray-900"
+              )}
+            >
+              {label}
+              {activeTab === label && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-full" />
+              )}
+            </button>
+          ))}
+        </div>
+        <Button onClick={handleAdd} className="bg-emerald-800 hover:bg-emerald-700 text-white ml-4">
+          <Plus className="h-4 w-4 mr-2" /> Nieuwe Factuur
+        </Button>
       </div>
 
       {/* Table */}
@@ -99,17 +173,17 @@ export function InvoicesTable() {
                 <td className="p-3 text-sm text-gray-600">{invoice.contactName}</td>
                 <td className="p-3 text-right">
                   <div className="flex items-center justify-end gap-1">
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-blue-600">
-                      <FileText className="h-4 w-4" />
+                    <Button onClick={() => handleEdit(invoice)} variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-blue-600">
+                      <Edit className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-blue-600">
+                    <Button onClick={() => handleDelete(invoice.id!)} variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-red-500">
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                    <Button onClick={() => handleDownloadPDF(invoice)} variant="ghost" size="icon" title="Download PDF" className="h-8 w-8 text-gray-400 hover:text-blue-600">
                       <Download className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-blue-600">
+                    <Button onClick={() => handleSendEmail(invoice)} variant="ghost" size="icon" title="Verzenden" className="h-8 w-8 text-gray-400 hover:text-blue-600">
                       <Send className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400">
-                      <MoreHorizontal className="h-4 w-4" />
                     </Button>
                   </div>
                 </td>
@@ -125,6 +199,12 @@ export function InvoicesTable() {
           </tbody>
         </table>
       </div>
+
+      <InvoiceEditDialog 
+        open={isEditOpen}
+        onOpenChange={setIsEditOpen}
+        invoice={editingInvoice}
+      />
     </div>
   );
 }
