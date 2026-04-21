@@ -5,7 +5,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { CheckCircle2, Zap, ArrowRight, ShieldCheck, ChevronDown, ChevronUp, Layers, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { PriceCalculator } from '@/components/landing/PriceCalculator';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { MODULES, BASIS_PRIJS_PER_GEBRUIKER } from '@/lib/modules';
+
+import { PublicNavbar } from '@/components/layout/PublicNavbar';
 
 export function LandingPage() {
   const navigate = useNavigate();
@@ -47,33 +50,7 @@ export function LandingPage() {
 
   return (
     <div className="min-h-screen bg-background font-sans">
-      {/* Navbar */}
-      <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container mx-auto max-w-6xl flex h-16 items-center justify-between px-6">
-          <div className="flex items-center gap-3">
-            <div className="h-8 w-8 rounded-lg bg-emerald-600 flex items-center justify-center shadow-sm">
-              <Zap className="h-5 w-5 text-white" />
-            </div>
-            <span className="font-bold text-gray-900 text-lg">Stream Install</span>
-          </div>
-          <div className="flex items-center gap-4">
-            <button
-              type="button"
-              onClick={() => navigate('/login')}
-              className="text-sm font-semibold text-gray-600 hover:text-gray-900 transition-colors cursor-pointer"
-            >
-              Inloggen
-            </button>
-            <Button
-              type="button"
-              onClick={() => navigate('/registreren')}
-              className="bg-emerald-700 hover:bg-emerald-800 text-white font-semibold shadow-sm"
-            >
-              Start Nu
-            </Button>
-          </div>
-        </div>
-      </header>
+      <PublicNavbar />
 
       <main>
         {/* Hero Section */}
@@ -297,7 +274,9 @@ export function LandingPage() {
                 Stel zelf je ideale pakket samen. Geen verrassingen achteraf.
               </p>
             </div>
-            <PriceCalculator />
+            <TooltipProvider>
+              <PriceCalculator />
+            </TooltipProvider>
           </div>
         </section>
 

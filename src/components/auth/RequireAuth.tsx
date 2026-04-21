@@ -12,9 +12,15 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
 }
 
 export function RequireGuest({ children }: { children: React.ReactNode }) {
-  const { authUser, authReady } = useTenant();
-  if (!authReady) return <FullPageSpinner />;
-  if (authUser) return <Navigate to="/dashboard" replace />;
+  const { authUser, authReady, loading, role } = useTenant();
+  // Wait until auth AND user-doc are fully loaded before deciding where to redirect
+  if (!authReady || loading) return <FullPageSpinner />;
+  if (authUser) {
+    // Only redirect if we actually know the role; null role means broken/missing user-doc
+    if (role === 'customer') return <Navigate to="/portaal" replace />;
+    if (role) return <Navigate to="/dashboard" replace />;
+    // No role yet (missing user doc) — let them through to login/register
+  }
   return <>{children}</>;
 }
 
