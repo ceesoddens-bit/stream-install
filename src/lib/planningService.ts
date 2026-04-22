@@ -135,6 +135,16 @@ export const planningService = {
     });
   },
 
+  subscribeToPlanningCard: (id: string, callback: (card: PlanningCard | null) => void) => {
+    return onSnapshot(tenantDoc(PLANNING_CARDS_COLLECTION, id), (doc) => {
+      if (doc.exists()) {
+        callback({ id: doc.id, ...doc.data() } as PlanningCard);
+      } else {
+        callback(null);
+      }
+    });
+  },
+
   addPlanningCard: async (card: Omit<PlanningCard, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {
       await addDoc(tenantCol(PLANNING_CARDS_COLLECTION), {

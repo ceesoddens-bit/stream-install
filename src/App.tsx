@@ -48,9 +48,16 @@ export default function DashboardShell() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const viewId = params.viewId;
   const subPath = params['*'];
-  const activeView = subPath 
+  let activeView = subPath 
     ? `${viewId}_${subPath.replace(/\//g, '_')}` 
     : (viewId || 'dashboard');
+
+  // Specific handling for project_detail to extract the ID
+  let projectIdForDetail = '';
+  if (activeView.startsWith('project_detail_')) {
+    projectIdForDetail = activeView.replace('project_detail_', '');
+    activeView = 'project_detail';
+  }
 
   const setActiveView = (v: string) => {
     const path = v === 'dashboard' ? '' : v.replace(/_/g, '/');
@@ -114,12 +121,12 @@ export default function DashboardShell() {
             )}
             {activeView === 'management_dashboard' && <ManagementDashboardView />}
             {activeView === 'project_detail' &&
-              withModuleGuard('project_detail', <ProjectDetail onBack={() => setActiveView('projects')} />)}
+              withModuleGuard('project_detail', <ProjectDetail projectId={projectIdForDetail} onBack={() => setActiveView('projects')} />)}
             {(activeView === 'projects' || activeView === 'my_projects') &&
               withModuleGuard(activeView, (
                 <KanbanBoard
                   scope={activeView === 'my_projects' ? 'mine' : 'all'}
-                  onViewProject={() => setActiveView('project_detail')}
+                  onViewProject={(id) => setActiveView('project_detail_' + id)}
                 />
               ))}
             {activeView === 'planning' && withModuleGuard('planning', <PlannerView />)}

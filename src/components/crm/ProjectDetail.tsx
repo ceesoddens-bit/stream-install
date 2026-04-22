@@ -21,27 +21,82 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { planningCards, quotes, invoices, currentUser } from '@/data/mockData';
 import { cn } from '@/lib/utils';
+import { planningService, PlanningCard } from '@/lib/planningService';
+import { financeService } from '@/lib/financeService';
+import { Quote, Invoice } from '@/types';
+import { useEffect } from 'react';
 
 interface ProjectDetailProps {
+  projectId: string;
   onBack: () => void;
-  // Usually you'd pass a projectId, we just mock it using the first PC
 }
 
-export function ProjectDetail({ onBack }: ProjectDetailProps) {
+export function ProjectDetail({ projectId, onBack }: ProjectDetailProps) {
   const [activeTab, setActiveTab] = useState<'overzicht' | 'financieel' | 'bestanden' | 'producten'>('overzicht');
-  
-  // Hardcoded mock project for the demo
-  const project = planningCards[0]; 
+  const [project, setProject] = useState<PlanningCard | null>(null);
+  const [projectQuotes, setProjectQuotes] = useState<Quote[]>([]);
+  const [projectInvoices, setProjectInvoices] = useState<Invoice[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (!projectId) return;
+    setIsLoading(true);
+    
+    const unsubProject = planningService.subscribeToPlanningCard(projectId, (data) => {
+      setProject(data);
+      setIsLoading(false);
+    });
+
+    const unsubQuotes = financeService.subscribeToQuotes((data) => {
+      setProjectQuotes(data);
+    }, { projectId });
+
+    const unsubInvoices = financeService.subscribeToInvoices((data) => {
+      setProjectInvoices(data);
+    }, { projectId });
+
+    return () => {
+      unsubProject();
+      unsubQuotes();
+      unsubInvoices();
+    };
+  }, [projectId]);
 
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 }).format(amount);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-full bg-gray-50">
+        <div className="flex flex-col items-center gap-2">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+          <p className="text-sm text-gray-500 font-medium">Project laden...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!project) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full bg-gray-50 p-6">
+        <div className="bg-white p-8 rounded-xl border border-gray-200 shadow-sm text-center max-w-md">
+          <div className="w-16 h-16 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+            <X className="h-8 w-8" />
+          </div>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Project niet gevonden</h2>
+          <p className="text-gray-500 mb-6">Het project met ID {projectId} kon niet worden gevonden of je hebt geen toegang.</p>
+          <Button onClick={onBack} className="w-full">Terug naar overzicht</Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-full bg-gray-50 overflow-y-auto">
       {/* ── Top Navigation & Header ── */}
       <div className="bg-white border-b border-gray-200 px-6 pt-4 pb-0 flex flex-col shrink-0">
+
         <div className="flex items-center gap-2 text-sm text-gray-500 hover:text-blue-600 cursor-pointer w-fit mb-3 transition-colors font-medium" onClick={onBack}>
           <ArrowLeft className="h-4 w-4" /> Terug naar Projectenlijst
         </div>
@@ -123,7 +178,9 @@ export function ProjectDetail({ onBack }: ProjectDetailProps) {
                 <Card className="border-gray-200 shadow-sm bg-white">
                   <CardContent className="p-4">
                     <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Gefactureerd</p>
-                    <h3 className="text-xl font-bold text-green-600">{formatCurrency(0)}</h3>
+                    <h3 className="text-xl font-bold text-green-600">
+                      {formatCurrency(projectInvoices.reduce((sum, inv) => sum + inv.amount, 0))}
+                    </h3>
                   </CardContent>
                 </Card>
                 <Card className="border-gray-200 shadow-sm bg-white">
@@ -283,7 +340,83 @@ export function ProjectDetail({ onBack }: ProjectDetailProps) {
           </div>
         )}
 
-        {activeTab !== 'overzicht' && (
+        {activeTab === 'financieel' && (
+          <div className="space-y-6">
+            <Card className="border-gray-200 shadow-sm bg-white overflow-hidden">
+              <CardHeader className="pb-3 border-b border-gray-100 bg-gray-50/50">
+                <CardTitle className="text-base font-bold text-gray-800 flex items-center justify-between">
+                  Offertes
+                  <Button size="sm" className="bg-blue-600 hover:bg-blue-700 h-8 text-xs">Nieuwe Offerte</Button>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                {projectQuotes.length === 0 ? (
+                  <div className="p-8 text-center text-gray-500 text-sm italic">Geen offertes gevonden voor dit project.</div>
+                ) : (
+                  <div className="divide-y divide-gray-100">
+                    {projectQuotes.map(q => (
+                      <div key={q.id} className="p-4 px-6 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                        <div className="flex flex-col">
+                          <span className="text-sm font-bold text-gray-900">{q.title}</span>
+                          <span className="text-xs text-gray-500 font-medium">{q.quoteNumber} • {q.date}</span>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <span className="text-sm font-bold text-gray-900">{formatCurrency(q.amount)}</span>
+                          <Badge className={cn(
+                            "font-bold text-[10px] px-2 py-0.5 border-transparent",
+                            q.status === 'Geaccepteerd' ? 'bg-green-100 text-green-700' : 
+                            q.status === 'Verstuurd' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
+                          )}>
+                            {q.status}
+                          </Badge>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400"><Download className="h-4 w-4"/></Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="border-gray-200 shadow-sm bg-white overflow-hidden">
+              <CardHeader className="pb-3 border-b border-gray-100 bg-gray-50/50">
+                <CardTitle className="text-base font-bold text-gray-800 flex items-center justify-between">
+                  Facturen
+                  <Button size="sm" className="bg-green-600 hover:bg-green-700 h-8 text-xs">Nieuwe Factuur</Button>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                {projectInvoices.length === 0 ? (
+                  <div className="p-8 text-center text-gray-500 text-sm italic">Geen facturen gevonden voor dit project.</div>
+                ) : (
+                  <div className="divide-y divide-gray-100">
+                    {projectInvoices.map(i => (
+                      <div key={i.id} className="p-4 px-6 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                        <div className="flex flex-col">
+                          <span className="text-sm font-bold text-gray-900">{i.invoiceNumber}</span>
+                          <span className="text-xs text-gray-500 font-medium">{i.date}</span>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <span className="text-sm font-bold text-gray-900">{formatCurrency(i.amount)}</span>
+                          <Badge className={cn(
+                            "font-bold text-[10px] px-2 py-0.5 border-transparent",
+                            i.status === 'Betaald' ? 'bg-green-100 text-green-700' : 
+                            i.status === 'Verstuurd' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
+                          )}>
+                            {i.status}
+                          </Badge>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400"><Download className="h-4 w-4"/></Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {activeTab !== 'overzicht' && activeTab !== 'financieel' && (
           <div className="flex items-center justify-center p-12 bg-white rounded-lg border border-gray-200 border-dashed">
             <div className="text-center">
               <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
@@ -291,7 +424,7 @@ export function ProjectDetail({ onBack }: ProjectDetailProps) {
               </div>
               <h2 className="text-lg font-bold text-gray-900 mb-1">{activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} Module</h2>
               <p className="text-sm text-gray-500 max-w-sm mx-auto">
-                Deze specifieke tab binnen het projectdossier kan verder uitgewerkt worden, bijvoorbeeld met een overzicht van bestanden, schouwingsverslagen of facturen.
+                Deze specifieke tab binnen het projectdossier kan verder uitgewerkt worden, bijvoorbeeld met een overzicht van bestanden of schouwingsverslagen.
               </p>
             </div>
           </div>
