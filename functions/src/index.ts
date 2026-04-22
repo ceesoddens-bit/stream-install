@@ -1,10 +1,12 @@
 import * as admin from "firebase-admin";
 import { auth as authV1 } from "firebase-functions/v1";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { onDocumentCreated } from "firebase-functions/v2/firestore";
 
 admin.initializeApp();
 
 const db = admin.firestore();
+const APP_URL = process.env.APP_URL || "http://localhost:3000";
 
 type Rol = "owner" | "admin" | "member";
 
@@ -192,3 +194,96 @@ export const setUserRole = onCall(async (request) => {
   console.log(`setUserRole: ${request.auth.uid} → ${targetUid}: ${oudRol} → ${nieuwRol}`);
   return { success: true };
 });
+
+/**
+ * Callable: herstel custom claims (tenantId + role) voor de ingelogde gebruiker.
+ *
+ * Wordt aangeroepen wanneer tenantContext detecteert dat het JWT-token geen
+ * tenantId-claim bevat (bijv. accounts aangemaakt vóór de CF werd gedeployed).
+ * Leest het users/{uid} document uit Firestore en zet de claims opnieuw.
+ */
+export const refreshClaims = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Niet ingelogd.");
+  }
+
+  const uid = request.auth.uid;
+  const userSnap = await db.doc(`users/${uid}`).get();
+
+  if (!userSnap.exists) {
+    throw new HttpsError("not-found", `Geen gebruikersdocument gevonden voor uid=${uid}.`);
+  }
+
+  const userData = userSnap.data() as { tenantId?: string; role?: string };
+
+  if (!userData.tenantId || !userData.role) {
+    throw new HttpsError(
+      "failed-precondition",
+      `Gebruikersdocument mist tenantId of role voor uid=${uid}.`
+    );
+  }
+
+  const claims = { tenantId: userData.tenantId, role: userData.role };
+  await admin.auth().setCustomUserClaims(uid, claims);
+  await db.doc(`users/${uid}`).update({
+    claimsRefreshedAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+
+  console.log(`refreshClaims: claims hersteld voor ${uid} — tenantId=${claims.tenantId}, role=${claims.role}`);
+  return { success: true };
+});
+
+// TODO: Stripe webhook handler — wordt geïmplementeerd bij Stripe integratie
+// export const onStripeSubscriptionUpdated = onDocumentWritten(
+//   'customers/{uid}/subscriptions/{subId}',
+//   async (event) => {
+//     // Lees echte Stripe price IDs uit de subscription items
+//     // Map price IDs naar ModuleKey via STRIPE_PRICES lookup
+//     // Schrijf actiefModules + abonnementStatus naar tenants/{tenantId}
+//     // Werkt alleen met echte Stripe price IDs (niet placeholders uit stripe.ts)
+//   }
+// );
+
+/**
+ * Firestore trigger: stuur uitnodigingsmail wanneer een invite-document wordt aangemaakt.
+ * Schrijft naar de `mail` collectie via Admin SDK (omzeilt client-side Firestore rules).
+ * De Trigger Email Extension verzendt de mail op basis van dit document.
+ */
+export const onInviteCreated = onDocumentCreated(
+  "tenants/{tenantId}/invites/{token}",
+  async (event) => {
+    const invite = event.data?.data();
+    if (!invite) return;
+
+    const token = event.params.token as string;
+    const email = invite.email as string;
+    const tenantNaam = (invite.tenantNaam as string | undefined) ?? "StreamInstall";
+    const role = invite.role as string;
+
+    const rolLabel = role === "owner" ? "Hoofdgebruiker"
+      : role === "admin" ? "Extra hoofdgebruiker"
+      : "Medewerker";
+
+    const inviteUrl = `${APP_URL}/invite/${token}`;
+
+    try {
+      await db.collection("mail").add({
+        to: email,
+        message: {
+          subject: `Uitnodiging om deel te nemen aan ${tenantNaam} op StreamInstall`,
+          html: `
+            <p>Hallo,</p>
+            <p>Je bent uitgenodigd om deel te nemen aan <strong>${tenantNaam}</strong> op StreamInstall als <strong>${rolLabel}</strong>.</p>
+            <p><a href="${inviteUrl}" style="background:#059669;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;display:inline-block;margin:16px 0;">Uitnodiging accepteren</a></p>
+            <p>Of kopieer deze link: ${inviteUrl}</p>
+            <p>Deze uitnodiging is 7 dagen geldig.</p>
+            <p>Met vriendelijke groet,<br>Het StreamInstall team</p>
+          `,
+        },
+      });
+      console.log(`onInviteCreated: uitnodigingsmail verstuurd naar ${email} (tenant: ${event.params.tenantId})`);
+    } catch (err) {
+      console.error(`onInviteCreated: mail versturen mislukt voor ${email}:`, err);
+    }
+  }
+);

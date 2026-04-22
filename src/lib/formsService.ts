@@ -1,5 +1,5 @@
-import { collection, addDoc, onSnapshot, query, orderBy, Timestamp, deleteDoc, doc, updateDoc } from 'firebase/firestore';
-import { db } from './firebase';
+import { addDoc, onSnapshot, query, orderBy, Timestamp } from 'firebase/firestore';
+import { tenantCol } from './firebase';
 
 export interface FormTemplate {
   id?: string;
@@ -22,13 +22,10 @@ export interface FormItem {
   updatedBy: string;
 }
 
-const FORM_TEMPLATES_COLLECTION = 'form_templates';
-const FORM_ITEMS_COLLECTION = 'form_items';
-
 export const formsService = {
   // --- Form Templates ---
   subscribeToFormTemplates: (callback: (templates: FormTemplate[]) => void) => {
-    const q = query(collection(db, FORM_TEMPLATES_COLLECTION), orderBy('name', 'asc'));
+    const q = query(tenantCol('form_templates'), orderBy('name', 'asc'));
     return onSnapshot(q, (snapshot) => {
       const templates = snapshot.docs.map((doc) => ({
         id: doc.id,
@@ -40,7 +37,7 @@ export const formsService = {
 
   addFormTemplate: async (template: Omit<FormTemplate, 'id' | 'createdAt'>) => {
     try {
-      await addDoc(collection(db, FORM_TEMPLATES_COLLECTION), {
+      await addDoc(tenantCol('form_templates'), {
         ...template,
         createdAt: Timestamp.now(),
       });
@@ -51,7 +48,7 @@ export const formsService = {
 
   // --- Form Items ---
   subscribeToFormItems: (callback: (items: FormItem[]) => void) => {
-    const q = query(collection(db, FORM_ITEMS_COLLECTION), orderBy('createdAt', 'desc'));
+    const q = query(tenantCol('form_items'), orderBy('createdAt', 'desc'));
     return onSnapshot(q, (snapshot) => {
       const items = snapshot.docs.map((doc) => ({
         id: doc.id,
@@ -63,7 +60,7 @@ export const formsService = {
 
   addFormItem: async (item: Omit<FormItem, 'id' | 'createdAt'>) => {
     try {
-      await addDoc(collection(db, FORM_ITEMS_COLLECTION), {
+      await addDoc(tenantCol('form_items'), {
         ...item,
         createdAt: Timestamp.now(),
       });

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { doc, onSnapshot, DocumentData } from 'firebase/firestore';
-import { onAuthStateChanged, User } from 'firebase/auth';
+import { onAuthStateChanged, signOut, User } from 'firebase/auth';
 import { auth, db, setCurrentTenantId } from './firebase';
 import { Tenant, UserDoc, Rol } from './tenantTypes';
 import { heeftToegang } from './moduleAccess';
@@ -32,6 +32,10 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
   const [authReady, setAuthReady] = useState(false);
   const [userReady, setUserReady] = useState(false);
   const [tenantReady, setTenantReady] = useState(false);
+  // Gate that prevents the tenant listener from starting before the JWT
+  // token contains the custom claims (tenantId / role). Without this guard
+  // Firestore uses a stale cached token and returns permission-denied.
+  const [claimsVerified, setClaimsVerified] = useState(false);
 
   useEffect(() => {
     if (!auth) {
@@ -48,9 +52,11 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
         setUserDoc(null);
         setTenant(null);
         setCurrentTenantId(null);
+        setClaimsVerified(false);
         setUserReady(true);
         setTenantReady(true);
       } else {
+        setClaimsVerified(false);
         setUserReady(false);
         setTenantReady(false);
       }
@@ -64,13 +70,42 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     return onSnapshot(ref, async (snap) => {
       if (snap.exists()) {
         const data = snap.data() as DocumentData;
-        setUserDoc({ uid: authUser.uid, ...(data as Omit<UserDoc, 'uid'>) });
 
-        try {
-          await authUser.getIdToken(true);
-        } catch (err) {
-          console.error('Fout bij verversen ID token:', err);
+        // Wait for the onUserCreated CF to set custom claims (tenantId, role) before
+        // triggering the tenant listener — without claims the Firestore rules deny access.
+        // For newly registered accounts this may take a few seconds while the CF runs.
+        let claimsOk = false;
+        for (let i = 0; i < 5; i++) {
+          try {
+            const result = await authUser.getIdTokenResult(true);
+            if (result.claims['tenantId']) {
+              claimsOk = true;
+              break;
+            }
+          } catch (err: any) {
+            // Token refresh failed (network error, revoked token, etc.)
+            console.error('Token refresh mislukt, sessie beëindigd:', err?.code, err?.message);
+            await signOut(auth);
+            return;
+          }
+          if (i < 4) await new Promise(r => setTimeout(r, 2000));
         }
+
+        if (!claimsOk) {
+          // Custom claims missing even after polling. This happens for accounts that were
+          // created before onUserCreated was deployed. Use scripts/set-claims.cjs to fix.
+          console.error(
+            'Custom claims ontbreken voor uid=' + authUser.uid + '. ' +
+            'Voer scripts/set-claims.cjs uit om het account te herstellen. Sessie beëindigd.'
+          );
+          await signOut(auth);
+          return;
+        }
+
+        // Mark claims as verified so the tenant listener is allowed to start.
+        // The token was already force-refreshed above, so Firestore will use the up-to-date JWT.
+        setClaimsVerified(true);
+        setUserDoc({ uid: authUser.uid, ...(data as Omit<UserDoc, 'uid'>) });
       } else {
         setUserDoc(null);
         setTenantReady(true);
@@ -91,7 +126,11 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
       setTenantReady(true);
       return;
     }
-    if (!userDoc?.tenantId) return;
+    // Wait until the JWT token has been refreshed with the correct custom
+    // claims before opening the tenant listener. Firestore evaluates rules
+    // against the token that was active when the listener was registered;
+    // starting too early causes a permission-denied error.
+    if (!userDoc?.tenantId || !claimsVerified) return;
 
     setCurrentTenantId(userDoc.tenantId);
     const ref = doc(db, 'tenants', userDoc.tenantId);
@@ -106,65 +145,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
       console.error('onSnapshot tenants error:', error);
       setTenantReady(true);
     });
-  }, [userDoc?.tenantId, userReady]);
-
-  // Stripe subscription sync — kopieert status + modules naar het tenant document
-  useEffect(() => {
-    if (!authUser?.uid || !userDoc?.tenantId) return;
-
-    const setupSync = async () => {
-      const { collection, query, onSnapshot, limit, orderBy } = await import('firebase/firestore');
-      const { getModuleKeyFromPrice } = await import('./stripe');
-      const { INBEGREPEN_MODULES } = await import('./modules');
-
-      const subsRef = collection(db, `customers/${authUser.uid}/subscriptions`);
-      const q = query(subsRef, orderBy('created', 'desc'), limit(1));
-
-      return onSnapshot(q, async (snap) => {
-        if (!snap.empty) {
-          const subDoc = snap.docs[0];
-          const subData = subDoc.data();
-
-          const items = subData.items || [];
-          let aantalOwners = 1;
-          let aantalAdmins = 0;
-          let aantalMembers = 0;
-          const modulesFromStripe: ModuleKey[] = [];
-
-          items.forEach((item: any) => {
-            const priceId = item.price.id;
-            const key = getModuleKeyFromPrice(priceId) as string | null;
-            if (key === 'owner_basis') aantalOwners = item.quantity || 1;
-            else if (key === 'admin_basis') aantalAdmins = item.quantity || 0;
-            else if (key === 'member_basis') aantalMembers = item.quantity || 0;
-            else if (key) modulesFromStripe.push(key as ModuleKey);
-          });
-
-          const { updateDoc, doc: firestoreDoc } = await import('firebase/firestore');
-          const tenantRef = firestoreDoc(db, 'tenants', userDoc.tenantId);
-          const finalModules = Array.from(new Set([...INBEGREPEN_MODULES, ...modulesFromStripe]));
-          const aantalGebruikers = aantalOwners + aantalAdmins + aantalMembers;
-
-          await updateDoc(tenantRef, {
-            stripeSubscriptionId: subDoc.id,
-            abonnementStatus: subData.status,
-            abonnementEindDatum: subData.current_period_end ? subData.current_period_end.toMillis() : null,
-            cancel_at_period_end: subData.cancel_at_period_end || false,
-            actiefModules: finalModules,
-            aantalGebruikers,
-            aantalOwners,
-            aantalAdmins,
-            aantalMembers,
-            updatedAt: new Date(),
-          });
-        }
-      });
-    };
-
-    let unsubscribe: (() => void) | undefined;
-    setupSync().then(unsub => { unsubscribe = unsub; });
-    return () => { if (unsubscribe) unsubscribe(); };
-  }, [authUser?.uid, userDoc?.tenantId]);
+  }, [userDoc?.tenantId, userReady, claimsVerified]);
 
   const updateTenantModules = async (modules: string[]) => {
     if (!userDoc?.tenantId) return;

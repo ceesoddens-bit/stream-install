@@ -5,7 +5,9 @@ import { PermissionKey } from '@/lib/permissions';
 const betaaldeKeys = MODULES.filter((m) => !m.inbegrepen).map((m) => m.key) as [ModuleKey, ...ModuleKey[]];
 
 const teamlidSchema = z.object({
-  email: z.string().trim().toLowerCase().email('Ongeldig e-mailadres'),
+  email: z.string().trim().toLowerCase().pipe(
+    z.union([z.literal(''), z.string().email('Ongeldig e-mailadres')])
+  ),
   role: z.enum(['owner', 'admin', 'member'] as const),
   permissions: z.array(z.string()).default([]),
 });

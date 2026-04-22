@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useForm, Controller, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { createUserWithEmailAndPassword, sendEmailVerification, updateProfile } from 'firebase/auth';
+import { createUserWithEmailAndPassword, sendEmailVerification, signOut, updateProfile } from 'firebase/auth';
 import { doc, writeBatch, collection, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
-import { createCheckoutSessionPayload } from '@/lib/stripe';
 import { Check, ChevronLeft, ChevronRight, ChevronDown, ChevronUp } from 'lucide-react';
 import {
   registrationSchema,
@@ -32,11 +31,14 @@ const STEPS = [
   { nr: 5, label: 'Bevestigen' },
 ];
 
-function mapAuthError(code?: string): string {
+function mapRegistratieError(code?: string): string {
   switch (code) {
     case 'auth/email-already-in-use': return 'Dit e-mailadres is al in gebruik.';
     case 'auth/weak-password': return 'Wachtwoord is te zwak.';
     case 'auth/network-request-failed': return 'Geen netwerkverbinding.';
+    case 'auth/user-token-expired':
+    case 'auth/invalid-user-token': return 'Je sessie is verlopen. Ververs de pagina en probeer opnieuw.';
+    case 'permission-denied': return 'Er is een configuratiefout opgetreden. Neem contact op met support.';
     default: return 'Registratie mislukt. Probeer het opnieuw.';
   }
 }
@@ -46,6 +48,7 @@ export function RegistrationWizard() {
   const [params] = useSearchParams();
   const [step, setStep] = useState(1);
   const [error, setError] = useState('');
+  const [preparing, setPreparing] = useState(false);
   const { authUser, loading: authLoading, role } = useTenant();
 
   const preModules = useMemo<ModuleKey[]>(() => {
@@ -139,6 +142,11 @@ export function RegistrationWizard() {
   const onSubmit = async (values: RegistrationValues) => {
     setError('');
     try {
+      // Clear any stale session from a previous (failed) attempt before creating a new account.
+      if (auth.currentUser) {
+        await signOut(auth);
+      }
+
       const cred = await createUserWithEmailAndPassword(auth, values.email, values.password);
       const displayName = `${values.voornaam} ${values.achternaam}`.trim();
       await updateProfile(cred.user, { displayName });
@@ -177,18 +185,30 @@ export function RegistrationWizard() {
         createdAt: serverTimestamp(),
       });
 
-      const checkoutRef = doc(collection(db, `customers/${cred.user.uid}/checkout_sessions`));
-      batch.set(checkoutRef, createCheckoutSessionPayload(
-        tenantRef.id,
-        aantalOwners,
-        aantalAdmins,
-        aantalMembers,
-        values.modules as ModuleKey[],
-        `${window.location.origin}/dashboard?welkom=1`,
-        `${window.location.origin}/registreren?step=3`
-      ));
+      // TIJDELIJK: diagnose — verwijder na debuggen
+      try {
+        const tokenDiag = await cred.user.getIdTokenResult();
+        console.log('[Registratie] Claims op moment van batch.commit():', JSON.stringify(tokenDiag.claims));
+        console.log('[Registratie] auth.currentUser uid:', auth.currentUser?.uid);
+        console.log('[Registratie] cred.user uid:', cred.user.uid);
+        console.log('[Registratie] tenantRef.id:', tenantRef.id);
+        console.log('[Registratie] userRef.id:', userRef.id);
+      } catch (diagErr) {
+        console.warn('[Registratie] Kon token niet ophalen voor diagnose:', diagErr);
+      }
 
       await batch.commit();
+      setPreparing(true);
+
+      // Poll until onUserCreated CF has set custom claims (tenantId, role) on the token.
+      // Without these claims the Firestore rules deny access to the tenant document.
+      for (let i = 0; i < 5; i++) {
+        try {
+          const result = await cred.user.getIdTokenResult(true);
+          if (result.claims['tenantId']) break;
+        } catch { /* ignore, tenantContext will retry as well */ }
+        if (i < 4) await new Promise(r => setTimeout(r, 2000));
+      }
 
       // Maak uitnodigingen aan voor teamleden (na batch commit, zodat tenantId bekend is)
       if (values.teamleden.length > 0) {
@@ -210,28 +230,28 @@ export function RegistrationWizard() {
 
       try { await sendEmailVerification(cred.user); } catch { /* niet-fataal */ }
 
-      const { onSnapshot } = await import('firebase/firestore');
-      const unsubscribe = onSnapshot(checkoutRef, (snap) => {
-        const data = snap.data();
-        if (data?.url) {
-          unsubscribe();
-          window.location.assign(data.url);
-        } else if (data?.error) {
-          unsubscribe();
-          setError('Fout bij het starten van de betaling. Probeer het opnieuw.');
-        }
-      });
-
-      setTimeout(() => {
-        unsubscribe();
-        if (!window.location.href.includes('stripe.com')) {
-          navigate('/dashboard', { replace: true });
-        }
-      }, 10000);
+      navigate('/dashboard', { replace: true });
     } catch (err: any) {
-      setError(mapAuthError(err?.code));
+      console.error('[Registratie] Fout code:', err?.code);
+      console.error('[Registratie] Fout message:', err?.message);
+      console.error('[Registratie] Volledig object:', err);
+      // Verwijder wees Auth-account als batch faalt na createUserWithEmailAndPassword
+      if (auth.currentUser) {
+        try { await auth.currentUser.delete(); } catch { /* verwijdering mislukt, niet-fataal */ }
+      }
+      setError(mapRegistratieError(err?.code));
     }
   };
+
+  if (preparing) {
+    return (
+      <div className="min-h-screen bg-background font-sans flex flex-col items-center justify-center gap-4">
+        <div className="h-10 w-10 rounded-full border-4 border-emerald-600 border-t-transparent animate-spin" />
+        <p className="text-base font-medium text-gray-700">Je account wordt voorbereid…</p>
+        <p className="text-sm text-gray-400">Dit duurt meestal minder dan 10 seconden.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background font-sans flex flex-col relative overflow-hidden">

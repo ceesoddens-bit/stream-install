@@ -150,6 +150,11 @@ service cloud.firestore {
         allow write: if sameTenant(tId) && isOwnerOrAdmin() && hasModule(tId, 'planning');
       }
 
+      match /technicians/{docId} {
+        allow read: if sameTenant(tId) && isAnyMember();
+        allow write: if sameTenant(tId) && isOwnerOrAdmin() && hasModule(tId, 'planning');
+      }
+
       // ----- Inventory -----
       match /inventory/{docId} {
         allow read: if sameTenant(tId) && isAnyMember();
@@ -192,6 +197,10 @@ service cloud.firestore {
       }
 
       // ----- Settings / Invites -----
+      match /settings/global_timer {
+        allow read: if sameTenant(tId) && isAnyMember();
+        allow write: if sameTenant(tId) && isAnyMember();
+      }
       match /settings/{docId} {
         allow read: if sameTenant(tId) && isAnyMember();
         allow write: if sameTenant(tId) && isOwnerOrAdmin();
@@ -227,6 +236,9 @@ service cloud.firestore {
     // === Stripe Payments Extension ===
     match /customers/{uid} {
       allow read: if isSignedIn() && request.auth.uid == uid;
+      match /checkout_sessions/{id} {
+        allow read, write: if isSignedIn() && request.auth.uid == uid;
+      }
       match /{document=**} {
         allow read: if isSignedIn() && request.auth.uid == uid;
       }

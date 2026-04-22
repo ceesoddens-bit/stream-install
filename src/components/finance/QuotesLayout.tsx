@@ -82,6 +82,7 @@ import { useTenant } from '@/lib/tenantContext';
 import { pdfService } from '@/lib/pdfService';
 import { automationService } from '@/lib/automationService';
 import { QuoteTemplate } from '../pdf/QuoteTemplate';
+import { PermissionGuard } from '@/components/auth/PermissionGuard';
 
 export function QuotesLayout() {
   const { tenant } = useTenant();
@@ -239,12 +240,14 @@ export function QuotesLayout() {
           </div>
           
           <div className="flex items-center gap-3">
-            <button 
-              onClick={handleAdd}
-              className="flex items-center gap-2 px-4 py-2 bg-emerald-800 text-white font-medium text-sm rounded-md shadow-sm opacity-90 hover:opacity-100 transition-opacity"
-            >
-              <Plus className="h-4 w-4" /> Nieuwe Offerte
-            </button>
+            <PermissionGuard permission="offertes.aanmaken">
+              <button 
+                onClick={handleAdd}
+                className="flex items-center gap-2 px-4 py-2 bg-emerald-800 text-white font-medium text-sm rounded-md shadow-sm opacity-90 hover:opacity-100 transition-opacity"
+              >
+                <Plus className="h-4 w-4" /> Nieuwe Offerte
+              </button>
+            </PermissionGuard>
             <button className="p-2 border border-gray-200 text-gray-600 rounded-lg shadow-sm hover:bg-gray-50">
               <Settings className="h-4 w-4" />
             </button>
@@ -419,10 +422,14 @@ export function QuotesLayout() {
                   </td>
                   <td className="p-3 text-right sticky right-0 bg-white/95 backdrop-blur-sm group-hover:bg-gray-50/95 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.02)] transition-colors">
                      <div className="flex items-center justify-end gap-2 text-emerald-600">
-                      <button onClick={() => handleEdit(row)} title="Bewerken" className="hover:text-emerald-800 p-0.5"><Edit className="h-3.5 w-3.5" /></button>
-                      <button onClick={() => handleDelete(row.id!)} title="Verwijderen" className="hover:text-red-600 p-0.5"><Archive className="h-3.5 w-3.5" /></button>
+                      <PermissionGuard permission="offertes.aanmaken">
+                        <button onClick={() => handleEdit(row)} title="Bewerken" className="hover:text-emerald-800 p-0.5"><Edit className="h-3.5 w-3.5" /></button>
+                        <button onClick={() => handleDelete(row.id!)} title="Verwijderen" className="hover:text-red-600 p-0.5"><Archive className="h-3.5 w-3.5" /></button>
+                      </PermissionGuard>
                       <button onClick={() => handleDownloadPDF(row)} title="Download PDF" className="hover:text-emerald-800 p-0.5"><Download className="h-3.5 w-3.5" /></button>
-                      <button onClick={() => handleSendEmail(row)} className="hover:text-emerald-800 p-0.5 text-emerald-600" title="Verzenden"><Send className="h-3.5 w-3.5" /></button>
+                      <PermissionGuard permission="offertes.versturen">
+                        <button onClick={() => handleSendEmail(row)} className="hover:text-emerald-800 p-0.5 text-emerald-600" title="Verzenden"><Send className="h-3.5 w-3.5" /></button>
+                      </PermissionGuard>
                     </div>
                   </td>
                 </tr>

@@ -5,6 +5,7 @@ import {
 import { crmService, Company } from '@/lib/crmService';
 import { cn } from '@/lib/utils';
 import { CompanyEditDialog } from './CRMEditDialogs';
+import { PermissionGuard } from '@/components/auth/PermissionGuard';
 import { toast } from 'sonner';
 
 type CompaniesColumnKey =
@@ -198,12 +199,14 @@ export function CompaniesLayout() {
           </div>
           
           <div className="flex items-center gap-3">
-            <button 
-                onClick={handleAdd}
-                className="flex items-center gap-2 px-4 py-2 bg-emerald-800 text-white font-medium text-sm rounded-md shadow-sm opacity-90 hover:opacity-100 transition-opacity"
-            >
-              <Plus className="h-4 w-4" /> Bedrijf Toevoegen
-            </button>
+            <PermissionGuard permission="crm.contacten.aanmaken">
+              <button 
+                  onClick={handleAdd}
+                  className="flex items-center gap-2 px-4 py-2 bg-emerald-800 text-white font-medium text-sm rounded-md shadow-sm opacity-90 hover:opacity-100 transition-opacity"
+              >
+                <Plus className="h-4 w-4" /> Bedrijf Toevoegen
+              </button>
+            </PermissionGuard>
             <button className="p-2 border border-gray-200 text-gray-600 rounded-lg shadow-sm hover:bg-gray-50">
               <Settings className="h-4 w-4" />
             </button>
@@ -330,18 +333,22 @@ export function CompaniesLayout() {
                   </td>
                   <td className="p-3 text-right sticky right-0 bg-white/90 backdrop-blur-sm group-hover:bg-gray-50/90 transition-colors z-10">
                     <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button 
-                        className="text-gray-400 hover:text-emerald-700 p-1 rounded hover:bg-gray-100 transition-colors"
-                        onClick={() => handleEdit(row)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(row.id!)}
-                        className="text-gray-300 hover:text-red-500 p-1 rounded hover:bg-red-50 transition-colors"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                      <PermissionGuard permission="crm.contacten.bewerken">
+                        <button 
+                          className="text-gray-400 hover:text-emerald-700 p-1 rounded hover:bg-gray-100 transition-colors"
+                          onClick={() => handleEdit(row)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </button>
+                      </PermissionGuard>
+                      <PermissionGuard permission="crm.contacten.verwijderen">
+                        <button
+                          onClick={() => handleDelete(row.id!)}
+                          className="text-gray-300 hover:text-red-500 p-1 rounded hover:bg-red-50 transition-colors"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </PermissionGuard>
                     </div>
                   </td>
                 </tr>

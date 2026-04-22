@@ -100,30 +100,8 @@ export const userService = {
       expiresAt,
     };
 
+    // Mail wordt verzonden door de Cloud Function `onInviteCreated` via Admin SDK.
     const inviteRef = await addDoc(tenantCol('invites'), inviteData);
-
-    // Stuur uitnodigingsmail via Trigger Email Extension (mail/{id})
-    try {
-      const inviteUrl = `${window.location.origin}/invite/${token}`;
-      await addDoc(collection(db, 'mail'), {
-        to: email,
-        message: {
-          subject: `Uitnodiging om deel te nemen aan ${tenantNaam} op StreamInstall`,
-          html: `
-            <p>Hallo,</p>
-            <p>Je bent uitgenodigd om deel te nemen aan <strong>${tenantNaam}</strong> op StreamInstall als <strong>${rolLabel(role)}</strong>.</p>
-            <p><a href="${inviteUrl}" style="background:#059669;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;display:inline-block;margin:16px 0;">Uitnodiging accepteren</a></p>
-            <p>Of kopieer deze link: ${inviteUrl}</p>
-            <p>Deze uitnodiging is 7 dagen geldig.</p>
-            <p>Met vriendelijke groet,<br>Het StreamInstall team</p>
-          `,
-        },
-      });
-    } catch (err) {
-      console.error('E-mail versturen mislukt:', err);
-      // Niet-fataal — uitnodiging is al opgeslagen
-    }
-
     return inviteRef.id;
   },
 

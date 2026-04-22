@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { BarChart3, Building2, FileText, Globe, LayoutDashboard, Map, Settings, Sparkles, Users, ListTodo } from 'lucide-react';
 import { ManagementUsersView } from './ManagementUsersView';
 import { ModuleGuard } from '@/components/auth/ModuleGuard';
+import { RequireRole } from '@/components/auth/RequireRole';
 import { ManagementCustomersView } from './ManagementCustomersView';
 import { ManagementAutomationView } from './ManagementAutomationView';
 import { ManagementAutomationLiteView } from './ManagementAutomationLiteView';
@@ -39,7 +40,11 @@ const managementViews = [
 ];
 
 export function ManagementLayout({ activeView }: ManagementLayoutProps) {
-  if (activeView === 'management_users') return <ManagementUsersView />;
+  if (activeView === 'management_users') return (
+    <RequireRole roles={['owner', 'admin']} fallback="/dashboard">
+      <ManagementUsersView />
+    </RequireRole>
+  );
   if (activeView === 'management_customers') return <ManagementCustomersView />;
   if (activeView === 'management_automation') return (
     <ModuleGuard module="automatiseringen">
