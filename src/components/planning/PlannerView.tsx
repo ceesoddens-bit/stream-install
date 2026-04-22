@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { planningService, PlanningEntry } from '@/lib/planningService';
 import { projectService, Project } from '@/lib/projectService';
 import { teamService, Technician } from '@/lib/teamService';
+import { ticketService, Ticket } from '@/lib/ticketService';
 import { format, addDays, subDays } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import { PlanProjectDialog } from './PlanningDialogs';
@@ -19,6 +20,7 @@ export function PlannerView() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [entries, setEntries] = useState<PlanningEntry[]>([]);
   const [techs, setTechs] = useState<Technician[]>([]);
+  const [tickets, setTickets] = useState<Ticket[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [copied, setCopied] = useState(false);
@@ -29,10 +31,12 @@ export function PlannerView() {
   useEffect(() => {
     const unsubProjects = projectService.subscribeToProjects(setProjects);
     const unsubTechs = teamService.subscribeToTechnicians(setTechs);
+    const unsubTickets = ticketService.subscribeToTickets(setTickets);
     setIsLoading(false);
     return () => {
       unsubProjects();
       unsubTechs();
+      unsubTickets();
     };
   }, []);
 
@@ -63,22 +67,38 @@ export function PlannerView() {
   };
 
   const getRows = () => {
-    return displayTechs.map(tech => {
-      const techEntries = entries.filter(e => e.technician === tech);
+    return techs.map(tech => {
+      const techEntries = entries.filter(e => e.technician === tech.name);
+      const techTickets = tickets.filter(t => t.assigneeId === tech.id && t.slaDate === dateKey);
+
+      const entryBlocks = techEntries.map(e => {
+        const start = parseInt(e.startTime.split(':')[0]) + (parseInt(e.startTime.split(':')[1]) / 60);
+        const end = parseInt(e.endTime.split(':')[0]) + (parseInt(e.endTime.split(':')[1]) / 60);
+        return {
+          id: e.id,
+          title: `${e.client} - ${e.projectName}`,
+          start,
+          end,
+          color: 'bg-emerald-100/80 border-emerald-200 text-emerald-800'
+        };
+      });
+
+      const ticketBlocks = techTickets.map(t => {
+        const start = parseInt((t.startTime || '08:00').split(':')[0]) + (parseInt((t.startTime || '08:00').split(':')[1]) / 60);
+        const end = parseInt((t.endTime || '09:00').split(':')[0]) + (parseInt((t.endTime || '09:00').split(':')[1]) / 60);
+        return {
+          id: t.id,
+          title: `🎟️ ${t.title}`,
+          start,
+          end,
+          color: 'bg-blue-100/80 border-blue-200 text-blue-800'
+        };
+      });
+
       return {
-        name: tech,
-        eff: techEntries.length > 0 ? "85%" : "",
-        blocks: techEntries.map(e => {
-          const start = parseInt(e.startTime.split(':')[0]) + (parseInt(e.startTime.split(':')[1]) / 60);
-          const end = parseInt(e.endTime.split(':')[0]) + (parseInt(e.endTime.split(':')[1]) / 60);
-          return {
-            id: e.id,
-            title: `${e.client} - ${e.projectName}`,
-            start,
-            end,
-            color: 'bg-emerald-100/80 border-emerald-200 text-emerald-800'
-          };
-        })
+        name: tech.name,
+        eff: (techEntries.length + techTickets.length) > 0 ? "85%" : "",
+        blocks: [...entryBlocks, ...ticketBlocks]
       };
     });
   };

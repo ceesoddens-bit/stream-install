@@ -115,3 +115,96 @@ export function PlanProjectDialog({ open, onOpenChange, project, technicians, se
     </EditDialog>
   );
 }
+
+interface EditProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  entry: PlanningEntry | null;
+  technicians: Technician[];
+  onSuccess?: () => void;
+}
+
+export function EditPlanningDialog({ open, onOpenChange, entry, technicians, onSuccess }: EditProps) {
+  const form = useForm<Partial<PlanningEntry>>({
+    defaultValues: entry || {},
+  });
+
+  useEffect(() => {
+    if (open && entry) {
+      form.reset(entry);
+    }
+  }, [open, entry, form]);
+
+  const onSubmit = async (values: Partial<PlanningEntry>) => {
+    try {
+      if (!entry?.id) return;
+      await planningService.updatePlanningEntry(entry.id, values);
+      toast.success('Planning bijgewerkt');
+      onOpenChange(false);
+      onSuccess?.();
+    } catch (error: any) {
+      toast.error(error.message || 'Fout bij bijwerken');
+    }
+  };
+
+  return (
+    <EditDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={`Planning bewerken: ${entry?.projectName || ''}`}
+      form={form}
+      onSubmit={onSubmit}
+    >
+      <div className="space-y-4">
+        <div className="space-y-1.5">
+          <Label>Monteur</Label>
+          <select 
+            {...form.register('technician')}
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
+            {technicians.map(t => (
+              <option key={t.id} value={t.name}>{t.name}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <Label>Starttijd</Label>
+            <Input type="time" {...form.register('startTime')} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Eindtijd</Label>
+            <Input type="time" {...form.register('endTime')} />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <Label>Type</Label>
+            <select 
+              {...form.register('type')}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              <option value="Installatie">Installatie</option>
+              <option value="Service">Service</option>
+              <option value="Onderhoud">Onderhoud</option>
+            </select>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Status</Label>
+            <select 
+              {...form.register('status')}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              <option value="Ingepland">Ingepland</option>
+              <option value="Onderweg">Onderweg</option>
+              <option value="Bezig">Bezig</option>
+              <option value="Afgerond">Afgerond</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </EditDialog>
+  );
+}
