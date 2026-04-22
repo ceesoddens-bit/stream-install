@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm, Controller, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { createUserWithEmailAndPassword, sendEmailVerification, updateProfile } from 'firebase/auth';
 import { doc, writeBatch, collection, serverTimestamp } from 'firebase/firestore';
@@ -11,14 +11,15 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { createCheckoutSessionPayload } from '@/lib/stripe';
-import { Check, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, ChevronDown, ChevronUp } from 'lucide-react';
 import {
   registrationSchema,
   RegistrationValues,
   STEP_FIELDS,
   passwordStrength,
 } from './RegistrationWizard.schema';
-import { MODULES, ModuleKey, berekenMaandprijs, INBEGREPEN_MODULES } from '@/lib/modules';
+import { MODULES, ModuleKey, berekenMaandprijs, INBEGREPEN_MODULES, PRIJS_OWNER, PRIJS_ADMIN, PRIJS_MEMBER } from '@/lib/modules';
+import { PERMISSIONS, PERMISSION_CATEGORIEEN, DEFAULT_MEMBER_PERMISSIONS, PermissionKey } from '@/lib/permissions';
 import { cn } from '@/lib/utils';
 import { useTenant } from '@/lib/tenantContext';
 import { PublicNavbar } from '@/components/layout/PublicNavbar';
@@ -27,19 +28,16 @@ const STEPS = [
   { nr: 1, label: 'Bedrijf' },
   { nr: 2, label: 'Account' },
   { nr: 3, label: 'Pakket' },
-  { nr: 4, label: 'Bevestigen' },
+  { nr: 4, label: 'Team' },
+  { nr: 5, label: 'Bevestigen' },
 ];
 
 function mapAuthError(code?: string): string {
   switch (code) {
-    case 'auth/email-already-in-use':
-      return 'Dit e-mailadres is al in gebruik.';
-    case 'auth/weak-password':
-      return 'Wachtwoord is te zwak.';
-    case 'auth/network-request-failed':
-      return 'Geen netwerkverbinding.';
-    default:
-      return 'Registratie mislukt. Probeer het opnieuw.';
+    case 'auth/email-already-in-use': return 'Dit e-mailadres is al in gebruik.';
+    case 'auth/weak-password': return 'Wachtwoord is te zwak.';
+    case 'auth/network-request-failed': return 'Geen netwerkverbinding.';
+    default: return 'Registratie mislukt. Probeer het opnieuw.';
   }
 }
 
@@ -54,13 +52,8 @@ export function RegistrationWizard() {
     const raw = params.get('modules');
     if (!raw) return [];
     const set = new Set(MODULES.filter((m) => !m.inbegrepen).map((m) => m.key));
-    return raw
-      .split(',')
-      .map((s) => s.trim() as ModuleKey)
-      .filter((k) => set.has(k));
+    return raw.split(',').map((s) => s.trim() as ModuleKey).filter((k) => set.has(k));
   }, [params]);
-
-  const preUsers = Math.max(1, Math.min(500, parseInt(params.get('users') ?? '1', 10) || 1));
 
   const form = useForm<RegistrationValues>({
     resolver: zodResolver(registrationSchema),
@@ -74,33 +67,74 @@ export function RegistrationWizard() {
       achternaam: '',
       email: '',
       password: '',
-      aantalGebruikers: preUsers,
       modules: preModules,
+      aantalOwners: 1,
+      aantalAdmins: 0,
+      aantalMembers: 0,
+      teamleden: [],
       voorwaarden: false as unknown as true,
     },
   });
 
-  // Redirect if already logged in, but ONLY if we are NOT currently submitting,
-  // after the initial auth check is done, and only if role is known (prevents
-  // redirect loop when user-doc is missing/loading).
+  const { fields: teamFields } = useFieldArray({
+    control: form.control,
+    name: 'teamleden',
+  });
+
   React.useEffect(() => {
-    if (authUser && !authLoading && !form.formState.isSubmitting && step !== 4 && role) {
-      navigate(role === 'customer' ? '/portaal' : '/dashboard', { replace: true });
+    if (authUser && !authLoading && !form.formState.isSubmitting && step !== 5 && role) {
+      navigate('/dashboard', { replace: true });
     }
   }, [authUser, authLoading, form.formState.isSubmitting, navigate, step, role]);
 
-  const watchAantal = form.watch('aantalGebruikers') || 1;
   const watchModules = form.watch('modules') || [];
   const watchPassword = form.watch('password') || '';
-  const liveTotaal = berekenMaandprijs(Number(watchAantal), watchModules as ModuleKey[]);
+  const watchOwners = Number(form.watch('aantalOwners')) || 1;
+  const watchAdmins = Number(form.watch('aantalAdmins')) || 0;
+  const watchMembers = Number(form.watch('aantalMembers')) || 0;
+  const liveTotaal = berekenMaandprijs(watchOwners, watchAdmins, watchMembers, watchModules as ModuleKey[]);
 
   const goNext = async () => {
     const fields = STEP_FIELDS[step];
     const ok = await form.trigger(fields as any);
     if (!ok) return;
-    setStep((s) => Math.min(4, s + 1));
+    // Stap 4 → team: sync teamleden array met de aantallen
+    if (step === 4) {
+      await syncTeamleden();
+    }
+    setStep((s) => Math.min(5, s + 1));
   };
   const goBack = () => setStep((s) => Math.max(1, s - 1));
+
+  // Past teamleden-array aan op basis van de tellerwaarden
+  const syncTeamleden = async () => {
+    const current = form.getValues('teamleden');
+    const owners = Math.max(1, watchOwners) - 1; // -1 voor de registrerende user
+    const admins = watchAdmins;
+    const members = watchMembers;
+    const ownerLeden = current.filter((t) => t.role === 'owner').slice(0, owners);
+    const adminLeden = current.filter((t) => t.role === 'admin').slice(0, admins);
+    const memberLeden = current.filter((t) => t.role === 'member').slice(0, members);
+
+    const fill = (arr: typeof ownerLeden, target: number, role: 'owner' | 'admin' | 'member') => {
+      while (arr.length < target) {
+        arr.push({
+          email: '',
+          role,
+          permissions: role === 'member' ? [...DEFAULT_MEMBER_PERMISSIONS] : [],
+        });
+      }
+      return arr;
+    };
+
+    const nieuw = [
+      ...fill(ownerLeden, owners, 'owner'),
+      ...fill(adminLeden, admins, 'admin'),
+      ...fill(memberLeden, members, 'member'),
+    ];
+
+    form.setValue('teamleden', nieuw as any, { shouldValidate: false });
+  };
 
   const onSubmit = async (values: RegistrationValues) => {
     setError('');
@@ -111,16 +145,22 @@ export function RegistrationWizard() {
 
       const tenantRef = doc(collection(db, 'tenants'));
       const userRef = doc(db, 'users', cred.user.uid);
-      const maandprijs = berekenMaandprijs(values.aantalGebruikers, values.modules as ModuleKey[]);
+      const aantalOwners = values.aantalOwners;
+      const aantalAdmins = values.aantalAdmins;
+      const aantalMembers = values.aantalMembers;
+      const maandprijs = berekenMaandprijs(aantalOwners, aantalAdmins, aantalMembers, values.modules as ModuleKey[]);
 
       const batch = writeBatch(db);
       batch.set(tenantRef, {
         naam: values.bedrijfsnaam,
         plan: 'custom',
-        aantalGebruikers: values.aantalGebruikers,
+        aantalGebruikers: aantalOwners + aantalAdmins + aantalMembers,
+        aantalOwners,
+        aantalAdmins,
+        aantalMembers,
         actiefModules: [...INBEGREPEN_MODULES, ...values.modules],
         maandprijs,
-        abonnementStatus: 'trialing', // Trial modus actief na checkout
+        abonnementStatus: 'trialing',
         abonnementStartDatum: Date.now(),
         kvk: values.kvk || null,
         btw: values.btw || null,
@@ -137,26 +177,39 @@ export function RegistrationWizard() {
         createdAt: serverTimestamp(),
       });
 
-      // Fase 2 - Stripe Integratie
-      // We maken een Checkout Session aan via de extensie
       const checkoutRef = doc(collection(db, `customers/${cred.user.uid}/checkout_sessions`));
       batch.set(checkoutRef, createCheckoutSessionPayload(
-        tenantRef.id, 
-        values.aantalGebruikers, 
+        tenantRef.id,
+        aantalOwners,
+        aantalAdmins,
+        aantalMembers,
         values.modules as ModuleKey[],
         `${window.location.origin}/dashboard?welkom=1`,
         `${window.location.origin}/registreren?step=3`
       ));
-      
+
       await batch.commit();
 
-      try {
-        await sendEmailVerification(cred.user);
-      } catch {
-        /* niet-fataal */
+      // Maak uitnodigingen aan voor teamleden (na batch commit, zodat tenantId bekend is)
+      if (values.teamleden.length > 0) {
+        const { userService } = await import('@/lib/userService');
+        await Promise.allSettled(
+          values.teamleden
+            .filter((t) => t.email.trim())
+            .map((t) =>
+              userService.createInvite(
+                tenantRef.id,
+                values.bedrijfsnaam,
+                t.email,
+                t.role as 'owner' | 'admin' | 'member',
+                t.permissions as PermissionKey[]
+              )
+            )
+        );
       }
 
-      // Luister naar de redirect URL
+      try { await sendEmailVerification(cred.user); } catch { /* niet-fataal */ }
+
       const { onSnapshot } = await import('firebase/firestore');
       const unsubscribe = onSnapshot(checkoutRef, (snap) => {
         const data = snap.data();
@@ -165,12 +218,10 @@ export function RegistrationWizard() {
           window.location.assign(data.url);
         } else if (data?.error) {
           unsubscribe();
-          console.error("Stripe error:", data.error);
-          setError("Fout bij het starten van de betaling. Probeer het opnieuw.");
+          setError('Fout bij het starten van de betaling. Probeer het opnieuw.');
         }
       });
 
-      // Fallback timeout
       setTimeout(() => {
         unsubscribe();
         if (!window.location.href.includes('stripe.com')) {
@@ -185,9 +236,7 @@ export function RegistrationWizard() {
   return (
     <div className="min-h-screen bg-background font-sans flex flex-col relative overflow-hidden">
       <PublicNavbar />
-      
-      {/* Background Pattern */}
-      <div className="absolute inset-0 -z-10 h-full w-full bg-white bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px] [mask-image:radial-gradient(ellipse_50%_50%_at_50%_0%,#000_70%,transparent_100%)]"></div>
+      <div className="absolute inset-0 -z-10 h-full w-full bg-white bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px] [mask-image:radial-gradient(ellipse_50%_50%_at_50%_0%,#000_70%,transparent_100%)]" />
 
       <div className="flex-1 py-10 px-4">
         <div className="max-w-2xl mx-auto">
@@ -198,14 +247,12 @@ export function RegistrationWizard() {
               return (
                 <li key={s.nr} className="flex-1 flex items-center">
                   <div className="flex items-center gap-2">
-                    <div
-                      className={cn(
-                        'h-8 w-8 rounded-full flex items-center justify-center text-sm font-semibold',
-                        done && 'bg-emerald-600 text-white',
-                        active && 'bg-emerald-100 text-emerald-700 border-2 border-emerald-600',
-                        !done && !active && 'bg-gray-200 text-gray-500'
-                      )}
-                    >
+                    <div className={cn(
+                      'h-8 w-8 rounded-full flex items-center justify-center text-sm font-semibold',
+                      done && 'bg-emerald-600 text-white',
+                      active && 'bg-emerald-100 text-emerald-700 border-2 border-emerald-600',
+                      !done && !active && 'bg-gray-200 text-gray-500'
+                    )}>
                       {done ? <Check className="h-4 w-4" /> : s.nr}
                     </div>
                     <span className={cn('text-sm hidden sm:block', active ? 'font-medium text-gray-900' : 'text-gray-500')}>
@@ -224,12 +271,14 @@ export function RegistrationWizard() {
                 {step === 1 && 'Bedrijfsgegevens'}
                 {step === 2 && 'Uw account'}
                 {step === 3 && 'Kies uw pakket'}
-                {step === 4 && 'Bevestigen & starten'}
+                {step === 4 && 'Uw team samenstellen'}
+                {step === 5 && 'Bevestigen & starten'}
               </h1>
             </CardHeader>
             <CardContent>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
-                {/* === STEP 1 === */}
+
+                {/* === STEP 1 — Bedrijf === */}
                 {step === 1 && (
                   <div className="space-y-4">
                     <div className="space-y-1.5">
@@ -252,11 +301,7 @@ export function RegistrationWizard() {
                     </div>
                     <div className="space-y-1.5">
                       <Label htmlFor="land">Land</Label>
-                      <select
-                        id="land"
-                        {...form.register('land')}
-                        className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm"
-                      >
+                      <select id="land" {...form.register('land')} className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm">
                         <option value="NL">Nederland</option>
                         <option value="BE">België</option>
                         <option value="DE">Duitsland</option>
@@ -265,23 +310,19 @@ export function RegistrationWizard() {
                   </div>
                 )}
 
-                {/* === STEP 2 === */}
+                {/* === STEP 2 — Account === */}
                 {step === 2 && (
                   <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-1.5">
                         <Label htmlFor="voornaam">Voornaam</Label>
                         <Input id="voornaam" {...form.register('voornaam')} />
-                        {form.formState.errors.voornaam && (
-                          <p className="text-xs text-red-600">{form.formState.errors.voornaam.message}</p>
-                        )}
+                        {form.formState.errors.voornaam && <p className="text-xs text-red-600">{form.formState.errors.voornaam.message}</p>}
                       </div>
                       <div className="space-y-1.5">
                         <Label htmlFor="achternaam">Achternaam</Label>
                         <Input id="achternaam" {...form.register('achternaam')} />
-                        {form.formState.errors.achternaam && (
-                          <p className="text-xs text-red-600">{form.formState.errors.achternaam.message}</p>
-                        )}
+                        {form.formState.errors.achternaam && <p className="text-xs text-red-600">{form.formState.errors.achternaam.message}</p>}
                       </div>
                     </div>
                     <div className="space-y-1.5">
@@ -293,24 +334,14 @@ export function RegistrationWizard() {
                       <Label htmlFor="password">Wachtwoord</Label>
                       <Input id="password" type="password" autoComplete="new-password" {...form.register('password')} />
                       <PasswordStrength value={watchPassword} />
-                      {form.formState.errors.password && (
-                        <p className="text-xs text-red-600">{form.formState.errors.password.message}</p>
-                      )}
+                      {form.formState.errors.password && <p className="text-xs text-red-600">{form.formState.errors.password.message}</p>}
                     </div>
                   </div>
                 )}
 
-                {/* === STEP 3 === */}
+                {/* === STEP 3 — Pakket === */}
                 {step === 3 && (
                   <div className="space-y-5">
-                    <div className="space-y-1.5">
-                      <Label htmlFor="aantalGebruikers">Aantal gebruikers</Label>
-                      <Input id="aantalGebruikers" type="number" min={1} max={500} {...form.register('aantalGebruikers')} />
-                      {form.formState.errors.aantalGebruikers && (
-                        <p className="text-xs text-red-600">{form.formState.errors.aantalGebruikers.message}</p>
-                      )}
-                    </div>
-
                     <Controller
                       control={form.control}
                       name="modules"
@@ -321,19 +352,15 @@ export function RegistrationWizard() {
                             {MODULES.filter((m) => !m.inbegrepen).map((m) => {
                               const checked = (field.value ?? []).includes(m.key);
                               return (
-                                <label
-                                  key={m.key}
-                                  className={cn(
-                                    'flex items-start gap-3 rounded-lg border p-3 cursor-pointer transition-colors',
-                                    checked ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200 hover:bg-gray-50'
-                                  )}
-                                >
+                                <label key={m.key} className={cn(
+                                  'flex items-start gap-3 rounded-lg border p-3 cursor-pointer transition-colors',
+                                  checked ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200 hover:bg-gray-50'
+                                )}>
                                   <Checkbox
                                     checked={checked}
                                     onCheckedChange={(v) => {
                                       const next = new Set(field.value ?? []);
-                                      if (v) next.add(m.key);
-                                      else next.delete(m.key);
+                                      if (v) next.add(m.key); else next.delete(m.key);
                                       field.onChange(Array.from(next));
                                     }}
                                   />
@@ -351,23 +378,78 @@ export function RegistrationWizard() {
                         </div>
                       )}
                     />
-
-                    <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
-                      <div className="flex items-baseline justify-between">
-                        <span className="text-sm text-emerald-800">Totaal per maand</span>
-                        <span className="text-2xl font-bold text-emerald-900">
-                          &euro;{liveTotaal.toLocaleString('nl-NL', { minimumFractionDigits: 0 })}
-                        </span>
-                      </div>
-                      <p className="mt-1 text-xs text-emerald-700">
-                        Incl. basisprijs €29 × {watchAantal} gebruiker{Number(watchAantal) > 1 ? 's' : ''}, excl. btw. Maandelijks opzegbaar.
-                      </p>
-                    </div>
+                    <p className="text-xs text-gray-500 bg-gray-50 rounded-lg p-3 border border-gray-200">
+                      Modulekosten worden berekend per <strong>hoofdgebruiker + extra hoofdgebruiker</strong>. Medewerkers betalen alleen hun basistoegang.
+                    </p>
                   </div>
                 )}
 
-                {/* === STEP 4 === */}
+                {/* === STEP 4 — Team === */}
                 {step === 4 && (
+                  <div className="space-y-5">
+                    {/* Rol-tellers met live prijsoverzicht */}
+                    <div className="rounded-xl border border-gray-200 overflow-hidden">
+                      <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
+                        <p className="text-sm font-semibold text-gray-900">Hoeveel gebruikers heeft u?</p>
+                        <p className="text-xs text-gray-500 mt-0.5">U bent zelf al meegeteld als hoofdgebruiker.</p>
+                      </div>
+                      <div className="divide-y divide-gray-100">
+                        <RolTeller
+                          label="Hoofdgebruikers"
+                          beschrijving="Volledige toegang incl. facturering en gebruikersbeheer"
+                          prijs={PRIJS_OWNER}
+                          value={watchOwners}
+                          min={1}
+                          onChange={(v) => form.setValue('aantalOwners', v)}
+                        />
+                        <RolTeller
+                          label="Extra hoofdgebruikers"
+                          beschrijving="Volledige toegang, excl. abonnementsbeheer"
+                          prijs={PRIJS_ADMIN}
+                          value={watchAdmins}
+                          min={0}
+                          onChange={(v) => form.setValue('aantalAdmins', v)}
+                        />
+                        <RolTeller
+                          label="Medewerkers"
+                          beschrijving="Toegang op maat — u bepaalt wat zij mogen"
+                          prijs={PRIJS_MEMBER}
+                          value={watchMembers}
+                          min={0}
+                          onChange={(v) => form.setValue('aantalMembers', v)}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Live prijsoverzicht */}
+                    <PrijsOverzicht
+                      watchOwners={watchOwners}
+                      watchAdmins={watchAdmins}
+                      watchMembers={watchMembers}
+                      watchModules={watchModules as ModuleKey[]}
+                      liveTotaal={liveTotaal}
+                    />
+
+                    {/* E-mailadressen teamleden */}
+                    {(watchOwners > 1 || watchAdmins > 0 || watchMembers > 0) && (
+                      <div className="space-y-3">
+                        <Label>E-mailadressen teamleden</Label>
+                        <p className="text-xs text-gray-500">Teamleden ontvangen een uitnodigingsmail. Vul in na registratie als u nog niet alle e-mailadressen weet.</p>
+                        {teamFields.map((field, i) => (
+                          <TeamlidRij
+                            key={field.id}
+                            index={i}
+                            form={form}
+                            role={field.role as 'owner' | 'admin' | 'member'}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* === STEP 5 — Bevestigen === */}
+                {step === 5 && (
                   <div className="space-y-4">
                     <Summary values={form.getValues()} totaal={liveTotaal} />
                     <Controller
@@ -376,20 +458,12 @@ export function RegistrationWizard() {
                       render={({ field, fieldState }) => (
                         <div>
                           <label className="flex items-start gap-3 p-3 rounded-lg border border-gray-200">
-                            <Checkbox
-                              checked={!!field.value}
-                              onCheckedChange={(v) => field.onChange(!!v)}
-                            />
+                            <Checkbox checked={!!field.value} onCheckedChange={(v) => field.onChange(!!v)} />
                             <span className="text-sm text-gray-700">
                               Ik ga akkoord met de{' '}
-                              <a href="#" className="text-emerald-600 underline">
-                                algemene voorwaarden
-                              </a>{' '}
+                              <a href="#" className="text-emerald-600 underline">algemene voorwaarden</a>{' '}
                               en het{' '}
-                              <a href="#" className="text-emerald-600 underline">
-                                privacybeleid
-                              </a>
-                              .
+                              <a href="#" className="text-emerald-600 underline">privacybeleid</a>.
                             </span>
                           </label>
                           {fieldState.error && <p className="text-xs text-red-600 mt-1">{fieldState.error.message}</p>}
@@ -405,19 +479,17 @@ export function RegistrationWizard() {
                   <div>
                     {step > 1 && (
                       <Button type="button" variant="outline" onClick={goBack} disabled={form.formState.isSubmitting}>
-                        <ChevronLeft className="h-4 w-4 mr-1" />
-                        Terug
+                        <ChevronLeft className="h-4 w-4 mr-1" />Terug
                       </Button>
                     )}
                   </div>
                   <div>
-                    {step < 4 && (
+                    {step < 5 && (
                       <Button type="button" onClick={goNext}>
-                        Volgende
-                        <ChevronRight className="h-4 w-4 ml-1" />
+                        Volgende<ChevronRight className="h-4 w-4 ml-1" />
                       </Button>
                     )}
-                    {step === 4 && (
+                    {step === 5 && (
                       <Button type="submit" disabled={form.formState.isSubmitting}>
                         {form.formState.isSubmitting ? 'Account aanmaken...' : 'Start gratis proefperiode'}
                       </Button>
@@ -430,12 +502,147 @@ export function RegistrationWizard() {
 
           <p className="text-center text-sm text-gray-500 mt-6">
             Al een account?{' '}
-            <Link to="/login" className="text-emerald-600 hover:underline">
-              Inloggen
-            </Link>
+            <Link to="/login" className="text-emerald-600 hover:underline">Inloggen</Link>
           </p>
         </div>
       </div>
+    </div>
+  );
+}
+
+// === Sub-componenten ===
+
+function RolTeller({
+  label, beschrijving, prijs, value, min, onChange,
+}: {
+  label: string; beschrijving: string; prijs: number; value: number; min: number; onChange: (v: number) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between px-4 py-3 gap-4">
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-gray-900">{label}</p>
+        <p className="text-xs text-gray-500 truncate">{beschrijving}</p>
+        <p className="text-xs font-semibold text-emerald-700 mt-0.5">&euro;{prijs}/mnd</p>
+      </div>
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => onChange(Math.max(min, value - 1))}
+          className="h-8 w-8 rounded-lg border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50 disabled:opacity-40"
+          disabled={value <= min}
+        >−</button>
+        <span className="w-8 text-center text-sm font-bold">{value}</span>
+        <button
+          type="button"
+          onClick={() => onChange(value + 1)}
+          className="h-8 w-8 rounded-lg border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50"
+        >+</button>
+      </div>
+      <div className="text-sm font-semibold text-gray-800 w-20 text-right">
+        &euro;{value * prijs}
+      </div>
+    </div>
+  );
+}
+
+function PrijsOverzicht({
+  watchOwners, watchAdmins, watchMembers, watchModules, liveTotaal,
+}: {
+  watchOwners: number; watchAdmins: number; watchMembers: number; watchModules: ModuleKey[]; liveTotaal: number;
+}) {
+  const modulesom = watchModules
+    .filter(k => !INBEGREPEN_MODULES.includes(k))
+    .reduce((s, k) => s + (MODULES.find(m => m.key === k)?.prijsPerGebruiker ?? 0), 0);
+  const betaald = watchOwners + watchAdmins;
+
+  return (
+    <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 space-y-1.5">
+      <PrijsRegel label={`Hoofdgebruikers (${watchOwners}×)`} bedrag={watchOwners * PRIJS_OWNER} />
+      {watchAdmins > 0 && <PrijsRegel label={`Extra hoofdgebr. (${watchAdmins}×)`} bedrag={watchAdmins * PRIJS_ADMIN} />}
+      {watchMembers > 0 && <PrijsRegel label={`Medewerkers (${watchMembers}×)`} bedrag={watchMembers * PRIJS_MEMBER} />}
+      {modulesom > 0 && <PrijsRegel label={`Modules (${betaald}× €${modulesom}/gebr.)`} bedrag={modulesom * betaald} />}
+      <div className="pt-2 mt-2 border-t border-emerald-200 flex items-baseline justify-between">
+        <span className="text-sm font-semibold text-emerald-900">Totaal per maand</span>
+        <span className="text-2xl font-bold text-emerald-900">&euro;{liveTotaal}</span>
+      </div>
+      <p className="text-xs text-emerald-700">Excl. btw. Maandelijks opzegbaar.</p>
+    </div>
+  );
+}
+
+function PrijsRegel({ label, bedrag }: { label: string; bedrag: number }) {
+  return (
+    <div className="flex items-baseline justify-between text-sm text-emerald-800">
+      <span>{label}</span>
+      <span className="font-medium">&euro;{bedrag}</span>
+    </div>
+  );
+}
+
+function TeamlidRij({ index, form, role }: { index: number; form: any; role: 'owner' | 'admin' | 'member' }) {
+  const [open, setOpen] = useState(false);
+  const rolLabels = { owner: 'Hoofdgebruiker', admin: 'Extra hoofdgebruiker', member: 'Medewerker' };
+  const error = form.formState.errors.teamleden?.[index]?.email;
+  const currentPermissions: string[] = form.watch(`teamleden.${index}.permissions`) ?? [];
+
+  return (
+    <div className="rounded-lg border border-gray-200 overflow-hidden">
+      <div className="flex items-center gap-3 px-3 py-2 bg-gray-50">
+        <span className={cn(
+          'text-xs font-semibold px-2 py-0.5 rounded-full',
+          role === 'owner' ? 'bg-blue-100 text-blue-700' :
+          role === 'admin' ? 'bg-purple-100 text-purple-700' :
+          'bg-gray-200 text-gray-700'
+        )}>{rolLabels[role]}</span>
+        <Input
+          placeholder="e-mailadres"
+          className="h-8 flex-1 text-sm bg-white"
+          {...form.register(`teamleden.${index}.email`)}
+        />
+      </div>
+      {error && <p className="text-xs text-red-600 px-3 pb-1">{error.message}</p>}
+      {role === 'member' && (
+        <>
+          <button
+            type="button"
+            onClick={() => setOpen(!open)}
+            className="w-full text-xs text-emerald-700 font-medium px-3 py-1.5 flex items-center gap-1 hover:bg-emerald-50"
+          >
+            {open ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+            Permissies instellen ({currentPermissions.length} geselecteerd)
+          </button>
+          {open && (
+            <div className="px-3 py-3 border-t border-gray-100 space-y-4">
+              {PERMISSION_CATEGORIEEN.map((cat) => {
+                const perms = PERMISSIONS.filter((p) => p.categorie === cat);
+                return (
+                  <div key={cat}>
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">{cat}</p>
+                    <div className="grid grid-cols-2 gap-1">
+                      {perms.map((p) => {
+                        const checked = currentPermissions.includes(p.key);
+                        return (
+                          <label key={p.key} className="flex items-center gap-2 text-xs text-gray-700 cursor-pointer">
+                            <Checkbox
+                              checked={checked}
+                              onCheckedChange={(v) => {
+                                const next = new Set(currentPermissions);
+                                if (v) next.add(p.key); else next.delete(p.key);
+                                form.setValue(`teamleden.${index}.permissions`, Array.from(next));
+                              }}
+                            />
+                            {p.label}
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }
@@ -447,10 +654,7 @@ function PasswordStrength({ value }: { value: string }) {
     <div>
       <div className="flex gap-1 mt-1">
         {[0, 1, 2, 3].map((i) => (
-          <div
-            key={i}
-            className={cn('h-1 flex-1 rounded', i < score ? colors[score] : 'bg-gray-200')}
-          />
+          <div key={i} className={cn('h-1 flex-1 rounded', i < score ? colors[score] : 'bg-gray-200')} />
         ))}
       </div>
       {value && <p className="text-[11px] text-gray-500 mt-1">{label}</p>}
@@ -460,25 +664,21 @@ function PasswordStrength({ value }: { value: string }) {
 
 function Summary({ values, totaal }: { values: RegistrationValues; totaal: number }) {
   const betaald = (values.modules ?? []) as ModuleKey[];
+  const teamCount = values.teamleden.filter((t) => t.email.trim()).length;
   return (
     <div className="space-y-3">
       <Row label="Bedrijf" value={values.bedrijfsnaam} />
       <Row label="Contactpersoon" value={`${values.voornaam} ${values.achternaam}`} />
       <Row label="E-mail" value={values.email} />
-      <Row label="Aantal gebruikers" value={String(values.aantalGebruikers)} />
+      <Row label="Gebruikers" value={`${values.aantalOwners} hoofdgebr. · ${values.aantalAdmins} extra · ${values.aantalMembers} medewerkers`} />
+      {teamCount > 0 && <Row label="Uitnodigingen" value={`${teamCount} teamleden ontvangen een uitnodiging`} />}
       <Row
         label="Modules"
-        value={
-          betaald.length === 0
-            ? 'Alleen basispakket (CRM + Dashboard)'
-            : betaald.map((k) => MODULES.find((m) => m.key === k)?.naam).filter(Boolean).join(', ')
-        }
+        value={betaald.length === 0 ? 'Alleen basispakket (CRM + Dashboard)' : betaald.map((k) => MODULES.find((m) => m.key === k)?.naam).filter(Boolean).join(', ')}
       />
       <div className="flex items-baseline justify-between pt-3 border-t border-gray-200">
         <span className="text-sm font-medium text-gray-900">Totaal per maand</span>
-        <span className="text-xl font-bold text-emerald-700">
-          &euro;{totaal.toLocaleString('nl-NL')}
-        </span>
+        <span className="text-xl font-bold text-emerald-700">&euro;{totaal.toLocaleString('nl-NL')}</span>
       </div>
     </div>
   );

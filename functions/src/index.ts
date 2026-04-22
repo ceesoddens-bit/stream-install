@@ -6,33 +6,12 @@ admin.initializeApp();
 
 const db = admin.firestore();
 
-type Rol =
-  | "owner"
-  | "admin"
-  | "manager"
-  | "technician"
-  | "sales"
-  | "finance"
-  | "customer";
-
-// Roles that setUserRole may assign (owner is immutable after registration)
-const ASSIGNABLE_ROLES: Rol[] = [
-  "admin",
-  "manager",
-  "technician",
-  "sales",
-  "finance",
-  "customer",
-];
+type Rol = "owner" | "admin" | "member";
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-/**
- * Waits for users/{uid} to appear in Firestore after the client batch-commits
- * the user doc immediately after createUserWithEmailAndPassword.
- */
 async function waitForUserDoc(
   uid: string,
   maxAttempts = 6,
@@ -47,19 +26,79 @@ async function waitForUserDoc(
 }
 
 /**
- * Auth trigger: sets tenantId + role custom claims on every new user.
+ * Auth trigger: zet tenantId + role custom claims na het aanmaken van een account.
  *
- * The client writes users/{uid} with {tenantId, role} in a batch right after
- * createUserWithEmailAndPassword. We poll until the doc appears (max ~12 s),
- * then mirror those values as custom claims so Firestore rules can use them.
+ * Werkt voor zowel directe registratie (owner) als uitnodigingsflow (admin/member).
+ * Bij een uitnodiging: zoek het invite-document op basis van het e-mailadres
+ * en kopieer orgId, role en permissions naar het users/{uid} document.
  */
 export const onUserCreated = authV1.user().onCreate(async (user) => {
+  // Controleer eerst of er een openstaande uitnodiging is
+  const inviteSnap = await db
+    .collectionGroup("invites")
+    .where("email", "==", user.email)
+    .where("status", "==", "pending")
+    .limit(1)
+    .get();
+
+  if (!inviteSnap.empty) {
+    const inviteDoc = inviteSnap.docs[0];
+    const invite = inviteDoc.data();
+
+    const tenantId = invite.tenantId as string;
+    const role = invite.role as Rol;
+    const permissions: string[] = invite.permissions ?? [];
+
+    // Maak het users/{uid} document aan als het er nog niet is
+    const userRef = db.doc(`users/${user.uid}`);
+    const userSnap = await userRef.get();
+    if (!userSnap.exists) {
+      await userRef.set({
+        tenantId,
+        role,
+        email: user.email ?? "",
+        displayName: user.displayName ?? "",
+        permissions,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    } else {
+      await userRef.update({ permissions });
+    }
+
+    await admin.auth().setCustomUserClaims(user.uid, { tenantId, role });
+    await userRef.update({ claimsRefreshedAt: admin.firestore.FieldValue.serverTimestamp() });
+
+    // Markeer de uitnodiging als geaccepteerd
+    await inviteDoc.ref.update({
+      status: "accepted",
+      usedAt: admin.firestore.FieldValue.serverTimestamp(),
+      usedByUid: user.uid,
+    });
+
+    // Update tenant-aantallen
+    const tenantRef = db.doc(`tenants/${tenantId}`);
+    const tenantSnap = await tenantRef.get();
+    if (tenantSnap.exists) {
+      const field =
+        role === "owner" ? "aantalOwners" :
+        role === "admin" ? "aantalAdmins" :
+        "aantalMembers";
+
+      await tenantRef.update({
+        [field]: admin.firestore.FieldValue.increment(1),
+        aantalGebruikers: admin.firestore.FieldValue.increment(1),
+      });
+    }
+
+    console.log(`onUserCreated (invite): ${user.uid} — tenantId=${tenantId}, role=${role}`);
+    return;
+  }
+
+  // Geen uitnodiging gevonden → normale registratie (owner)
   const userDoc = await waitForUserDoc(user.uid);
 
   if (!userDoc?.tenantId || !userDoc?.role) {
-    console.error(
-      `onUserCreated: geen users/${user.uid} doc gevonden na maximale wachttijd. Claims niet gezet.`
-    );
+    console.error(`onUserCreated: geen users/${user.uid} doc gevonden. Claims niet gezet.`);
     return;
   }
 
@@ -69,24 +108,18 @@ export const onUserCreated = authV1.user().onCreate(async (user) => {
   };
 
   await admin.auth().setCustomUserClaims(user.uid, claims);
-
-  // Timestamp zodat de client weet wanneer hij een token-refresh moet forceren
   await db.doc(`users/${user.uid}`).update({
     claimsRefreshedAt: admin.firestore.FieldValue.serverTimestamp(),
   });
 
-  console.log(
-    `onUserCreated: claims gezet voor ${user.uid} — tenantId=${claims.tenantId}, role=${claims.role}`
-  );
+  console.log(`onUserCreated: claims gezet voor ${user.uid} — tenantId=${claims.tenantId}, role=${claims.role}`);
 });
 
 /**
- * Callable function: laat een owner de rol van een andere gebruiker binnen
- * dezelfde tenant wijzigen. Geeft een fout als de aanroeper geen owner is,
- * de doelgebruiker buiten de tenant valt, of de rol ongeldig is.
+ * Callable: wijzig de rol van een gebruiker binnen dezelfde tenant.
+ * Alleen owners mogen rollen wijzigen. Owners kunnen niet worden gedowngraded.
  *
- * Verwacht: { targetUid: string, newRole: Rol }
- * Retourneert: { success: true }
+ * Verwacht: { targetUid: string, newRole: 'admin' | 'member' }
  */
 export const setUserRole = onCall(async (request) => {
   if (!request.auth) {
@@ -99,10 +132,7 @@ export const setUserRole = onCall(async (request) => {
   };
 
   if (callerClaims.role !== "owner") {
-    throw new HttpsError(
-      "permission-denied",
-      "Alleen een owner kan gebruikersrollen wijzigen."
-    );
+    throw new HttpsError("permission-denied", "Alleen een owner kan gebruikersrollen wijzigen.");
   }
 
   const { targetUid, newRole } = request.data as {
@@ -114,58 +144,51 @@ export const setUserRole = onCall(async (request) => {
     throw new HttpsError("invalid-argument", "targetUid ontbreekt.");
   }
 
-  if (!newRole || !ASSIGNABLE_ROLES.includes(newRole as Rol)) {
-    throw new HttpsError(
-      "invalid-argument",
-      `Ongeldige rol. Kies uit: ${ASSIGNABLE_ROLES.join(", ")}.`
-    );
+  const assignable: Rol[] = ["admin", "member"];
+  if (!newRole || !assignable.includes(newRole as Rol)) {
+    throw new HttpsError("invalid-argument", `Ongeldige rol. Kies uit: ${assignable.join(", ")}.`);
   }
 
-  // Zelf-downgrade blokkeren
   if (targetUid === request.auth.uid) {
-    throw new HttpsError(
-      "invalid-argument",
-      "Je kunt je eigen rol niet wijzigen."
-    );
+    throw new HttpsError("invalid-argument", "Je kunt je eigen rol niet wijzigen.");
   }
 
-  // Verificeer dat de doelgebruiker in dezelfde tenant zit
   const targetRecord = await admin.auth().getUser(targetUid);
-  const targetClaims = (targetRecord.customClaims ?? {}) as {
-    tenantId?: string;
-    role?: Rol;
-  };
+  const targetClaims = (targetRecord.customClaims ?? {}) as { tenantId?: string; role?: Rol };
 
   if (targetClaims.tenantId !== callerClaims.tenantId) {
-    throw new HttpsError(
-      "permission-denied",
-      "Deze gebruiker behoort niet tot jouw organisatie."
-    );
+    throw new HttpsError("permission-denied", "Deze gebruiker behoort niet tot jouw organisatie.");
   }
 
-  // Owner-naar-owner promotie blokkeren (owner-rol is eenmalig bij registratie)
   if (targetClaims.role === "owner") {
-    throw new HttpsError(
-      "permission-denied",
-      "De rol van een owner kan niet worden gewijzigd."
-    );
+    throw new HttpsError("permission-denied", "De rol van een owner kan niet worden gewijzigd.");
   }
 
-  const updatedClaims = {
-    ...targetClaims,
-    role: newRole as Rol,
-  };
+  const oudRol: "admin" | "member" = targetClaims.role === "admin" ? "admin" : "member";
+  const nieuwRol = newRole as "admin" | "member";
 
-  await admin.auth().setCustomUserClaims(targetUid, updatedClaims);
+  await admin.auth().setCustomUserClaims(targetUid, {
+    ...targetClaims,
+    role: nieuwRol,
+  });
 
   await db.doc(`users/${targetUid}`).update({
-    role: newRole,
+    role: nieuwRol,
     claimsRefreshedAt: admin.firestore.FieldValue.serverTimestamp(),
   });
 
-  console.log(
-    `setUserRole: ${request.auth.uid} heeft rol van ${targetUid} gewijzigd naar ${newRole}`
-  );
+  // Pas tenant-aantallen aan
+  const tenantRef = db.doc(`tenants/${callerClaims.tenantId}`);
+  const oudField = oudRol === "admin" ? "aantalAdmins" : "aantalMembers";
+  const nieuwField = nieuwRol === "admin" ? "aantalAdmins" : "aantalMembers";
 
+  if (oudField !== nieuwField) {
+    await tenantRef.update({
+      [oudField]: admin.firestore.FieldValue.increment(-1),
+      [nieuwField]: admin.firestore.FieldValue.increment(1),
+    });
+  }
+
+  console.log(`setUserRole: ${request.auth.uid} → ${targetUid}: ${oudRol} → ${nieuwRol}`);
   return { success: true };
 });

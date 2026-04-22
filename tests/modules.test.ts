@@ -1,29 +1,33 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
-import { berekenMaandprijs, BASIS_PRIJS_PER_GEBRUIKER, MODULE_MAP } from '../src/lib/modules';
+import { berekenMaandprijs, PRIJS_OWNER, PRIJS_ADMIN, PRIJS_MEMBER, MODULE_MAP } from '../src/lib/modules';
 
-test('berekenMaandprijs berekent correcte prijzen', (t) => {
-  // Test 1: Basis (geen extra modules, 1 user)
-  let prijs = berekenMaandprijs(1, []);
-  assert.strictEqual(prijs, BASIS_PRIJS_PER_GEBRUIKER, '1 user zonder modules = basisprijs');
+test('berekenMaandprijs berekent correcte prijzen', () => {
+  // 1 owner, geen modules = enkel owner basisprijs
+  let prijs = berekenMaandprijs(1, 0, 0, []);
+  assert.strictEqual(prijs, PRIJS_OWNER, '1 owner zonder modules');
 
-  // Test 2: Meerdere gebruikers, geen modules
-  prijs = berekenMaandprijs(5, []);
-  assert.strictEqual(prijs, BASIS_PRIJS_PER_GEBRUIKER * 5, '5 users zonder modules = 5 * basisprijs');
+  // 0 owners telt als 1 (minimum)
+  prijs = berekenMaandprijs(0, 0, 0, []);
+  assert.strictEqual(prijs, PRIJS_OWNER, '0 owners telt als 1');
 
-  // Test 3: Gebruikers kan niet minder dan 1 zijn
-  prijs = berekenMaandprijs(0, []);
-  assert.strictEqual(prijs, BASIS_PRIJS_PER_GEBRUIKER, '0 users telt als 1 user');
+  // 1 owner + 1 admin + 1 member
+  prijs = berekenMaandprijs(1, 1, 1, []);
+  assert.strictEqual(prijs, PRIJS_OWNER + PRIJS_ADMIN + PRIJS_MEMBER, '1+1+1 zonder modules');
 
-  // Test 4: Basis + 1 betaalde module ('offertes' is 15 euro)
-  prijs = berekenMaandprijs(1, ['offertes']);
-  assert.strictEqual(prijs, BASIS_PRIJS_PER_GEBRUIKER + 15, '1 user + offertes module');
+  // Modules worden doorberekend aan owners + admins (betaalde gebruikers)
+  prijs = berekenMaandprijs(1, 0, 0, ['offertes']); // offertes = €15
+  assert.strictEqual(prijs, PRIJS_OWNER + 15, '1 owner + offertes module');
 
-  // Test 5: Meerdere gebruikers + 1 betaalde module
-  prijs = berekenMaandprijs(3, ['offertes']);
-  assert.strictEqual(prijs, (BASIS_PRIJS_PER_GEBRUIKER + 15) * 3, '3 users + offertes module');
+  // Members betalen niet mee voor modules
+  prijs = berekenMaandprijs(1, 0, 3, ['offertes']);
+  assert.strictEqual(prijs, PRIJS_OWNER + 15 + PRIJS_MEMBER * 3, 'modules niet voor members');
 
-  // Test 6: Inbegrepen modules tellen niet mee in prijs (bijv 'crm')
-  prijs = berekenMaandprijs(2, ['crm', 'dashboarding']);
-  assert.strictEqual(prijs, BASIS_PRIJS_PER_GEBRUIKER * 2, 'inbegrepen modules kosten niets extra');
+  // 2 betaalde gebruikers → module × 2
+  prijs = berekenMaandprijs(1, 1, 0, ['offertes']);
+  assert.strictEqual(prijs, PRIJS_OWNER + PRIJS_ADMIN + 15 * 2, '2 betaalde gebr + offertes');
+
+  // Inbegrepen modules kosten niets extra
+  prijs = berekenMaandprijs(2, 0, 0, ['crm', 'dashboarding']);
+  assert.strictEqual(prijs, PRIJS_OWNER * 2, 'inbegrepen modules kosten niets extra');
 });

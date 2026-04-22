@@ -116,7 +116,7 @@ export function AcceptInvitePage() {
         await sendEmailVerification(cred.user);
       } catch {}
 
-      navigate(invite.role === 'customer' ? '/portaal' : '/dashboard', { replace: true });
+      navigate('/dashboard', { replace: true });
     } catch (err: any) {
       if (err?.code === 'auth/email-already-in-use') {
         setSubmitError('Er bestaat al een account met dit e-mailadres. Log in en vraag een nieuwe uitnodiging aan.');

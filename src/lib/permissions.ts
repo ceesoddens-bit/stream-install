@@ -1,80 +1,90 @@
-import { Rol } from './tenantTypes';
+// Per-gebruiker permissies — alleen relevant voor members.
+// Owners en admins hebben altijd volledige toegang.
 
-// Permission format: 'module.action' (e.g. 'offertes.create').
-export type Action = 'view' | 'create' | 'update' | 'delete' | 'manage';
-export type PermissionKey = string;
+export type PermissionKey =
+  // CRM
+  | 'crm.contacten.bekijken'
+  | 'crm.contacten.aanmaken'
+  | 'crm.contacten.bewerken'
+  | 'crm.contacten.verwijderen'
+  // Projecten
+  | 'projecten.bekijken'
+  | 'projecten.aanmaken'
+  | 'projecten.bewerken'
+  | 'projecten.verwijderen'
+  // Offertes
+  | 'offertes.bekijken'
+  | 'offertes.aanmaken'
+  | 'offertes.versturen'
+  // Facturering
+  | 'facturen.bekijken'
+  | 'facturen.aanmaken'
+  // Planning
+  | 'planning.bekijken'
+  | 'planning.bewerken'
+  // Documenten
+  | 'documenten.bekijken'
+  | 'documenten.uploaden'
+  | 'documenten.verwijderen'
+  // Formulieren
+  | 'formulieren.invullen'
+  | 'formulieren.aanmaken'
+  // Voorraad
+  | 'voorraad.bekijken'
+  | 'voorraad.bewerken'
+  // Rapportages
+  | 'rapportages.bekijken';
 
-const ALL: Action[] = ['view', 'create', 'update', 'delete', 'manage'];
-
-// Rol -> module -> allowed actions
-const MATRIX: Record<Rol, Record<string, Action[]>> = {
-  owner: { '*': ALL },
-  admin: { '*': ALL },
-  manager: {
-    crm: ALL,
-    dashboarding: ['view'],
-    projectmanagement: ALL,
-    planning: ALL,
-    offertes: ALL,
-    facturering: ['view', 'create', 'update'],
-    formulieren: ALL,
-    documenten: ALL,
-    voorraadbeheer: ALL,
-    automatiseringen: ['view', 'update'],
-    ai_assistent: ['view', 'create'],
-    tickets: ALL,
-    hours: ALL,
-    tasks: ALL,
-    users: ['view'],
-    settings: ['view'],
-  },
-  technician: {
-    crm: ['view'],
-    dashboarding: ['view'],
-    projectmanagement: ['view', 'update'],
-    planning: ['view', 'update'],
-    formulieren: ['view', 'create', 'update'],
-    voorraadbeheer: ['view', 'update'],
-    tickets: ['view', 'create', 'update'],
-    hours: ['view', 'create', 'update'],
-    tasks: ['view', 'create', 'update'],
-    ai_assistent: ['view'],
-  },
-  sales: {
-    crm: ALL,
-    dashboarding: ['view'],
-    offertes: ALL,
-    facturering: ['view'],
-    projectmanagement: ['view', 'create', 'update'],
-    planning: ['view'],
-    ai_assistent: ['view', 'create'],
-    tickets: ['view', 'create', 'update'],
-  },
-  finance: {
-    crm: ['view'],
-    dashboarding: ['view'],
-    offertes: ['view', 'update'],
-    facturering: ALL,
-    projectmanagement: ['view'],
-  },
-  customer: {
-    klantportaal: ALL,
-  },
-};
-
-export function hasPermission(role: Rol | null | undefined, permission: PermissionKey): boolean {
-  if (!role) return false;
-  const [module, action] = permission.split('.') as [string, Action];
-  if (!module || !action) return false;
-  const rolePerms = MATRIX[role];
-  if (!rolePerms) return false;
-  const wildcard = rolePerms['*'];
-  if (wildcard && wildcard.includes(action)) return true;
-  const perms = rolePerms[module];
-  if (!perms) return false;
-  return perms.includes(action);
+export interface PermissionDefinitie {
+  key: PermissionKey;
+  label: string;
+  categorie: string;
 }
 
-export function isElevated(role: Rol | null | undefined): boolean {
-  return role === 'owner' || role === 'admin';
+export const PERMISSIONS: PermissionDefinitie[] = [
+  { key: 'crm.contacten.bekijken', label: 'Contacten bekijken', categorie: 'CRM' },
+  { key: 'crm.contacten.aanmaken', label: 'Contacten aanmaken', categorie: 'CRM' },
+  { key: 'crm.contacten.bewerken', label: 'Contacten bewerken', categorie: 'CRM' },
+  { key: 'crm.contacten.verwijderen', label: 'Contacten verwijderen', categorie: 'CRM' },
+  { key: 'projecten.bekijken', label: 'Projecten bekijken', categorie: 'Projecten' },
+  { key: 'projecten.aanmaken', label: 'Projecten aanmaken', categorie: 'Projecten' },
+  { key: 'projecten.bewerken', label: 'Projecten bewerken', categorie: 'Projecten' },
+  { key: 'projecten.verwijderen', label: 'Projecten verwijderen', categorie: 'Projecten' },
+  { key: 'offertes.bekijken', label: 'Offertes bekijken', categorie: 'Offertes' },
+  { key: 'offertes.aanmaken', label: 'Offertes aanmaken', categorie: 'Offertes' },
+  { key: 'offertes.versturen', label: 'Offertes versturen', categorie: 'Offertes' },
+  { key: 'facturen.bekijken', label: 'Facturen bekijken', categorie: 'Facturering' },
+  { key: 'facturen.aanmaken', label: 'Facturen aanmaken', categorie: 'Facturering' },
+  { key: 'planning.bekijken', label: 'Planning bekijken', categorie: 'Planning' },
+  { key: 'planning.bewerken', label: 'Planning bewerken', categorie: 'Planning' },
+  { key: 'documenten.bekijken', label: 'Documenten bekijken', categorie: 'Documenten' },
+  { key: 'documenten.uploaden', label: 'Documenten uploaden', categorie: 'Documenten' },
+  { key: 'documenten.verwijderen', label: 'Documenten verwijderen', categorie: 'Documenten' },
+  { key: 'formulieren.invullen', label: 'Formulieren invullen', categorie: 'Formulieren' },
+  { key: 'formulieren.aanmaken', label: 'Formulieren aanmaken', categorie: 'Formulieren' },
+  { key: 'voorraad.bekijken', label: 'Voorraad bekijken', categorie: 'Voorraad' },
+  { key: 'voorraad.bewerken', label: 'Voorraad bewerken', categorie: 'Voorraad' },
+  { key: 'rapportages.bekijken', label: 'Rapportages bekijken', categorie: 'Rapportages' },
+];
+
+export const PERMISSION_CATEGORIEEN = Array.from(
+  new Set(PERMISSIONS.map((p) => p.categorie))
+);
+
+export const DEFAULT_MEMBER_PERMISSIONS: PermissionKey[] = [
+  'crm.contacten.bekijken',
+  'projecten.bekijken',
+  'planning.bekijken',
+  'documenten.bekijken',
+  'formulieren.invullen',
+];
+
+export function heeftPermissie(
+  role: string | null | undefined,
+  permission: PermissionKey,
+  userPermissions: PermissionKey[] = []
+): boolean {
+  if (!role) return false;
+  if (role === 'owner' || role === 'admin') return true;
+  return userPermissions.includes(permission);
 }

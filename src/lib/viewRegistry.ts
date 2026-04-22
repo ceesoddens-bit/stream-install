@@ -95,7 +95,7 @@ export const VIEW_REGISTRY: Record<string, ViewMeta> = {
 
   [VIEW_IDS.settings]: { id: VIEW_IDS.settings, label: 'Instellingen', requiredRoles: ['owner','admin'] },
   [VIEW_IDS.settings_subscription]: { id: VIEW_IDS.settings_subscription, label: 'Abonnement', requiredRoles: ['owner','admin'] },
-  [VIEW_IDS.management_dashboard]: { id: VIEW_IDS.management_dashboard, label: 'Management', requiredRoles: ['owner','admin','manager'] },
+  [VIEW_IDS.management_dashboard]: { id: VIEW_IDS.management_dashboard, label: 'Management', requiredRoles: ['owner','admin'] },
 };
 
 export const ADMINISTRATION_VIEW_IDS = [

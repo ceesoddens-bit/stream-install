@@ -1,4 +1,9 @@
-export const BASIS_PRIJS_PER_GEBRUIKER = 29;
+export const PRIJS_OWNER = 29;
+export const PRIJS_ADMIN = 19;
+export const PRIJS_MEMBER = 9;
+
+/** @deprecated Gebruik PRIJS_OWNER — blijft voor backward-compat met Stripe sync */
+export const BASIS_PRIJS_PER_GEBRUIKER = PRIJS_OWNER;
 
 export type ModuleKey =
   | 'crm'
@@ -28,7 +33,7 @@ export interface ModuleDefinitie {
 
 export const MODULES: ModuleDefinitie[] = [
   { key: 'crm', naam: 'CRM', beschrijving: 'Contacten & bedrijven', prijsPerGebruiker: 0, inbegrepen: true, categorie: 'basis' },
-  { key: 'dashboarding', naam: 'Dashboarding', beschrijving: 'Overzichten en KPI\u2019s', prijsPerGebruiker: 0, inbegrepen: true, categorie: 'basis' },
+  { key: 'dashboarding', naam: 'Dashboarding', beschrijving: 'Overzichten en KPI\'s', prijsPerGebruiker: 0, inbegrepen: true, categorie: 'basis' },
   { key: 'offertes', naam: 'Offertes', beschrijving: 'Offertes maken & versturen', prijsPerGebruiker: 15, inbegrepen: false, categorie: 'verkoop' },
   { key: 'facturering', naam: 'Facturering', beschrijving: 'Facturen + betalingen', prijsPerGebruiker: 15, inbegrepen: false, categorie: 'administratie' },
   { key: 'projectmanagement', naam: 'Projectmanagement', beschrijving: 'Projecten, tickets, uren & taken', prijsPerGebruiker: 15, inbegrepen: false, categorie: 'operatie' },
@@ -48,13 +53,28 @@ export const MODULE_MAP: Record<ModuleKey, ModuleDefinitie> = MODULES.reduce((ac
 
 export const INBEGREPEN_MODULES: ModuleKey[] = MODULES.filter(m => m.inbegrepen).map(m => m.key);
 
-export function berekenMaandprijs(aantalGebruikers: number, modules: ModuleKey[]): number {
-  const users = Math.max(1, aantalGebruikers);
-  const basis = BASIS_PRIJS_PER_GEBRUIKER * users;
-  const modulesSom = modules
+/**
+ * Berekent de totale maandprijs.
+ * Modulekosten worden alleen doorberekend aan owners + admins (betaalde gebruikers).
+ * Members betalen alleen hun basistoegang.
+ */
+export function berekenMaandprijs(
+  aantalOwners: number,
+  aantalAdmins: number,
+  aantalMembers: number,
+  modules: ModuleKey[]
+): number {
+  const owners = Math.max(1, aantalOwners);
+  const admins = Math.max(0, aantalAdmins);
+  const members = Math.max(0, aantalMembers);
+  const betaaldeGebruikers = owners + admins;
+
+  const gebruikersKosten = owners * PRIJS_OWNER + admins * PRIJS_ADMIN + members * PRIJS_MEMBER;
+  const moduleKosten = modules
     .filter(k => !INBEGREPEN_MODULES.includes(k))
     .reduce((sum, k) => sum + (MODULE_MAP[k]?.prijsPerGebruiker ?? 0), 0);
-  return basis + modulesSom * users;
+
+  return gebruikersKosten + moduleKosten * betaaldeGebruikers;
 }
 
 export function isInbegrepenModule(key: ModuleKey): boolean {
