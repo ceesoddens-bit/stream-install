@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { inventoryService, InventoryItem } from '@/lib/inventoryService';
+import { PermissionGuard } from '@/components/auth/PermissionGuard';
 
 const tabs = [
   { id: 'overzicht', label: 'Overzicht' },
@@ -158,13 +159,15 @@ export function InventoryLayout({ initialTab }: InventoryLayoutProps) {
               <Download className="h-3.5 w-3.5" />
               Exporteren
             </Button>
-            <Button
-              size="sm"
-              className="h-8 gap-2 bg-blue-600 hover:bg-blue-700 text-xs font-semibold ml-2 shadow-sm"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              Nieuw Artikel
-            </Button>
+            <PermissionGuard permission="voorraad.bewerken">
+              <Button
+                size="sm"
+                className="h-8 gap-2 bg-blue-600 hover:bg-blue-700 text-xs font-semibold ml-2 shadow-sm"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Nieuw Artikel
+              </Button>
+            </PermissionGuard>
           </div>
         </div>
 

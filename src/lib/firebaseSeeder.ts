@@ -85,11 +85,8 @@ interface DemoUser {
 const DEMO_USERS: DemoUser[] = [
   { key: 'owner', email: 'owner@demo.streaminstall.app', displayName: 'Olivia Owner', role: 'owner' },
   { key: 'admin', email: 'admin@demo.streaminstall.app', displayName: 'Arend Admin', role: 'admin' },
-  { key: 'manager', email: 'manager@demo.streaminstall.app', displayName: 'Marit Manager', role: 'manager' },
-  { key: 'sales', email: 'sales@demo.streaminstall.app', displayName: 'Sander Sales', role: 'sales' },
-  { key: 'finance', email: 'finance@demo.streaminstall.app', displayName: 'Fenna Finance', role: 'finance' },
-  { key: 'technician', email: 'tech@demo.streaminstall.app', displayName: 'Theo Technician', role: 'technician' },
-  { key: 'customer', email: 'klant@demo.streaminstall.app', displayName: 'Klaas Klant', role: 'customer' },
+  { key: 'member1', email: 'monteur@demo.streaminstall.app', displayName: 'Mark Monteur', role: 'member' },
+  { key: 'member2', email: 'medewerker@demo.streaminstall.app', displayName: 'Sandra Service', role: 'member' },
 ];
 
 const ALL_MODULES: ModuleKey[] = MODULES.map(m => m.key);
@@ -167,14 +164,20 @@ async function seedUsers(): Promise<Record<string, { uid: string; email: string;
 }
 
 async function seedTenant(ownerUid: string) {
+  const aantalOwners = DEMO_USERS.filter(u => u.role === 'owner').length;
+  const aantalAdmins = DEMO_USERS.filter(u => u.role === 'admin').length;
+  const aantalMembers = DEMO_USERS.filter(u => u.role === 'member').length;
   const aantalGebruikers = DEMO_USERS.length;
   const tenant: Tenant = {
     id: DEMO_TENANT_ID,
     naam: 'Demo Installatiebedrijf',
     plan: 'volledig',
     aantalGebruikers,
+    aantalOwners,
+    aantalAdmins,
+    aantalMembers,
     actiefModules: ALL_MODULES,
-    maandprijs: berekenMaandprijs(aantalGebruikers, ALL_MODULES),
+    maandprijs: berekenMaandprijs(aantalOwners, aantalAdmins, aantalMembers, ALL_MODULES),
     abonnementStatus: 'active',
     abonnementStartDatum: Date.now(),
     branding: {

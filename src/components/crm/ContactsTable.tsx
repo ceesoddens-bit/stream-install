@@ -37,7 +37,7 @@ export function ContactsTable() {
     if (selectedRows.length === contacts.length) {
       setSelectedRows([]);
     } else {
-      setSelectedRows(contacts.map((c) => c.id!).filter(Boolean));
+      setSelectedRows(contacts.map((c) => c.id).filter((id): id is string => !!id));
     }
   };
 
@@ -70,8 +70,8 @@ export function ContactsTable() {
             <TableRow key={contact.id} className="hover:bg-gray-50/50 transition-colors group">
               <TableCell>
                 <Checkbox 
-                  checked={selectedRows.includes(contact.id!)}
-                  onCheckedChange={() => toggleRow(contact.id!)}
+                  checked={contact.id ? selectedRows.includes(contact.id) : false}
+                  onCheckedChange={() => contact.id && toggleRow(contact.id)}
                 />
               </TableCell>
               <TableCell className="text-sm font-medium text-gray-900">{contact.firstName} {contact.lastName}</TableCell>
@@ -98,7 +98,7 @@ export function ContactsTable() {
               </TableCell>
               <TableCell>
                 <div className="flex flex-wrap gap-1">
-                  {contact.tags.map(tag => (
+                  {contact.tags?.map(tag => (
                     <Badge key={tag} variant="secondary" className="text-[10px] px-1.5 py-0 font-medium bg-gray-100 text-gray-600 border-transparent">
                       {tag}
                     </Badge>

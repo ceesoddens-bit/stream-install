@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Send, Paperclip, Trash2, Clock, User, Calendar as CalendarIcon, MessageSquare } from 'lucide-react';
 import { ticketService, Ticket, TicketComment } from '@/lib/ticketService';
+import { teamService, Technician } from '@/lib/teamService';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -23,6 +24,15 @@ export function TicketSidePanel({ ticket, onClose }: TicketSidePanelProps) {
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [assignee, setAssignee] = useState(ticket.assigneeId || '');
   const [slaDate, setSlaDate] = useState(ticket.slaDate || '');
+  const [startTime, setStartTime] = useState(ticket.startTime || '08:00');
+  const [endTime, setEndTime] = useState(ticket.endTime || '09:00');
+  const [hasChanges, setHasChanges] = useState(false);
+  const [techs, setTechs] = useState<Technician[]>([]);
+
+  useEffect(() => {
+    const unsubscribe = teamService.subscribeToTechnicians(setTechs);
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     if (!ticket.id) return;
@@ -48,6 +58,20 @@ export function TicketSidePanel({ ticket, onClose }: TicketSidePanelProps) {
   const handleDeleteComment = async (commentId: string) => {
     if (!ticket.id) return;
     await ticketService.deleteComment(ticket.id, commentId);
+  };
+
+  const handleSaveDetails = async () => {
+    if (!ticket.id) return;
+    setIsSubmitting(true);
+    await ticketService.updateTicket(ticket.id, {
+      assigneeId: assignee,
+      slaDate: slaDate,
+      startTime: startTime,
+      endTime: endTime
+    });
+    setHasChanges(false);
+    setIsSubmitting(false);
+    toast.success('Wijzigingen opgeslagen');
   };
 
   const handleUpdateTicket = async (updates: Partial<Ticket>) => {
@@ -118,17 +142,18 @@ export function TicketSidePanel({ ticket, onClose }: TicketSidePanelProps) {
                   value={assignee}
                   onChange={(e) => {
                     setAssignee(e.target.value);
-                    handleUpdateTicket({ assigneeId: e.target.value });
+                    setHasChanges(true);
                   }}
                   className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 focus:bg-white outline-none"
                 >
                   <option value="">Niet toegewezen</option>
-                  <option value="user-1">Jan Jansen</option>
-                  <option value="user-2">Piet Pieters</option>
+                  {techs.map(tech => (
+                    <option key={tech.id} value={tech.id}>{tech.name}</option>
+                  ))}
                 </select>
               </div>
               <div>
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 block">SLA Deadline</label>
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 block">Datum</label>
                 <div className="relative">
                   <CalendarIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <input 
@@ -136,13 +161,52 @@ export function TicketSidePanel({ ticket, onClose }: TicketSidePanelProps) {
                     value={slaDate}
                     onChange={(e) => {
                       setSlaDate(e.target.value);
-                      handleUpdateTicket({ slaDate: e.target.value });
+                      setHasChanges(true);
                     }}
                     className="w-full text-sm border border-gray-200 rounded-lg pl-9 pr-3 py-2 bg-gray-50 focus:bg-white outline-none"
                   />
                 </div>
               </div>
             </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 block">Starttijd</label>
+                <input 
+                  type="time" 
+                  value={startTime}
+                  onChange={(e) => {
+                    setStartTime(e.target.value);
+                    setHasChanges(true);
+                  }}
+                  className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 focus:bg-white outline-none"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 block">Eindtijd</label>
+                <input 
+                  type="time" 
+                  value={endTime}
+                  onChange={(e) => {
+                    setEndTime(e.target.value);
+                    setHasChanges(true);
+                  }}
+                  className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 focus:bg-white outline-none"
+                />
+              </div>
+            </div>
+
+            {hasChanges && (
+              <div className="pt-2">
+                <Button 
+                  onClick={handleSaveDetails} 
+                  disabled={isSubmitting}
+                  className="w-full bg-emerald-800 hover:bg-emerald-700 text-white font-bold h-10 shadow-lg shadow-emerald-800/10"
+                >
+                  {isSubmitting ? 'Opslaan...' : 'Wijzigingen Opslaan'}
+                </Button>
+              </div>
+            )}
 
             <div>
               <div className="flex items-center justify-between mb-1">

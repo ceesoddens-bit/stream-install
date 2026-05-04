@@ -1,10 +1,11 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { doc, onSnapshot, DocumentData } from 'firebase/firestore';
-import { onAuthStateChanged, User } from 'firebase/auth';
+import { onAuthStateChanged, signOut, User } from 'firebase/auth';
 import { auth, db, setCurrentTenantId } from './firebase';
 import { Tenant, UserDoc, Rol } from './tenantTypes';
 import { heeftToegang } from './moduleAccess';
 import { ModuleKey } from './modules';
+import { PermissionKey, heeftPermissie as checkPermissie } from './permissions';
 
 interface TenantContextValue {
   authUser: User | null;
@@ -14,6 +15,8 @@ interface TenantContextValue {
   role: Rol | null;
   actiefModules: ModuleKey[];
   heeftToegang: (key: ModuleKey) => boolean;
+  permissions: PermissionKey[];
+  heeftPermissie: (permission: PermissionKey) => boolean;
   updateTenantModules: (modules: string[]) => Promise<void>;
   loading: boolean;
   authReady: boolean;
@@ -29,11 +32,14 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
   const [authReady, setAuthReady] = useState(false);
   const [userReady, setUserReady] = useState(false);
   const [tenantReady, setTenantReady] = useState(false);
-
+  // Gate that prevents the tenant listener from starting before the JWT
+  // token contains the custom claims (tenantId / role). Without this guard
+  // Firestore uses a stale cached token and returns permission-denied.
+  const [claimsVerified, setClaimsVerified] = useState(false);
 
   useEffect(() => {
     if (!auth) {
-      console.error("Auth is not initialized");
+      console.error('Auth is not initialized');
       setAuthReady(true);
       setUserReady(true);
       setTenantReady(true);
@@ -46,39 +52,67 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
         setUserDoc(null);
         setTenant(null);
         setCurrentTenantId(null);
+        setClaimsVerified(false);
         setUserReady(true);
         setTenantReady(true);
       } else {
+        setClaimsVerified(false);
         setUserReady(false);
         setTenantReady(false);
       }
     });
   }, []);
 
-
   useEffect(() => {
     if (!authUser) return;
     const ref = doc(db, 'users', authUser.uid);
 
-
     return onSnapshot(ref, async (snap) => {
       if (snap.exists()) {
         const data = snap.data() as DocumentData;
-        setUserDoc({ uid: authUser.uid, ...(data as Omit<UserDoc, 'uid'>) });
-        
-        // Force refresh token om nieuwe custom claims (tenantId, role) op te halen
-        try {
-          await authUser.getIdToken(true);
-        } catch (err) {
-          console.error("Fout bij verversen ID token:", err);
+
+        // Wait for the onUserCreated CF to set custom claims (tenantId, role) before
+        // triggering the tenant listener — without claims the Firestore rules deny access.
+        // For newly registered accounts this may take a few seconds while the CF runs.
+        let claimsOk = false;
+        for (let i = 0; i < 5; i++) {
+          try {
+            const result = await authUser.getIdTokenResult(true);
+            if (result.claims['tenantId']) {
+              claimsOk = true;
+              break;
+            }
+          } catch (err: any) {
+            // Token refresh failed (network error, revoked token, etc.)
+            console.error('Token refresh mislukt, sessie beëindigd:', err?.code, err?.message);
+            await signOut(auth);
+            return;
+          }
+          if (i < 4) await new Promise(r => setTimeout(r, 2000));
         }
+
+        if (!claimsOk) {
+          // Custom claims missing even after polling. This happens for accounts that were
+          // created before onUserCreated was deployed. Use scripts/set-claims.cjs to fix.
+          console.error(
+            'Custom claims ontbreken voor uid=' + authUser.uid + '. ' +
+            'Voer scripts/set-claims.cjs uit om het account te herstellen. Sessie beëindigd.'
+          );
+          await signOut(auth);
+          return;
+        }
+
+        // Mark claims as verified so the tenant listener is allowed to start.
+        // The token was already force-refreshed above, so Firestore will use the up-to-date JWT.
+        setClaimsVerified(true);
+        setUserDoc({ uid: authUser.uid, ...(data as Omit<UserDoc, 'uid'>) });
       } else {
         setUserDoc(null);
-        setTenantReady(true); // No user doc means no tenant doc to wait for
+        setTenantReady(true);
       }
       setUserReady(true);
     }, (error) => {
-      console.error("onSnapshot users error:", error);
+      console.error('onSnapshot users error:', error);
       setUserDoc(null);
       setUserReady(true);
       setTenantReady(true);
@@ -92,7 +126,11 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
       setTenantReady(true);
       return;
     }
-    if (!userDoc?.tenantId) return;
+    // Wait until the JWT token has been refreshed with the correct custom
+    // claims before opening the tenant listener. Firestore evaluates rules
+    // against the token that was active when the listener was registered;
+    // starting too early causes a permission-denied error.
+    if (!userDoc?.tenantId || !claimsVerified) return;
 
     setCurrentTenantId(userDoc.tenantId);
     const ref = doc(db, 'tenants', userDoc.tenantId);
@@ -104,102 +142,39 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
       }
       setTenantReady(true);
     }, (error) => {
-      console.error("onSnapshot tenants error:", error);
+      console.error('onSnapshot tenants error:', error);
       setTenantReady(true);
     });
-  }, [userDoc?.tenantId, userReady]);
-
-
-
-  // Fase 2 - Stripe Integratie (Webhook Sync)
-  // Hier luisteren we naar de `customers/{uid}/subscriptions` collectie die door de firestore-stripe-payments 
-  // extension wordt geüpdatet. Als er een wijziging is, kopieer je de status naar het tenant document.
-  useEffect(() => {
-    if (!authUser?.uid || !userDoc?.tenantId) return;
-
-    const setupSync = async () => {
-      const { collection, query, onSnapshot, limit, orderBy } = await import('firebase/firestore');
-      const { getModuleKeyFromPrice } = await import('./stripe');
-      const { INBEGREPEN_MODULES } = await import('./modules');
-      
-      const subsRef = collection(db, `customers/${authUser.uid}/subscriptions`);
-      // Haal het meest recente actieve of trialing abonnement op
-      const q = query(subsRef, orderBy('created', 'desc'), limit(1));
-      
-      return onSnapshot(q, async (snap) => {
-        if (!snap.empty) {
-          const subDoc = snap.docs[0];
-          const subData = subDoc.data();
-          
-          // Afleiden van actieve modules en aantal gebruikers uit de subscription items
-          const items = subData.items || [];
-          const modulesFromStripe: any[] = [];
-          let userCount = 1;
-
-          items.forEach((item: any) => {
-            const priceId = item.price.id;
-            const key = getModuleKeyFromPrice(priceId);
-            if (key === 'basis') {
-              userCount = item.quantity || 1;
-            } else if (key && key !== 'basis') {
-              modulesFromStripe.push(key);
-            }
-          });
-
-          const { updateDoc, doc } = await import('firebase/firestore');
-          const tenantRef = doc(db, 'tenants', userDoc.tenantId);
-          
-          // We behouden de inbegrepen modules en voegen de betaalde modules uit Stripe toe
-          const finalModules = Array.from(new Set([...INBEGREPEN_MODULES, ...modulesFromStripe]));
-
-          await updateDoc(tenantRef, {
-            stripeSubscriptionId: subDoc.id,
-            abonnementStatus: subData.status, // bijv. 'active', 'trialing', 'canceled', 'past_due'
-            abonnementEindDatum: subData.current_period_end ? subData.current_period_end.toMillis() : null,
-            cancel_at_period_end: subData.cancel_at_period_end || false,
-            actiefModules: finalModules,
-            aantalGebruikers: userCount,
-            updatedAt: new Date()
-          });
-        }
-      });
-    };
-
-    let unsubscribe: () => void;
-    setupSync().then(unsub => { unsubscribe = unsub; });
-    
-    return () => { if (unsubscribe) unsubscribe(); };
-  }, [authUser?.uid, userDoc?.tenantId]);
+  }, [userDoc?.tenantId, userReady, claimsVerified]);
 
   const updateTenantModules = async (modules: string[]) => {
     if (!userDoc?.tenantId) return;
     const { updateDoc } = await import('firebase/firestore');
     const ref = doc(db, 'tenants', userDoc.tenantId);
-    await updateDoc(ref, { 
-      actiefModules: modules,
-      updatedAt: new Date()
-    });
+    await updateDoc(ref, { actiefModules: modules, updatedAt: new Date() });
   };
-
 
   const value = useMemo<TenantContextValue>(() => {
     const actief = tenant?.actiefModules ?? [];
-    return {
+    const userPermissions = (userDoc?.permissions ?? []) as PermissionKey[];
+    const rol = userDoc?.role ?? null;
 
+    return {
       authUser,
       userDoc,
       tenant,
       tenantId: userDoc?.tenantId ?? null,
-      role: userDoc?.role ?? null,
+      role: rol,
       actiefModules: actief,
       heeftToegang: (key: ModuleKey) => heeftToegang(key, actief),
+      permissions: userPermissions,
+      heeftPermissie: (permission: PermissionKey) => checkPermissie(rol, permission, userPermissions),
       updateTenantModules,
       loading: !authReady || (!!authUser && (!userReady || !tenantReady)),
       authReady,
       isBetaald: tenant?.abonnementStatus === 'active' || tenant?.abonnementStatus === 'trialing',
     };
   }, [authUser, userDoc, tenant, authReady, userReady, tenantReady]);
-
 
   return <TenantContext.Provider value={value}>{children}</TenantContext.Provider>;
 }

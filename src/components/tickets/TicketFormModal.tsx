@@ -3,6 +3,7 @@ import {
   X, Paperclip, Send, Loader2, AlertCircle, FileIcon, ImageIcon, Package, User, Hash
 } from 'lucide-react';
 import { ticketService, Ticket } from '@/lib/ticketService';
+import { teamService, Technician } from '@/lib/teamService';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -15,7 +16,13 @@ interface TicketFormModalProps {
 export function TicketFormModal({ onClose }: TicketFormModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
+  const [techs, setTechs] = useState<Technician[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    const unsubscribe = teamService.subscribeToTechnicians(setTechs);
+    return () => unsubscribe();
+  }, []);
 
   const [formData, setFormData] = useState<Omit<Ticket, 'id' | 'createdAt' | 'attachments'>>({
     title: '',
@@ -25,7 +32,10 @@ export function TicketFormModal({ onClose }: TicketFormModalProps) {
     status: 'Nieuw',
     priority: 'Medium',
     userId: 'Huidige Gebruiker',
-    userImage: 'https://i.pravatar.cc/150?u=me'
+    userImage: 'https://i.pravatar.cc/150?u=me',
+    assigneeId: '',
+    startTime: '08:00',
+    endTime: '09:00'
   });
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -131,6 +141,54 @@ export function TicketFormModal({ onClose }: TicketFormModalProps) {
                    </button>
                 ))}
               </div>
+            </div>
+          </div>
+
+          {/* Assignee & Date */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest pl-1">Toegewezen aan</label>
+              <select 
+                className="w-full px-4 py-2 bg-gray-50 border border-gray-100 rounded-xl text-sm font-bold text-gray-700 outline-none focus:bg-white focus:border-emerald-600 transition-all cursor-pointer"
+                value={formData.assigneeId}
+                onChange={(e) => setFormData({ ...formData, assigneeId: e.target.value })}
+              >
+                <option value="">Niet toegewezen</option>
+                {techs.map(tech => (
+                  <option key={tech.id} value={tech.id}>{tech.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest pl-1">Datum</label>
+              <input 
+                type="date"
+                className="w-full px-4 py-2 bg-gray-50 border border-gray-100 rounded-xl text-sm font-bold text-gray-700 outline-none focus:bg-white focus:border-emerald-600 transition-all"
+                value={formData.date}
+                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+              />
+            </div>
+          </div>
+
+          {/* Times */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest pl-1">Starttijd</label>
+              <input 
+                type="time"
+                className="w-full px-4 py-2 bg-gray-50 border border-gray-100 rounded-xl text-sm font-bold text-gray-700 outline-none focus:bg-white focus:border-emerald-600 transition-all"
+                value={formData.startTime}
+                onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest pl-1">Eindtijd</label>
+              <input 
+                type="time"
+                className="w-full px-4 py-2 bg-gray-50 border border-gray-100 rounded-xl text-sm font-bold text-gray-700 outline-none focus:bg-white focus:border-emerald-600 transition-all"
+                value={formData.endTime}
+                onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
+              />
             </div>
           </div>
 

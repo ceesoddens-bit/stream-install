@@ -34,6 +34,7 @@ import { useTenant } from '@/lib/tenantContext';
 import { pdfService } from '@/lib/pdfService';
 import { automationService } from '@/lib/automationService';
 import { InvoiceTemplate } from '../pdf/InvoiceTemplate';
+import { PermissionGuard } from '@/components/auth/PermissionGuard';
 
 export function InvoicesTable() {
   const { tenant } = useTenant();
@@ -127,9 +128,11 @@ export function InvoicesTable() {
             </button>
           ))}
         </div>
-        <Button onClick={handleAdd} className="bg-emerald-800 hover:bg-emerald-700 text-white ml-4">
-          <Plus className="h-4 w-4 mr-2" /> Nieuwe Factuur
-        </Button>
+        <PermissionGuard permission="facturen.aanmaken">
+          <Button onClick={handleAdd} className="bg-emerald-800 hover:bg-emerald-700 text-white ml-4">
+            <Plus className="h-4 w-4 mr-2" /> Nieuwe Factuur
+          </Button>
+        </PermissionGuard>
       </div>
 
       {/* Table */}
@@ -173,18 +176,22 @@ export function InvoicesTable() {
                 <td className="p-3 text-sm text-gray-600">{invoice.contactName}</td>
                 <td className="p-3 text-right">
                   <div className="flex items-center justify-end gap-1">
-                    <Button onClick={() => handleEdit(invoice)} variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-blue-600">
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button onClick={() => handleDelete(invoice.id!)} variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-red-500">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <PermissionGuard permission="facturen.aanmaken">
+                      <Button onClick={() => handleEdit(invoice)} variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-blue-600">
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button onClick={() => handleDelete(invoice.id!)} variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-red-500">
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </PermissionGuard>
                     <Button onClick={() => handleDownloadPDF(invoice)} variant="ghost" size="icon" title="Download PDF" className="h-8 w-8 text-gray-400 hover:text-blue-600">
                       <Download className="h-4 w-4" />
                     </Button>
-                    <Button onClick={() => handleSendEmail(invoice)} variant="ghost" size="icon" title="Verzenden" className="h-8 w-8 text-gray-400 hover:text-blue-600">
-                      <Send className="h-4 w-4" />
-                    </Button>
+                    <PermissionGuard permission="facturen.aanmaken">
+                      <Button onClick={() => handleSendEmail(invoice)} variant="ghost" size="icon" title="Verzenden" className="h-8 w-8 text-gray-400 hover:text-blue-600">
+                        <Send className="h-4 w-4" />
+                      </Button>
+                    </PermissionGuard>
                   </div>
                 </td>
               </tr>

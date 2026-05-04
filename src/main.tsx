@@ -38,7 +38,7 @@ createRoot(document.getElementById('root')!).render(
             path="/dashboard"
             element={
               <RequireAuth>
-                <RequireRole roles={['owner', 'admin', 'manager', 'technician', 'sales', 'finance']}>
+                <RequireRole roles={['owner', 'admin', 'member']}>
                   <DashboardShell />
                 </RequireRole>
               </RequireAuth>
@@ -48,7 +48,7 @@ createRoot(document.getElementById('root')!).render(
             path="/dashboard/:viewId/*"
             element={
               <RequireAuth>
-                <RequireRole roles={['owner', 'admin', 'manager', 'technician', 'sales', 'finance']}>
+                <RequireRole roles={['owner', 'admin', 'member']}>
                   <DashboardShell />
                 </RequireRole>
               </RequireAuth>
@@ -59,9 +59,7 @@ createRoot(document.getElementById('root')!).render(
             path="/portaal/*"
             element={
               <RequireAuth>
-                <RequireRole roles={['customer']} fallback="/dashboard">
-                  <PortalPage />
-                </RequireRole>
+                <PortalPage />
               </RequireAuth>
             }
           />

@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { cn } from '@/lib/utils';
 import { Dialog } from '@base-ui/react/dialog';
 import { X, User, Phone, Mail, MapPin, Tag, Calendar, History, FileText, CheckCircle2, Send } from 'lucide-react';
 import { Contact } from '@/lib/crmService';

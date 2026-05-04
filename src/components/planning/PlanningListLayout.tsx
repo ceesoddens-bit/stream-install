@@ -24,6 +24,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { PermissionGuard } from '@/components/auth/PermissionGuard';
 
 export function PlanningListLayout() {
   const [entries, setEntries] = useState<PlanningEntry[]>([]);
@@ -300,11 +301,13 @@ export function PlanningListLayout() {
           </div>
           
           <div className="flex items-center gap-3">
-             <button 
-                className="flex items-center gap-2 px-4 py-2 bg-emerald-800 text-white font-medium text-xs rounded-md shadow-sm hover:bg-emerald-700 transition-all"
-              >
-              <Plus className="h-4 w-4" /> Afspraak Maken
-            </button>
+             <PermissionGuard permission="planning.bewerken">
+               <button 
+                  className="flex items-center gap-2 px-4 py-2 bg-emerald-800 text-white font-medium text-xs rounded-md shadow-sm hover:bg-emerald-700 transition-all"
+                >
+                 <Plus className="h-4 w-4" /> Afspraak Maken
+               </button>
+             </PermissionGuard>
             <button className="p-2 border border-gray-200 text-gray-600 rounded-lg shadow-sm hover:bg-gray-50">
               <Settings className="h-4 w-4" />
             </button>
@@ -422,13 +425,15 @@ export function PlanningListLayout() {
                   ))}
                   <td className="p-3 text-right">
                     <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button className="text-emerald-600 hover:text-emerald-800 p-1"><Edit className="h-4 w-4" /></button>
-                      <button 
-                        onClick={() => handleDelete(row.id!)}
-                        className="text-gray-400 hover:text-red-500 p-1 transition-colors"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                      <PermissionGuard permission="planning.bewerken">
+                        <button className="text-emerald-600 hover:text-emerald-800 p-1"><Edit className="h-4 w-4" /></button>
+                        <button 
+                          onClick={() => handleDelete(row.id!)}
+                          className="text-gray-400 hover:text-red-500 p-1 transition-colors"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </PermissionGuard>
                     </div>
                   </td>
                 </tr>

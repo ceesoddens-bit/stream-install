@@ -1,5 +1,5 @@
-import { collection, addDoc, onSnapshot, query, orderBy, Timestamp, deleteDoc, doc, updateDoc } from 'firebase/firestore';
-import { db } from './firebase';
+import { addDoc, onSnapshot, query, orderBy, Timestamp, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { tenantCol, tenantDoc } from './firebase';
 
 export interface Project {
   id?: string;
@@ -17,11 +17,9 @@ export interface Project {
   createdAt?: Timestamp;
 }
 
-const PROJECTS_COLLECTION = 'projects';
-
 export const projectService = {
   subscribeToProjects: (callback: (projects: Project[]) => void) => {
-    const q = query(collection(db, PROJECTS_COLLECTION), orderBy('createdAt', 'desc'));
+    const q = query(tenantCol('projects'), orderBy('createdAt', 'desc'));
     return onSnapshot(q, (snapshot) => {
       const projects = snapshot.docs.map((doc) => ({
         id: doc.id,
@@ -33,7 +31,7 @@ export const projectService = {
 
   addProject: async (project: Omit<Project, 'id' | 'createdAt'>) => {
     try {
-      await addDoc(collection(db, PROJECTS_COLLECTION), {
+      await addDoc(tenantCol('projects'), {
         ...project,
         createdAt: Timestamp.now(),
       });
@@ -44,7 +42,7 @@ export const projectService = {
 
   updateProject: async (id: string, updates: Partial<Project>) => {
     try {
-      await updateDoc(doc(db, PROJECTS_COLLECTION, id), updates);
+      await updateDoc(tenantDoc('projects', id), updates);
     } catch (error) {
       console.error("Error updating project: ", error);
     }
@@ -52,7 +50,7 @@ export const projectService = {
 
   deleteProject: async (id: string) => {
     try {
-      await deleteDoc(doc(db, PROJECTS_COLLECTION, id));
+      await deleteDoc(tenantDoc('projects', id));
     } catch (error) {
       console.error("Error deleting project: ", error);
     }

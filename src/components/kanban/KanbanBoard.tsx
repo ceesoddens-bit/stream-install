@@ -5,6 +5,8 @@ import { PlanningStatus } from '@/types';
 import { ProjectCard } from './ProjectCard';
 import { cn } from '@/lib/utils';
 import { Columns3, SlidersHorizontal, BookmarkCheck, ChevronDown, LayoutGrid, Search, Plus } from 'lucide-react';
+import { ProjectAddDialog } from './ProjectAddDialog';
+import { useTenant } from '@/lib/tenantContext';
 
 const formatCurrency = (amount: number) =>
   new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 }).format(amount);
@@ -129,6 +131,8 @@ export function KanbanBoard({ scope = 'all', onViewProject }: KanbanBoardProps) 
   const [activeTab, setActiveTab] = useState<'Alles' | 'Installatie' | 'Service'>('Alles');
   const [typeFilter, setTypeFilter] = useState<'Installatie' | 'Service' | 'both'>('both');
   const [planningCards, setPlanningCards] = useState<PlanningCard[]>([]);
+  const [isAddOpen, setIsAddOpen] = useState(false);
+  const { userDoc } = useTenant();
 
   useEffect(() => {
     return planningService.subscribeToPlanningCards((data) => {
@@ -137,7 +141,7 @@ export function KanbanBoard({ scope = 'all', onViewProject }: KanbanBoardProps) 
   }, []);
 
   const scopedCards = scope === 'mine'
-    ? planningCards.filter((c) => c.accountManager === currentUser.name)
+    ? planningCards.filter((c) => c.accountManager === userDoc?.displayName)
     : planningCards;
 
   const getColumns = () => {
@@ -212,10 +216,12 @@ export function KanbanBoard({ scope = 'all', onViewProject }: KanbanBoardProps) 
             <LayoutGrid className="h-4 w-4" />
           </button>
 
-          <button className="flex items-center gap-1.5 bg-green-600 hover:bg-green-700 text-white text-[12px] font-semibold px-3 py-1.5 rounded-lg transition-colors">
+          <button 
+            onClick={() => setIsAddOpen(true)}
+            className="flex items-center gap-1.5 bg-green-600 hover:bg-green-700 text-white text-[12px] font-semibold px-3 py-1.5 rounded-lg transition-colors"
+          >
             <Plus className="h-3.5 w-3.5" />
-            Residentieel
-            <ChevronDown className="h-3.5 w-3.5" />
+            Project Toevoegen
           </button>
         </div>
       </div>
@@ -264,6 +270,11 @@ export function KanbanBoard({ scope = 'all', onViewProject }: KanbanBoardProps) 
           ))}
         </div>
       </div>
+
+      <ProjectAddDialog 
+        open={isAddOpen}
+        onOpenChange={setIsAddOpen}
+      />
     </div>
   );
 }

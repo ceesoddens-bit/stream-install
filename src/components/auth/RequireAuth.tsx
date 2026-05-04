@@ -17,7 +17,6 @@ export function RequireGuest({ children }: { children: React.ReactNode }) {
   if (!authReady || loading) return <FullPageSpinner />;
   if (authUser) {
     // Only redirect if we actually know the role; null role means broken/missing user-doc
-    if (role === 'customer') return <Navigate to="/portaal" replace />;
     if (role) return <Navigate to="/dashboard" replace />;
     // No role yet (missing user doc) — let them through to login/register
   }

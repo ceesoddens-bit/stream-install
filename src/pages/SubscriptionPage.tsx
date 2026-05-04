@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useTenant } from '@/lib/tenantContext';
-import { MODULES, MODULE_MAP, BASIS_PRIJS_PER_GEBRUIKER, berekenMaandprijs, ModuleKey } from '@/lib/modules';
+import { MODULES, MODULE_MAP, berekenMaandprijs, ModuleKey, PRIJS_OWNER, PRIJS_ADMIN, PRIJS_MEMBER } from '@/lib/modules';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Check, Info, AlertTriangle, ArrowLeft, ShieldCheck, CreditCard, Sparkles, X, ChevronRight } from 'lucide-react';
@@ -19,7 +19,7 @@ import { createSubscriptionUpdatePayload, createCancelSubscriptionPayload } from
 import { toast } from 'sonner';
 
 export default function SubscriptionPage() {
-  const { tenant, updateTenantModules } = useTenant();
+  const { tenant, updateTenantModules, authUser } = useTenant();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   
@@ -53,8 +53,13 @@ export default function SubscriptionPage() {
 
   if (!tenant) return null;
 
-  const currentPrice = berekenMaandprijs(tenant.aantalGebruikers, tenant.actiefModules || []);
-  const newPrice = berekenMaandprijs(tenant.aantalGebruikers, Array.from(selectedModules) as ModuleKey[]);
+  const aantalOwners = tenant.aantalOwners ?? Math.max(1, tenant.aantalGebruikers ?? 1);
+  const aantalAdmins = tenant.aantalAdmins ?? 0;
+  const aantalMembers = tenant.aantalMembers ?? 0;
+  const betaaldeGebruikers = aantalOwners + aantalAdmins;
+
+  const currentPrice = berekenMaandprijs(aantalOwners, aantalAdmins, aantalMembers, tenant.actiefModules || []);
+  const newPrice = berekenMaandprijs(aantalOwners, aantalAdmins, aantalMembers, Array.from(selectedModules) as ModuleKey[]);
   const diff = newPrice - currentPrice;
 
   const toggleModule = (key: string) => {
@@ -82,7 +87,9 @@ export default function SubscriptionPage() {
         await setDoc(updateRef, createSubscriptionUpdatePayload(
           tenant.id,
           tenant.stripeSubscriptionId,
-          tenant.aantalGebruikers,
+          aantalOwners,
+          aantalAdmins,
+          aantalMembers,
           Array.from(selectedModules) as ModuleKey[]
         ));
         
@@ -265,8 +272,8 @@ export default function SubscriptionPage() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Basisplatform ({tenant.aantalGebruikers} gebruikers)</span>
-                  <span className="font-medium">€{(tenant.aantalGebruikers * BASIS_PRIJS_PER_GEBRUIKER).toFixed(2)}</span>
+                  <span className="text-gray-600">{aantalOwners} hoofdgebr. + {aantalAdmins} extra + {aantalMembers} medew.</span>
+                  <span className="font-medium">€{(aantalOwners * PRIJS_OWNER + aantalAdmins * PRIJS_ADMIN + aantalMembers * PRIJS_MEMBER).toFixed(2)}</span>
                 </div>
                 {Array.from(selectedModules).map(key => {
                   const mod = MODULE_MAP[key as ModuleKey];
@@ -274,7 +281,7 @@ export default function SubscriptionPage() {
                   return (
                     <div key={key} className="flex justify-between text-sm">
                       <span className="text-gray-600">{mod.naam}</span>
-                      <span className="font-medium">€{(tenant.aantalGebruikers * mod.prijsPerGebruiker).toFixed(2)}</span>
+                      <span className="font-medium">€{(betaaldeGebruikers * mod.prijsPerGebruiker).toFixed(2)}</span>
                     </div>
                   );
                 })}

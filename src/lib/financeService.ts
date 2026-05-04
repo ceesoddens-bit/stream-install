@@ -7,13 +7,15 @@ const INVOICES_COLLECTION = 'invoices';
 
 export const financeService = {
   // --- Quotes ---
-  subscribeToQuotes: (callback: (quotes: Quote[]) => void, contactId?: string) => {
-    let q;
-    if (contactId) {
-      q = query(tenantCol(QUOTES_COLLECTION), where('contactId', '==', contactId), orderBy('sentDate', 'desc'));
-    } else {
-      q = query(tenantCol(QUOTES_COLLECTION), orderBy('sentDate', 'desc'));
+  subscribeToQuotes: (callback: (quotes: Quote[]) => void, filters?: { contactId?: string, projectId?: string }) => {
+    let q = query(tenantCol(QUOTES_COLLECTION), orderBy('sentDate', 'desc'));
+    
+    if (filters?.contactId) {
+      q = query(tenantCol(QUOTES_COLLECTION), where('contactId', '==', filters.contactId), orderBy('sentDate', 'desc'));
+    } else if (filters?.projectId) {
+      q = query(tenantCol(QUOTES_COLLECTION), where('projectId', '==', filters.projectId), orderBy('sentDate', 'desc'));
     }
+    
     return onSnapshot(q, (snapshot) => {
       const quotes = snapshot.docs.map((doc) => ({
         id: doc.id,
@@ -58,13 +60,15 @@ export const financeService = {
   },
 
   // --- Invoices ---
-  subscribeToInvoices: (callback: (invoices: Invoice[]) => void, contactId?: string) => {
-    let q;
-    if (contactId) {
-      q = query(tenantCol(INVOICES_COLLECTION), where('contactId', '==', contactId), orderBy('id', 'desc'));
-    } else {
-      q = query(tenantCol(INVOICES_COLLECTION), orderBy('id', 'desc'));
+  subscribeToInvoices: (callback: (invoices: Invoice[]) => void, filters?: { contactId?: string, projectId?: string }) => {
+    let q = query(tenantCol(INVOICES_COLLECTION), orderBy('id', 'desc'));
+    
+    if (filters?.contactId) {
+      q = query(tenantCol(INVOICES_COLLECTION), where('contactId', '==', filters.contactId), orderBy('id', 'desc'));
+    } else if (filters?.projectId) {
+      q = query(tenantCol(INVOICES_COLLECTION), where('projectId', '==', filters.projectId), orderBy('id', 'desc'));
     }
+    
     return onSnapshot(q, (snapshot) => {
       const invoices = snapshot.docs.map((doc) => ({
         id: doc.id,

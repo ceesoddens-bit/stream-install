@@ -3,6 +3,7 @@ import { inventoryService, InventoryItem } from '@/lib/inventoryService';
 import { Package, Search, Image as ImageIcon, AlertTriangle, ArrowRight, TrendingUp, Trash2, Edit2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { PermissionGuard } from '@/components/auth/PermissionGuard';
 
 type ArticlesColumnKey =
   | 'select'
@@ -190,13 +191,15 @@ export function ArticlesTable({ items }: ArticlesTableProps) {
                 </td>
                 <td className="p-3 text-right">
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                        <button className="p-1 hover:text-emerald-600 transition-colors"><Edit2 className="h-4 w-4" /></button>
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); handleDelete(article.id!); }}
-                          className="p-1 hover:text-red-500 transition-colors text-gray-300"
-                        >
-                            <Trash2 className="h-4 w-4" />
-                        </button>
+                        <PermissionGuard permission="voorraad.bewerken">
+                          <button className="p-1 hover:text-emerald-600 transition-colors"><Edit2 className="h-4 w-4" /></button>
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); handleDelete(article.id!); }}
+                            className="p-1 hover:text-red-500 transition-colors text-gray-300"
+                          >
+                              <Trash2 className="h-4 w-4" />
+                          </button>
+                        </PermissionGuard>
                     </div>
                 </td>
               </tr>

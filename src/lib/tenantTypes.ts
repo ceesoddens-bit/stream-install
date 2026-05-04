@@ -1,6 +1,7 @@
 import { ModuleKey } from './modules';
+import { PermissionKey } from './permissions';
 
-export type Rol = 'owner' | 'admin' | 'manager' | 'technician' | 'sales' | 'finance' | 'customer';
+export type Rol = 'owner' | 'admin' | 'member';
 
 export type AbonnementStatus = 'trialing' | 'active' | 'past_due' | 'canceled' | 'paused' | 'incomplete';
 
@@ -29,6 +30,9 @@ export interface Tenant {
   naam: string;
   plan: 'basis' | 'groei' | 'volledig' | 'custom';
   aantalGebruikers: number;
+  aantalOwners: number;
+  aantalAdmins: number;
+  aantalMembers: number;
   actiefModules: ModuleKey[];
   maandprijs: number;
   abonnementStatus: AbonnementStatus;
@@ -53,5 +57,6 @@ export interface UserDoc {
   email: string;
   photoURL?: string;
   contactId?: string;
+  permissions?: PermissionKey[];
   createdAt?: number;
 }

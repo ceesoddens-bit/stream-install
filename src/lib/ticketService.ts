@@ -29,6 +29,8 @@ export interface Ticket {
   userImage?: string;
   assigneeId?: string; // Added assignee picker support
   slaDate?: string;    // Added SLA support
+  startTime?: string;  // Added for planner integration
+  endTime?: string;    // Added for planner integration
   attachments?: TicketAttachment[];
   comments?: TicketComment[]; // Embedded or subcollection? For simplicity let's use embedded first, or separate. The plan says "comments subcollectie". I will add functions for that.
   createdAt?: Timestamp;
