@@ -1,4 +1,4 @@
-import { addDoc, Timestamp } from 'firebase/firestore';
+import { addDoc, Timestamp, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { tenantCol } from './firebase';
 import { Quote, Invoice } from '@/types';
 import { Tenant } from '@/lib/tenantTypes';
@@ -7,6 +7,20 @@ import { QuoteTemplate } from '@/components/pdf/QuoteTemplate';
 import { InvoiceTemplate } from '@/components/pdf/InvoiceTemplate';
 import { OrderConfirmationTemplate } from '@/components/pdf/OrderConfirmationTemplate';
 import React from 'react';
+
+export interface AutomationRule {
+  id?: string;
+  name: string;
+  description?: string;
+  version?: string;
+  triggerEvent?: string;
+  active?: boolean;
+  action?: string;
+  createdAt?: Timestamp;
+  updatedAt?: Timestamp;
+  createdBy?: string;
+  updatedBy?: string;
+}
 
 const MAIL_COLLECTION = 'mail';
 
@@ -153,6 +167,13 @@ export const automationService = {
         encoding: 'base64'
       }]
     );
+  },
+
+  subscribeToRules: (callback: (rules: AutomationRule[]) => void) => {
+    const q = query(tenantCol('automatiseringen'), orderBy('createdAt', 'desc'));
+    return onSnapshot(q, (snap) => {
+      callback(snap.docs.map(d => ({ id: d.id, ...d.data() })) as AutomationRule[]);
+    });
   },
 
   /**

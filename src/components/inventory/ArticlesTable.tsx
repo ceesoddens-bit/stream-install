@@ -37,6 +37,7 @@ const articlesColumns: ArticlesColumnDef[] = [
 
 interface ArticlesTableProps {
   items: InventoryItem[];
+  onEdit?: (article: InventoryItem) => void;
 }
 
 const getCategoryBadge = (category: string) => {
@@ -62,7 +63,7 @@ const getStockStatus = (stock: number, min: number) => {
   return { label: 'Ruim', color: 'bg-green-50 text-green-700 border-green-200', icon: null };
 };
 
-export function ArticlesTable({ items }: ArticlesTableProps) {
+export function ArticlesTable({ items, onEdit }: ArticlesTableProps) {
   const [columnWidths, setColumnWidths] = useState<Record<ArticlesColumnKey, number>>(() => {
     return articlesColumns.reduce((acc, col) => {
       acc[col.key] = col.width;
@@ -192,12 +193,19 @@ export function ArticlesTable({ items }: ArticlesTableProps) {
                 <td className="p-3 text-right">
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
                         <PermissionGuard permission="voorraad.bewerken">
-                          <button className="p-1 hover:text-emerald-600 transition-colors"><Edit2 className="h-4 w-4" /></button>
-                          <button 
+                          <button
+                            onClick={(e) => { e.stopPropagation(); onEdit?.(article); }}
+                            className="p-1 hover:text-emerald-600 transition-colors"
+                            title="Bewerken"
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </button>
+                          <button
                             onClick={(e) => { e.stopPropagation(); handleDelete(article.id!); }}
                             className="p-1 hover:text-red-500 transition-colors text-gray-300"
+                            title="Verwijderen"
                           >
-                              <Trash2 className="h-4 w-4" />
+                            <Trash2 className="h-4 w-4" />
                           </button>
                         </PermissionGuard>
                     </div>

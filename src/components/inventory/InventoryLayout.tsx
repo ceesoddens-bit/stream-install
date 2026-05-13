@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ArticlesTable } from './ArticlesTable';
+import { ArticleDialog } from './ArticleDialog';
 import { BOMTable } from './BOMTable';
 import { SuppliersTable } from './SuppliersTable';
 import { StockOverviewTable } from './StockOverviewTable';
@@ -13,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { inventoryService, InventoryItem } from '@/lib/inventoryService';
 import { PermissionGuard } from '@/components/auth/PermissionGuard';
+import { ModuleGuard } from '@/components/auth/ModuleGuard';
 
 const tabs = [
   { id: 'overzicht', label: 'Overzicht' },
@@ -28,13 +30,15 @@ type InventoryLayoutProps = {
   initialTab?: string;
 };
 
-export function InventoryLayout({ initialTab }: InventoryLayoutProps) {
+function InventoryLayoutInner({ initialTab }: InventoryLayoutProps) {
   const [activeTab, setActiveTab] = useState(() => {
     if (initialTab && tabs.some((t) => t.id === initialTab)) return initialTab;
     return 'artikelen';
   });
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(activeTab === 'artikelen');
+  const [isArticleDialogOpen, setIsArticleDialogOpen] = useState(false);
+  const [editingArticle, setEditingArticle] = useState<InventoryItem | null>(null);
 
   useEffect(() => {
     if (!initialTab) return;
@@ -163,6 +167,7 @@ export function InventoryLayout({ initialTab }: InventoryLayoutProps) {
               <Button
                 size="sm"
                 className="h-8 gap-2 bg-blue-600 hover:bg-blue-700 text-xs font-semibold ml-2 shadow-sm"
+                onClick={() => { setEditingArticle(null); setIsArticleDialogOpen(true); }}
               >
                 <Plus className="h-3.5 w-3.5" />
                 Nieuw Artikel
@@ -191,10 +196,27 @@ export function InventoryLayout({ initialTab }: InventoryLayoutProps) {
           {isLoading ? (
             <div className="p-20 text-center text-gray-400 animate-pulse">Laden van artikelen...</div>
           ) : (
-            <ArticlesTable items={items} />
+            <ArticlesTable
+              items={items}
+              onEdit={(article) => { setEditingArticle(article); setIsArticleDialogOpen(true); }}
+            />
           )}
         </div>
       </div>
+
+      <ArticleDialog
+        open={isArticleDialogOpen}
+        onOpenChange={setIsArticleDialogOpen}
+        article={editingArticle}
+      />
     </div>
+  );
+}
+
+export function InventoryLayout(props: InventoryLayoutProps) {
+  return (
+    <ModuleGuard module="voorraadbeheer">
+      <InventoryLayoutInner {...props} />
+    </ModuleGuard>
   );
 }

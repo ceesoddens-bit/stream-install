@@ -3,6 +3,8 @@ import { Send, X, Bot, User, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useTenant } from '@/lib/tenantContext';
+import { UpgradeOverlay } from '@/components/auth/UpgradeOverlay';
 
 interface AIChatPopupProps {
   isOpen: boolean;
@@ -18,6 +20,7 @@ export function AIChatPopup({ isOpen, onClose }: AIChatPopupProps) {
     }
   ]);
   const [inputValue, setInputValue] = useState('');
+  const { heeftToegang } = useTenant();
 
   if (!isOpen) return null;
 
@@ -65,8 +68,14 @@ export function AIChatPopup({ isOpen, onClose }: AIChatPopupProps) {
         </button>
       </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 max-h-[350px] custom-scrollbar bg-slate-50/50">
+      {!heeftToegang('ai_assistent') ? (
+        <div className="h-[350px]">
+          <UpgradeOverlay module="ai_assistent" />
+        </div>
+      ) : (
+        <>
+          {/* Messages */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 max-h-[350px] custom-scrollbar bg-slate-50/50">
         {messages.map((m) => (
           <div 
             key={m.id} 
@@ -112,10 +121,12 @@ export function AIChatPopup({ isOpen, onClose }: AIChatPopupProps) {
         </div>
       </div>
       
-      {/* Policy hint */}
-      <div className="px-4 pb-3 text-center">
-        <span className="text-[9px] text-gray-400 font-medium">Onze AI spreekt momenteel Nederlands</span>
-      </div>
+          {/* Policy hint */}
+          <div className="px-4 pb-3 text-center">
+            <span className="text-[9px] text-gray-400 font-medium">Onze AI spreekt momenteel Nederlands</span>
+          </div>
+        </>
+      )}
     </div>
   );
 }

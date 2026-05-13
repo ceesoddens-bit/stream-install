@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { doc, getDoc, onSnapshot, query, where, collection } from 'firebase/firestore';
+import { useParams } from 'react-router-dom';
+import { doc, getDoc, onSnapshot, query, where, collection, addDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Tenant } from '@/lib/tenantTypes';
 import { Quote, Invoice } from '@/types';
 import { Contact } from '@/lib/crmService';
-import { 
-  FileText, CreditCard, LayoutDashboard, CheckCircle2, 
-  XCircle, Clock, Download, ExternalLink, User
+import {
+  FileText, CreditCard, LayoutDashboard,
+  Download, ExternalLink, User, MessageSquare, Plus, Send, Loader2, Clock, CheckCircle2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -16,6 +16,15 @@ import { QuoteTemplate } from '../pdf/QuoteTemplate';
 import { InvoiceTemplate } from '../pdf/InvoiceTemplate';
 import { toast } from 'sonner';
 
+interface PortalTicket {
+  id: string;
+  title: string;
+  description: string;
+  status: 'Open' | 'In behandeling' | 'Opgelost';
+  contactId: string;
+  createdAt: Timestamp;
+}
+
 export function PortalLayout() {
   const { tenantId, contactId } = useParams<{ tenantId: string; contactId: string }>();
   const [tenant, setTenant] = useState<Tenant | null>(null);
@@ -23,7 +32,12 @@ export function PortalLayout() {
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'quotes' | 'invoices'>('quotes');
+  const [activeTab, setActiveTab] = useState<'quotes' | 'invoices' | 'tickets'>('quotes');
+  const [tickets, setTickets] = useState<PortalTicket[]>([]);
+  const [isTicketFormOpen, setIsTicketFormOpen] = useState(false);
+  const [ticketTitle, setTicketTitle] = useState('');
+  const [ticketDesc, setTicketDesc] = useState('');
+  const [isSubmittingTicket, setIsSubmittingTicket] = useState(false);
 
   useEffect(() => {
     if (!tenantId || !contactId) return;
@@ -56,9 +70,17 @@ export function PortalLayout() {
         setIsLoading(false);
       });
 
+      // Subscribe to Tickets for this contact
+      const tRef = collection(db, 'tenants', tenantId, 'tickets');
+      const tQuery = query(tRef, where('contactId', '==', contactId));
+      const unsubTickets = onSnapshot(tQuery, (snap) => {
+        setTickets(snap.docs.map(d => ({ id: d.id, ...d.data() })) as PortalTicket[]);
+      });
+
       return () => {
         unsubQuotes();
         unsubInvoices();
+        unsubTickets();
       };
     };
 
@@ -104,6 +126,32 @@ export function PortalLayout() {
     } catch (err) {
       console.error(err);
       toast.error('Fout bij accepteren offerte', { id: toastId });
+    }
+  };
+
+  const handleSubmitTicket = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!ticketTitle.trim() || !tenantId || !contactId) return;
+    setIsSubmittingTicket(true);
+    try {
+      await addDoc(collection(db, 'tenants', tenantId, 'tickets'), {
+        title: ticketTitle.trim(),
+        description: ticketDesc.trim(),
+        status: 'Open',
+        contactId,
+        contactName: contact?.name || '',
+        contactEmail: contact?.email || '',
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now(),
+      });
+      toast.success('Uw melding is ingediend');
+      setTicketTitle('');
+      setTicketDesc('');
+      setIsTicketFormOpen(false);
+    } catch {
+      toast.error('Fout bij indienen melding');
+    } finally {
+      setIsSubmittingTicket(false);
     }
   };
 
@@ -166,7 +214,7 @@ export function PortalLayout() {
               >
                 <FileText className="h-4 w-4" /> Mijn Offertes
               </button>
-              <button 
+              <button
                 onClick={() => setActiveTab('invoices')}
                 className={cn(
                   "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all",
@@ -174,6 +222,20 @@ export function PortalLayout() {
                 )}
               >
                 <CreditCard className="h-4 w-4" /> Mijn Facturen
+              </button>
+              <button
+                onClick={() => setActiveTab('tickets')}
+                className={cn(
+                  "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all",
+                  activeTab === 'tickets' ? "bg-white text-emerald-700 shadow-sm border border-emerald-100" : "text-gray-500 hover:bg-gray-100"
+                )}
+              >
+                <MessageSquare className="h-4 w-4" /> Meldingen
+                {tickets.filter(t => t.status === 'Open').length > 0 && (
+                  <span className="ml-auto bg-orange-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                    {tickets.filter(t => t.status === 'Open').length}
+                  </span>
+                )}
               </button>
             </nav>
 
@@ -199,12 +261,98 @@ export function PortalLayout() {
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
               <div className="p-6 border-b border-gray-50 flex items-center justify-between">
                 <h2 className="text-xl font-bold text-gray-900">
-                  {activeTab === 'quotes' ? 'Uw Offertes' : 'Uw Facturen'}
+                  {activeTab === 'quotes' ? 'Uw Offertes' : activeTab === 'invoices' ? 'Uw Facturen' : 'Meldingen'}
                 </h2>
+                {activeTab === 'tickets' && (
+                  <Button
+                    size="sm"
+                    className="bg-emerald-800 hover:bg-emerald-700 text-white gap-2 h-9"
+                    onClick={() => setIsTicketFormOpen(v => !v)}
+                  >
+                    <Plus className="h-4 w-4" /> Nieuwe melding
+                  </Button>
+                )}
               </div>
 
               <div className="p-0">
-                {activeTab === 'quotes' ? (
+                {activeTab === 'tickets' ? (
+                  <div>
+                    {isTicketFormOpen && (
+                      <form onSubmit={handleSubmitTicket} className="p-6 border-b border-gray-100 bg-gray-50/50 space-y-4">
+                        <h3 className="text-sm font-bold text-gray-700">Nieuwe melding indienen</h3>
+                        <div className="space-y-1">
+                          <label className="text-xs font-semibold text-gray-500">Onderwerp *</label>
+                          <input
+                            type="text"
+                            required
+                            autoFocus
+                            value={ticketTitle}
+                            onChange={e => setTicketTitle(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:border-emerald-500"
+                            placeholder="Kort omschrijf uw vraag of probleem"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs font-semibold text-gray-500">Omschrijving</label>
+                          <textarea
+                            rows={4}
+                            value={ticketDesc}
+                            onChange={e => setTicketDesc(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:border-emerald-500 resize-none"
+                            placeholder="Geef zo veel mogelijk details..."
+                          />
+                        </div>
+                        <div className="flex items-center justify-end gap-3">
+                          <Button type="button" variant="ghost" size="sm" onClick={() => setIsTicketFormOpen(false)}>
+                            Annuleren
+                          </Button>
+                          <Button
+                            type="submit"
+                            size="sm"
+                            disabled={isSubmittingTicket || !ticketTitle.trim()}
+                            className="bg-emerald-800 hover:bg-emerald-700 text-white gap-2"
+                          >
+                            {isSubmittingTicket ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                            Indienen
+                          </Button>
+                        </div>
+                      </form>
+                    )}
+                    <div className="divide-y divide-gray-50">
+                      {tickets.length === 0 ? (
+                        <div className="p-12 text-center text-gray-400 italic">Geen meldingen gevonden.</div>
+                      ) : tickets.map(ticket => (
+                        <div key={ticket.id} className="p-6 hover:bg-slate-50/50 transition-colors flex items-start gap-4">
+                          <div className={cn(
+                            "h-10 w-10 rounded-xl flex items-center justify-center shrink-0",
+                            ticket.status === 'Opgelost' ? "bg-green-50 text-green-600" :
+                            ticket.status === 'In behandeling' ? "bg-blue-50 text-blue-600" :
+                            "bg-orange-50 text-orange-600"
+                          )}>
+                            {ticket.status === 'Opgelost' ? <CheckCircle2 className="h-5 w-5" /> : <Clock className="h-5 w-5" />}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-bold text-gray-900 truncate">{ticket.title}</h4>
+                            {ticket.description && (
+                              <p className="text-sm text-gray-500 mt-0.5 line-clamp-2">{ticket.description}</p>
+                            )}
+                            <p className="text-[11px] text-gray-400 mt-1">
+                              {ticket.createdAt?.toDate?.().toLocaleDateString('nl-NL') || ''}
+                            </p>
+                          </div>
+                          <span className={cn(
+                            "text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap",
+                            ticket.status === 'Opgelost' ? "bg-green-100 text-green-700" :
+                            ticket.status === 'In behandeling' ? "bg-blue-100 text-blue-700" :
+                            "bg-orange-100 text-orange-700"
+                          )}>
+                            {ticket.status}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : activeTab === 'quotes' ? (
                   <div className="divide-y divide-gray-50">
                     {quotes.length === 0 ? (
                       <div className="p-12 text-center text-gray-400 italic">Geen offertes gevonden.</div>

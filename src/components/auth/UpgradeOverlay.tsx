@@ -26,7 +26,7 @@ export function UpgradeOverlay({ module }: Props) {
           </p>
         )}
         <Link
-          to={`/dashboard/instellingen/abonnement?activeer=${module}`}
+          to={`/dashboard/settings/subscription?activeer=${module}`}
           className={buttonVariants({ size: 'lg', className: 'mt-6 w-full' })}
         >
           <Sparkles className="h-4 w-4 mr-2" />

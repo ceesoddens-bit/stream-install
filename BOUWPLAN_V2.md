@@ -14,12 +14,12 @@ Prioriteit: **productie-kritisch eerst** — claims, betaling, module-gating, PD
 
 Zonder server-side claims werken Firestore rules niet betrouwbaar.
 
-- [ ] Firebase Extension voor custom claims installeren & configureren (triggert bij `users/{uid}`, zet `tenantId` + `role` als token claims)
-- [ ] `firebase.json` aangepast, extension-config gecommit
-- [ ] `auth.currentUser.getIdToken(true)` in `tenantContext.tsx` na user-doc wijziging
-- [ ] `firestore.rules.test.ts` — emulator-tests voor tenant-isolatie, role-matrix, module-gating, portal-access (`@firebase/rules-unit-testing`)
-- [ ] `firestore.indexes.json` gecontroleerd voor composite queries (hours, planning, invoices status+date, etc.)
-- [ ] Script `npm run test:rules` toegevoegd
+- [x] Firebase Extension voor custom claims installeren & configureren (triggert bij `users/{uid}`, zet `tenantId` + `role` als token claims)
+- [x] `firebase.json` aangepast, extension-config gecommit
+- [x] `auth.currentUser.getIdToken(true)` in `tenantContext.tsx` na user-doc wijziging
+- [x] `firestore.rules.test.ts` — emulator-tests voor tenant-isolatie, role-matrix, module-gating, portal-access (`@firebase/rules-unit-testing`)
+- [x] `firestore.indexes.json` gecontroleerd voor composite queries (hours, planning, invoices status+date, etc.)
+- [x] Script `npm run test:rules` toegevoegd
 
 Files: `firestore.rules`, `src/lib/tenantContext.tsx`, `src/lib/firebase.ts`
 
@@ -42,17 +42,17 @@ Skill: `stripe-subscription-sync`
 
 ## Fase 3 — ModuleGuard overal toepassen
 
-- [ ] `offertes` → QuotesLayout, SalesLayout
-- [ ] `facturering` → InvoicesTable, FinanceLayout
-- [ ] `projectmanagement` → ProjectsLayout
-- [ ] `planning` → PlannerView, PlanningListLayout, TeamsLayout
-- [ ] `voorraadbeheer` → InventoryLayout + alle tabs
-- [ ] `formulieren` → FormsLayout
-- [ ] `documenten` → relevante views
-- [ ] `automatiseringen` → ManagementAutomationView
-- [ ] `klantportaal` → PortalLayout owner-kant
-- [ ] `ai_assistent` → relevante views
-- [ ] Sidebar toont 🔒 voor vergrendelde modules → click → `/dashboard/instellingen/abonnement?activeer={key}`
+- [x] `offertes` → QuotesLayout, SalesLayout
+- [x] `facturering` → InvoicesTable, FinanceLayout
+- [x] `projectmanagement` → ProjectsLayout
+- [x] `planning` → PlannerView, PlanningListLayout, TeamsLayout
+- [x] `voorraadbeheer` → InventoryLayout (ModuleGuard wrapper toegevoegd) + alle tabs
+- [x] `formulieren` → FormsLayout
+- [x] `documenten` → relevante views
+- [x] `automatiseringen` → ManagementAutomationView
+- [x] `klantportaal` → PortalLayout owner-kant
+- [x] `ai_assistent` → relevante views
+- [x] Sidebar toont 🔒 voor vergrendelde modules → click → `/dashboard/instellingen/abonnement?activeer={key}` (badge vervangen door Lock icon)
 
 Files: `src/components/auth/ModuleGuard.tsx`, `src/components/auth/UpgradeOverlay.tsx`, `src/components/layout/Sidebar.tsx`
 Skill: `module-guard-wrap`
@@ -61,13 +61,13 @@ Skill: `module-guard-wrap`
 
 ## Fase 4 — PDF-templates (MVP)
 
-- [ ] Shared layout: header met tenant-branding (logo, kleur, NAW), footer met btw/KvK, line-items tabel, totalen incl. btw-split
-- [ ] **OfferteTemplate** — "Verzenden" → PDF → Firebase Storage → `mail/` queue
-- [ ] **FactuurTemplate** — idem
-- [ ] **BetalingsherinneringTemplate** — reminder met originele factuurref + vervaldag
-- [ ] **OrderbevestigingTemplate** — na accept quote of manual trigger
-- [ ] Storage-rules: tenant-isolatie + portal-read voor eigen docs
-- [ ] Download-knop + preview-modal in UI
+- [x] Shared layout: header met tenant-branding (logo, kleur, NAW), footer met btw/KvK, line-items tabel, totalen incl. btw-split
+- [x] **OfferteTemplate** — "Verzenden" → PDF → Firebase Storage → `mail/` queue
+- [x] **FactuurTemplate** — idem
+- [x] **BetalingsherinneringTemplate** — reminder met originele factuurref + vervaldag
+- [x] **OrderbevestigingTemplate** — na accept quote of manual trigger
+- [x] Storage-rules: tenant-isolatie + portal-read voor eigen docs
+- [x] Download-knop + preview-modal in UI (Eye-knop → inline PDFViewer modal in QuotesLayout)
 
 Files: nieuwe `src/lib/pdf/*Template.tsx`, `src/lib/financeService.ts`, `storage.rules`
 Skill: `finance-pdf-template`
@@ -77,24 +77,24 @@ Skill: `finance-pdf-template`
 ## Fase 5 — CRUD-gaps dichten
 
 ### Inventory
-- [ ] BOMTable — add/edit/delete dialogs + EntityPicker artikelen
-- [ ] PurchaseOrdersTable — dialogs + status-workflow (concept → besteld → ontvangen)
-- [ ] SuppliersTable — CRUD dialogs
-- [ ] WarehousesTable — CRUD dialogs
-- [ ] MutationsTable — create-form (inkomend/uitgaand/correctie) + auto-update stock
-- [ ] StockOverviewTable — recompute-trigger bij mutation
-- [ ] ArticlesTable nieuw — lookup voor BOM/PO
+- [x] BOMTable — add/edit/delete dialogs + EntityPicker artikelen
+- [x] PurchaseOrdersTable — dialogs + status-workflow (concept → besteld → ontvangen)
+- [x] SuppliersTable — CRUD dialogs
+- [x] WarehousesTable — CRUD dialogs
+- [x] MutationsTable — create-form (inkomend/uitgaand/correctie) + auto-update stock
+- [x] StockOverviewTable — recompute-trigger bij mutation
+- [x] ArticlesTable nieuw — CRUD dialogs (add/edit/delete)
 
 ### Tasks
-- [ ] TasksLayout — dialogs + assign-to-user + link-to-project
+- [x] TasksLayout — dialogs + assign-to-user + link-to-project
 
 ### Sales
 - [ ] QuotesLayout — complete edit-flow: line-items editor, korting, btw, status-transitions
-- [ ] "Converteer naar factuur"-actie
+- [x] "Converteer naar factuur"-actie
 
 ### Projects
-- [ ] Volledige CRUD UI
-- [ ] Project-detail view met tabs (info, uren, tickets, taken, documenten)
+- [x] Volledige CRUD UI (Kanban + ProjectAddDialog + ProjectDetail)
+- [x] Project-detail view met tabs: overzicht, financieel, uren, taken, producten, bestanden (uren+taken live uit Firestore)
 
 ### Forms
 - [ ] FormsLayout — CRUD + form-renderer voor submissions
@@ -107,9 +107,9 @@ Skill: `finance-pdf-template`
 - [ ] Dedupliceer `ManagementCustomersView` vs CRM
 
 ### Portal
-- [ ] Offerte-accept → schrijft status + triggert orderbevestiging-mail
-- [ ] Factuur-download via storage-url
-- [ ] Ticket-create form voor klant
+- [x] Offerte-accept → schrijft status + triggert orderbevestiging-mail (handleAcceptQuote + "Akkoord Geven" knop)
+- [x] Factuur-download via PDF generatie (PortalLayout + PortalInvoices)
+- [x] Ticket-create form voor klant
 
 Skill: `wire-crud-table`, `scaffold-module`
 
@@ -117,11 +117,11 @@ Skill: `wire-crud-table`, `scaffold-module`
 
 ## Fase 6 — Email (Trigger Email extension)
 
-- [ ] `src/lib/mailService.ts` — schrijft naar `mail/` collectie
+- [x] `src/lib/mailService.ts` — schrijft naar `mail/` collectie
 - [ ] Email-templates in Firestore `settings/emailTemplates/*` via bestaande `ManagementEmailTemplatesView`
 - [ ] Triggers: invite-send, quote-verzenden, factuur-verzenden, herinnering, ticket-reply, password-reset-custom
-- [ ] Tenant-branding in email-header (logo + kleur)
-- [ ] NL-kopij + verpakte errors
+- [x] Tenant-branding in email-header (logo + kleur) — HTML-wrapper met bedrijfsnaam
+- [x] NL-kopij + verpakte errors
 
 Files: nieuwe `src/lib/mailService.ts`, `src/components/management/ManagementEmailTemplatesView.tsx`
 

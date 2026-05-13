@@ -117,6 +117,7 @@ export interface Quote {
   referenceNumber: string;
   quoteNumber: string;
   createdAt: any;
+  createdBy?: string;
   lineItems?: LineItem[];
 }
 

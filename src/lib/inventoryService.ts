@@ -152,6 +152,39 @@ export const inventoryService = {
     });
   },
 
+  addSupplier: async (supplier: Omit<Supplier, 'id' | 'createdAt'>) => {
+    try {
+      await addDoc(tenantCol(SUPPLIERS_COLLECTION), {
+        ...supplier,
+        createdAt: Timestamp.now(),
+      });
+    } catch (error) {
+      console.error("Error adding supplier: ", error);
+      throw error;
+    }
+  },
+
+  updateSupplier: async (id: string, updates: Partial<Supplier>) => {
+    try {
+      await updateDoc(tenantDoc(SUPPLIERS_COLLECTION, id), {
+        ...updates,
+        updatedAt: Timestamp.now()
+      });
+    } catch (error) {
+      console.error("Error updating supplier: ", error);
+      throw error;
+    }
+  },
+
+  deleteSupplier: async (id: string) => {
+    try {
+      await deleteDoc(tenantDoc(SUPPLIERS_COLLECTION, id));
+    } catch (error) {
+      console.error("Error deleting supplier: ", error);
+      throw error;
+    }
+  },
+
   // --- Warehouses ---
   subscribeToWarehouses: (callback: (warehouses: Warehouse[]) => void) => {
     const q = query(tenantCol(WAREHOUSES_COLLECTION), orderBy('name', 'asc'));
@@ -164,6 +197,39 @@ export const inventoryService = {
     });
   },
 
+  addWarehouse: async (warehouse: Omit<Warehouse, 'id' | 'createdAt'>) => {
+    try {
+      await addDoc(tenantCol(WAREHOUSES_COLLECTION), {
+        ...warehouse,
+        createdAt: Timestamp.now(),
+      });
+    } catch (error) {
+      console.error("Error adding warehouse: ", error);
+      throw error;
+    }
+  },
+
+  updateWarehouse: async (id: string, updates: Partial<Warehouse>) => {
+    try {
+      await updateDoc(tenantDoc(WAREHOUSES_COLLECTION, id), {
+        ...updates,
+        updatedAt: Timestamp.now()
+      });
+    } catch (error) {
+      console.error("Error updating warehouse: ", error);
+      throw error;
+    }
+  },
+
+  deleteWarehouse: async (id: string) => {
+    try {
+      await deleteDoc(tenantDoc(WAREHOUSES_COLLECTION, id));
+    } catch (error) {
+      console.error("Error deleting warehouse: ", error);
+      throw error;
+    }
+  },
+
   // --- BOM Items ---
   subscribeToBOMItems: (callback: (items: BOMItem[]) => void) => {
     const q = query(tenantCol(BOM_COLLECTION), orderBy('projectName', 'asc'));
@@ -174,6 +240,36 @@ export const inventoryService = {
       })) as BOMItem[];
       callback(items);
     });
+  },
+
+  addBOMItem: async (item: Omit<BOMItem, 'id' | 'createdAt'>) => {
+    try {
+      await addDoc(tenantCol(BOM_COLLECTION), {
+        ...item,
+        createdAt: Timestamp.now(),
+      });
+    } catch (error) {
+      console.error("Error adding BOM item: ", error);
+      throw error;
+    }
+  },
+
+  updateBOMItem: async (id: string, updates: Partial<BOMItem>) => {
+    try {
+      await updateDoc(tenantDoc(BOM_COLLECTION, id), updates);
+    } catch (error) {
+      console.error("Error updating BOM item: ", error);
+      throw error;
+    }
+  },
+
+  deleteBOMItem: async (id: string) => {
+    try {
+      await deleteDoc(tenantDoc(BOM_COLLECTION, id));
+    } catch (error) {
+      console.error("Error deleting BOM item: ", error);
+      throw error;
+    }
   },
 
   // --- Stock Overview ---
@@ -210,6 +306,36 @@ export const inventoryService = {
       })) as PurchaseOrder[];
       callback(orders);
     });
+  },
+
+  addPurchaseOrder: async (order: Omit<PurchaseOrder, 'id' | 'createdAt'>) => {
+    try {
+      await addDoc(tenantCol(PURCHASE_ORDERS_COLLECTION), {
+        ...order,
+        createdAt: Timestamp.now(),
+      });
+    } catch (error) {
+      console.error("Error adding purchase order: ", error);
+      throw error;
+    }
+  },
+
+  updatePurchaseOrder: async (id: string, updates: Partial<PurchaseOrder>) => {
+    try {
+      await updateDoc(tenantDoc(PURCHASE_ORDERS_COLLECTION, id), updates);
+    } catch (error) {
+      console.error("Error updating purchase order: ", error);
+      throw error;
+    }
+  },
+
+  deletePurchaseOrder: async (id: string) => {
+    try {
+      await deleteDoc(tenantDoc(PURCHASE_ORDERS_COLLECTION, id));
+    } catch (error) {
+      console.error("Error deleting purchase order: ", error);
+      throw error;
+    }
   },
 
   // --- Mutations ---

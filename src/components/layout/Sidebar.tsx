@@ -299,6 +299,10 @@ export function Sidebar({
             <div key={item.id} className="flex flex-col space-y-1">
               <button
                 onClick={() => {
+                  if (isParentLocked) {
+                    onViewChange(`settings_subscription?activeer=${item.requiredModule}`);
+                    return;
+                  }
                   if (hasSubItems) {
                     const willExpand = !isExpanded;
                     toggleExpand(item.id);
@@ -323,9 +327,7 @@ export function Sidebar({
                   <item.icon className={cn('h-5 w-5 shrink-0', isActive ? 'text-white' : 'text-white/55')} />
                   {!collapsed && <span className={cn("truncate", isActive && hasSubItems ? 'text-white font-semibold' : '')}>{item.label}</span>}
                   {!collapsed && isParentLocked && (
-                    <span className="ml-auto text-[8px] font-black bg-white/10 text-white/40 px-1 py-0.5 rounded border border-white/5 shrink-0">
-                      UPGRADE
-                    </span>
+                    <Lock className="ml-auto h-3.5 w-3.5 text-white/35 shrink-0" />
                   )}
                 </div>
                 {!collapsed && hasSubItems && (
@@ -347,6 +349,10 @@ export function Sidebar({
                       <div key={subItem.id} className="flex flex-col space-y-1">
                         <button
                           onClick={() => {
+                            if (isLocked) {
+                              onViewChange(`settings_subscription?activeer=${meta.requiredModule}`);
+                              return;
+                            }
                             if (hasSubSubItems) {
                               if (subItem.id === 'management_customer_portal') {
                                 if (!isSubExpanded) toggleExpand(subItem.id);
@@ -371,9 +377,7 @@ export function Sidebar({
                             {subItem.icon && <subItem.icon className={cn('h-4 w-4 shrink-0', (isSubActive && !hasSubSubItems) ? 'text-white' : 'text-white/45')} />}
                             <span className={cn("truncate", hasSubSubItems && isSubActive ? "text-white font-semibold" : "")}>{subItem.label}</span>
                             {isLocked && (
-                              <span className="ml-auto text-[9px] font-black bg-blue-600 text-white px-1.5 py-0.5 rounded shadow-sm shrink-0">
-                                UPGRADE
-                              </span>
+                              <Lock className="ml-auto h-3.5 w-3.5 text-white/35 shrink-0" />
                             )}
                           </div>
                           

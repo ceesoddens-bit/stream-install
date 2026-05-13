@@ -140,7 +140,7 @@ export default function DashboardShell() {
             {activeView === 'inventory_boms' && withModuleGuard('inventory_boms', <InventoryLayout initialTab="boms" />)}
             {activeView === 'finance' && withModuleGuard('finance', <FinanceLayout />)}
             {activeView === 'quotes' && withModuleGuard('quotes', <QuotesLayout />)}
-            {isAdministration && <AdministrationLayout activeView={activeView} onViewChange={setActiveView} />}
+            {isAdministration && withModuleGuard(activeView, <AdministrationLayout activeView={activeView} onViewChange={setActiveView} />)}
             {activeView === 'settings' && <SettingsLayout />}
             {activeView === 'crm' && withModuleGuard('crm', <ContactsLayout />)}
             {activeView === 'crm_companies' && withModuleGuard('crm_companies', <CompaniesLayout />)}
@@ -152,7 +152,7 @@ export default function DashboardShell() {
             {activeView === 'teams' && withModuleGuard('teams', <TeamsLayout />)}
             {activeView === 'settings_subscription' && <SubscriptionPage />}
             {isTickets && withModuleGuard(activeView, <TicketsLayout />)}
-            {isManagement && activeView !== 'management_dashboard' && <ManagementLayout activeView={activeView} />}
+            {isManagement && activeView !== 'management_dashboard' && withModuleGuard(activeView, <ManagementLayout activeView={activeView} />)}
             {!isKnown && (
               <div className="flex items-center justify-center h-full text-gray-500">
                 <div className="text-center">

@@ -4,7 +4,8 @@ import { Input } from '@/components/ui/input';
 import { inventoryService, StockMutation } from '@/lib/inventoryService';
 import { cn } from '@/lib/utils';
 import { useResizableColumns, type ResizableColumnDef } from '@/lib/useResizableColumns';
-import { ArrowUp, CheckCircle2, ChevronDown, Columns3, Download, Filter, Settings, SlidersHorizontal, ZoomIn } from 'lucide-react';
+import { ArrowUp, CheckCircle2, ChevronDown, Columns3, Download, Filter, Settings, SlidersHorizontal, ZoomIn, Plus } from 'lucide-react';
+import { MutationDialog } from './MutationDialog';
 
 const pageSize = 25;
 
@@ -51,6 +52,7 @@ export function MutationsTable() {
   const [segment, setSegment] = useState<'alles' | 'inkomend' | 'voorraadcontrole' | 'intern' | 'uitgaand'>('alles');
   const [query, setQuery] = useState('');
   const [mutations, setMutations] = useState<StockMutation[]>([]);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   useEffect(() => {
     const unsubscribe = inventoryService.subscribeToMutations((fetched) => {
@@ -92,9 +94,18 @@ export function MutationsTable() {
     <div className="flex flex-col h-full">
       <div className="flex-1 bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden flex flex-col">
         <div className="px-6 pt-5 pb-4">
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-            <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Mutaties</h1>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+              <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Mutaties</h1>
+            </div>
+            <Button 
+              onClick={() => setIsDialogOpen(true)}
+              className="h-9 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold gap-2"
+            >
+              <Plus className="h-4 w-4" />
+              Nieuwe Mutatie
+            </Button>
           </div>
 
           <div className="mt-4 flex items-center gap-2">
@@ -350,6 +361,7 @@ export function MutationsTable() {
           </div>
         </div>
       </div>
+      <MutationDialog open={isDialogOpen} onOpenChange={setIsDialogOpen} />
     </div>
   );
 }

@@ -12,8 +12,13 @@ import {
   Settings,
   SlidersHorizontal,
   ZoomIn,
-  Leaf
+  Leaf,
+  Plus,
+  Edit,
+  Trash2
 } from 'lucide-react';
+import { BOMItemDialog } from './BOMItemDialog';
+import { toast } from 'sonner';
 
 type BomRow = {
   id: string;
@@ -48,7 +53,8 @@ type BomColumnKey =
   | 'sku'
   | 'definitie'
   | 'verkoopprijs'
-  | 'aankoopprijs';
+  | 'aankoopprijs'
+  | 'actions';
 
 type BomColumnDef = {
   key: BomColumnKey;
@@ -71,13 +77,16 @@ const bomColumns: BomColumnDef[] = [
   { key: 'sku', label: 'SKU', width: 140, minWidth: 120, resizable: true, thClassName: 'p-3 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider' },
   { key: 'definitie', label: 'Definitie', width: 120, minWidth: 100, resizable: true, thClassName: 'p-3 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider text-right' },
   { key: 'verkoopprijs', label: 'Verkoopprijs', width: 140, minWidth: 120, resizable: true, thClassName: 'p-3 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider text-right' },
-  { key: 'aankoopprijs', label: 'Aankoopprijs', width: 140, minWidth: 120, resizable: true, thClassName: 'p-3 pr-6 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider text-right' },
+  { key: 'aankoopprijs', label: 'Aankoopprijs', width: 140, minWidth: 120, resizable: true, thClassName: 'p-3 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider text-right' },
+  { key: 'actions', label: '', width: 80, minWidth: 80, resizable: false, thClassName: 'p-3 pr-6 text-[11px] font-extrabold text-gray-500 uppercase tracking-wider text-right' },
 ];
 
 export function BOMTable() {
   const [query, setQuery] = useState('');
   const [bomItems, setBomItems] = useState<BOMItem[]>([]);
   const [articles, setArticles] = useState<InventoryItem[]>([]);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<BOMItem | null>(null);
 
   useEffect(() => {
     const unsubBOM = inventoryService.subscribeToBOMItems(setBomItems);
@@ -127,6 +136,17 @@ export function BOMTable() {
     });
   }, [query, rows]);
 
+  const handleDelete = async (id: string) => {
+    if (window.confirm("Weet je zeker dat je deze regel wilt verwijderen?")) {
+      try {
+        await inventoryService.deleteBOMItem(id);
+        toast.success("Regel verwijderd");
+      } catch (e: any) {
+        toast.error("Fout bij verwijderen: " + e.message);
+      }
+    }
+  };
+
   return (
     <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
       <div className="px-6 pt-5 pb-4 border-b border-gray-100">
@@ -137,6 +157,13 @@ export function BOMTable() {
             </div>
             <h2 className="text-lg font-extrabold text-gray-900 tracking-tight">BOM-lijst</h2>
           </div>
+          <Button 
+            onClick={() => { setEditingItem(null); setIsDialogOpen(true); }}
+            className="h-9 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold gap-2"
+          >
+            <Plus className="h-4 w-4" />
+            Nieuwe Regel
+          </Button>
         </div>
 
         <div className="mt-4 flex items-center justify-between gap-3">
@@ -242,7 +269,33 @@ export function BOMTable() {
                 <td className="p-3 font-mono text-xs text-gray-600">{row.sku}</td>
                 <td className="p-3 text-sm text-gray-900 text-right">{formatNumberNl(row.definitie)}</td>
                 <td className="p-3 text-sm text-gray-900 text-right">{formatNumberNl(row.verkoopprijs)}</td>
-                <td className="p-3 pr-6 text-sm text-gray-900 text-right">{formatNumberNl(row.aankoopprijs)}</td>
+                <td className="p-3 text-sm text-gray-900 text-right">{formatNumberNl(row.aankoopprijs)}</td>
+                <td className="p-3 pr-6 text-right">
+                  <div className="flex items-center justify-end gap-1">
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={() => { 
+                        const original = bomItems.find(b => b.id === row.id);
+                        if(original) {
+                          setEditingItem(original); 
+                          setIsDialogOpen(true);
+                        }
+                      }}
+                      className="h-8 w-8 text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50"
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={() => handleDelete(row.id)}
+                      className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </td>
               </tr>
             ))}
             {filtered.length === 0 && (
@@ -271,6 +324,11 @@ export function BOMTable() {
           </button>
         </div>
       </div>
+      <BOMItemDialog 
+        open={isDialogOpen} 
+        onOpenChange={setIsDialogOpen} 
+        bomItem={editingItem} 
+      />
     </div>
   );
 }

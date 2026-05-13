@@ -18,8 +18,8 @@ export function PortalDashboard() {
   useEffect(() => {
     if (!userDoc?.contactId) return;
 
-    const unsubQuotes = financeService.subscribeToQuotes(setQuotes, userDoc.contactId);
-    const unsubInvoices = financeService.subscribeToInvoices(setInvoices, userDoc.contactId);
+    const unsubQuotes = financeService.subscribeToQuotes(setQuotes, { contactId: userDoc.contactId });
+    const unsubInvoices = financeService.subscribeToInvoices(setInvoices, { contactId: userDoc.contactId });
     const unsubTickets = ticketService.subscribeToTickets(setTickets, 50, userDoc.contactId);
 
     return () => {

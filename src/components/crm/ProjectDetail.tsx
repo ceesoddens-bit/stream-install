@@ -1,21 +1,22 @@
 import React, { useState } from 'react';
-import { 
-  ArrowLeft, 
-  Euro, 
-  MapPin, 
-  Phone, 
-  Mail, 
-  Calendar, 
-  FileText, 
-  MessageSquare, 
-  Paperclip, 
-  CheckCircle2, 
-  Clock, 
+import {
+  ArrowLeft,
+  Euro,
+  MapPin,
+  Phone,
+  Mail,
+  Calendar,
+  FileText,
+  MessageSquare,
+  Paperclip,
+  CheckCircle2,
+  Clock,
   Wrench,
   MoreVertical,
   Plus,
   Zap,
-  Download
+  Download,
+  X
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -24,6 +25,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { planningService, PlanningCard } from '@/lib/planningService';
 import { financeService } from '@/lib/financeService';
+import { hoursService, HourEntry } from '@/lib/hoursService';
+import { tasksService, TaskItem } from '@/lib/tasksService';
 import { Quote, Invoice } from '@/types';
 import { useEffect } from 'react';
 
@@ -33,16 +36,18 @@ interface ProjectDetailProps {
 }
 
 export function ProjectDetail({ projectId, onBack }: ProjectDetailProps) {
-  const [activeTab, setActiveTab] = useState<'overzicht' | 'financieel' | 'bestanden' | 'producten'>('overzicht');
+  const [activeTab, setActiveTab] = useState<'overzicht' | 'financieel' | 'uren' | 'taken' | 'bestanden' | 'producten'>('overzicht');
   const [project, setProject] = useState<PlanningCard | null>(null);
   const [projectQuotes, setProjectQuotes] = useState<Quote[]>([]);
   const [projectInvoices, setProjectInvoices] = useState<Invoice[]>([]);
+  const [projectHours, setProjectHours] = useState<HourEntry[]>([]);
+  const [projectTasks, setProjectTasks] = useState<TaskItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if (!projectId) return;
     setIsLoading(true);
-    
+
     const unsubProject = planningService.subscribeToPlanningCard(projectId, (data) => {
       setProject(data);
       setIsLoading(false);
@@ -56,10 +61,20 @@ export function ProjectDetail({ projectId, onBack }: ProjectDetailProps) {
       setProjectInvoices(data);
     }, { projectId });
 
+    const unsubHours = hoursService.subscribeToHours((entries) => {
+      setProjectHours(entries.filter(e => e.project === projectId || e.project === project?.projectRef));
+    });
+
+    const unsubTasks = tasksService.subscribeToTasks((tasks) => {
+      setProjectTasks(tasks.filter(t => t.projectId === projectId));
+    });
+
     return () => {
       unsubProject();
       unsubQuotes();
       unsubInvoices();
+      unsubHours();
+      unsubTasks();
     };
   }, [projectId]);
 
@@ -138,10 +153,12 @@ export function ProjectDetail({ projectId, onBack }: ProjectDetailProps) {
         </div>
 
         {/* ── Tabs ── */}
-        <div className="flex items-end gap-6 border-transparent">
+        <div className="flex items-end gap-6 border-transparent overflow-x-auto scrollbar-hide">
           {[
             { id: 'overzicht', label: 'Dossier Overzicht' },
             { id: 'financieel', label: 'Offertes & Facturen' },
+            { id: 'uren', label: 'Uren' },
+            { id: 'taken', label: 'Taken' },
             { id: 'producten', label: 'Producten (BOM)' },
             { id: 'bestanden', label: 'Bestanden & Media' },
           ].map(tab => (
@@ -416,7 +433,109 @@ export function ProjectDetail({ projectId, onBack }: ProjectDetailProps) {
           </div>
         )}
 
-        {activeTab !== 'overzicht' && activeTab !== 'financieel' && (
+        {activeTab === 'uren' && (
+          <Card className="border-gray-200 shadow-sm bg-white overflow-hidden">
+            <CardHeader className="pb-3 border-b border-gray-100 bg-gray-50/50">
+              <CardTitle className="text-base font-bold text-gray-800 flex items-center justify-between">
+                Geregistreerde uren
+                <span className="text-sm font-semibold text-gray-500">
+                  Totaal: {Math.round(projectHours.reduce((s, e) => s + (e.durationMinutes || 0), 0) / 60 * 10) / 10}u
+                </span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              {projectHours.length === 0 ? (
+                <div className="p-8 text-center text-gray-500 text-sm italic">Geen uren geregistreerd voor dit project.</div>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 text-xs font-semibold text-gray-500 uppercase">
+                    <tr>
+                      <th className="px-4 py-2 text-left">Medewerker</th>
+                      <th className="px-4 py-2 text-left">Datum</th>
+                      <th className="px-4 py-2 text-left">Type</th>
+                      <th className="px-4 py-2 text-right">Duur</th>
+                      <th className="px-4 py-2 text-left">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {projectHours.map(entry => (
+                      <tr key={entry.id} className="hover:bg-gray-50">
+                        <td className="px-4 py-3 font-medium text-gray-900">{entry.userName}</td>
+                        <td className="px-4 py-3 text-gray-600">{entry.date}</td>
+                        <td className="px-4 py-3 text-gray-600">{entry.type}</td>
+                        <td className="px-4 py-3 text-right font-medium tabular-nums">{entry.duur}</td>
+                        <td className="px-4 py-3">
+                          <span className={cn(
+                            "text-[10px] font-bold px-2 py-0.5 rounded-full",
+                            entry.status === 'Goedgekeurd' ? "bg-green-100 text-green-700" :
+                            entry.status === 'Ingediend' ? "bg-blue-100 text-blue-700" :
+                            entry.status === 'Afgewezen' ? "bg-red-100 text-red-700" :
+                            "bg-gray-100 text-gray-600"
+                          )}>
+                            {entry.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {activeTab === 'taken' && (
+          <Card className="border-gray-200 shadow-sm bg-white overflow-hidden">
+            <CardHeader className="pb-3 border-b border-gray-100 bg-gray-50/50">
+              <CardTitle className="text-base font-bold text-gray-800 flex items-center justify-between">
+                Taken
+                <div className="flex items-center gap-2 text-sm font-semibold text-gray-500">
+                  <span>{projectTasks.filter(t => t.status === 'Done').length}/{projectTasks.length} afgerond</span>
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              {projectTasks.length === 0 ? (
+                <div className="p-8 text-center text-gray-500 text-sm italic">Geen taken gekoppeld aan dit project.</div>
+              ) : (
+                <div className="divide-y divide-gray-100">
+                  {projectTasks.map(task => (
+                    <div key={task.id} className="px-6 py-3 flex items-center gap-4 hover:bg-gray-50">
+                      <div className={cn(
+                        "h-4 w-4 rounded border-2 shrink-0 flex items-center justify-center",
+                        task.status === 'Done' ? "border-green-500 bg-green-500" : "border-gray-300"
+                      )}>
+                        {task.status === 'Done' && <CheckCircle2 className="h-3 w-3 text-white" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className={cn("text-sm font-medium text-gray-900", task.status === 'Done' && "line-through text-gray-400")}>
+                          {task.title}
+                        </p>
+                        {task.description && <p className="text-xs text-gray-500 truncate">{task.description}</p>}
+                      </div>
+                      {task.assigneeName && (
+                        <span className="text-xs text-gray-500 shrink-0">{task.assigneeName}</span>
+                      )}
+                      {task.dueDate && (
+                        <span className="text-xs text-gray-400 shrink-0">{task.dueDate}</span>
+                      )}
+                      <span className={cn(
+                        "text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0",
+                        task.priority === 'High' ? "bg-red-100 text-red-700" :
+                        task.priority === 'Medium' ? "bg-orange-100 text-orange-700" :
+                        "bg-gray-100 text-gray-600"
+                      )}>
+                        {task.priority}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {activeTab !== 'overzicht' && activeTab !== 'financieel' && activeTab !== 'uren' && activeTab !== 'taken' && (
           <div className="flex items-center justify-center p-12 bg-white rounded-lg border border-gray-200 border-dashed">
             <div className="text-center">
               <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
@@ -424,7 +543,7 @@ export function ProjectDetail({ projectId, onBack }: ProjectDetailProps) {
               </div>
               <h2 className="text-lg font-bold text-gray-900 mb-1">{activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} Module</h2>
               <p className="text-sm text-gray-500 max-w-sm mx-auto">
-                Deze specifieke tab binnen het projectdossier kan verder uitgewerkt worden, bijvoorbeeld met een overzicht van bestanden of schouwingsverslagen.
+                Deze sectie wordt binnenkort uitgewerkt.
               </p>
             </div>
           </div>

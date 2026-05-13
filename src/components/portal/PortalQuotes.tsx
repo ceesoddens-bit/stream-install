@@ -26,7 +26,7 @@ export function PortalQuotes() {
 
   useEffect(() => {
     if (!userDoc?.contactId) return;
-    const unsub = financeService.subscribeToQuotes(setQuotes, userDoc.contactId);
+    const unsub = financeService.subscribeToQuotes(setQuotes, { contactId: userDoc.contactId });
     return () => unsub();
   }, [userDoc?.contactId]);
 
