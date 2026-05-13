@@ -2,15 +2,26 @@ import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, doc, CollectionReference, DocumentReference } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { getStorage } from 'firebase/storage';
+import { getFunctions } from 'firebase/functions';
+
+const getEnv = (key: string) => {
+  if (typeof import.meta !== 'undefined' && (import.meta as any).env) {
+    return (import.meta as any).env[key];
+  }
+  if (typeof process !== 'undefined' && process.env) {
+    return process.env[key];
+  }
+  return undefined;
+};
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
+  apiKey: getEnv('VITE_FIREBASE_API_KEY'),
+  authDomain: getEnv('VITE_FIREBASE_AUTH_DOMAIN'),
+  projectId: getEnv('VITE_FIREBASE_PROJECT_ID'),
+  storageBucket: getEnv('VITE_FIREBASE_STORAGE_BUCKET'),
+  messagingSenderId: getEnv('VITE_FIREBASE_MESSAGING_SENDER_ID'),
+  appId: getEnv('VITE_FIREBASE_APP_ID'),
+  measurementId: getEnv('VITE_FIREBASE_MEASUREMENT_ID'),
 };
 
 
@@ -18,6 +29,7 @@ let app;
 let db: any;
 let auth: any;
 let storage: any;
+let functions: any;
 
 
 try {
@@ -25,7 +37,10 @@ try {
   db = getFirestore(app);
   auth = getAuth(app);
   storage = getStorage(app);
-  
+  // TODO: Bij intensief testen — schakel emulator in via connectFunctionsEmulator
+  // firebase emulators:start --only functions
+  functions = getFunctions(app, 'us-central1');
+
   if (typeof window !== 'undefined') {
     (window as any).auth = auth;
     (window as any).db = db;
@@ -35,7 +50,7 @@ try {
   console.error("Firebase initialization failed:", error);
 }
 
-export { db, auth, storage };
+export { db, auth, storage, functions };
 export let analytics: any = null;
 
 

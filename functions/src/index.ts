@@ -1,4 +1,5 @@
 import * as admin from "firebase-admin";
+import * as functionsV1 from "firebase-functions/v1";
 import { auth as authV1 } from "firebase-functions/v1";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { onDocumentCreated } from "firebase-functions/v2/firestore";
@@ -9,6 +10,102 @@ const db = admin.firestore();
 const APP_URL = process.env.APP_URL || "http://localhost:3000";
 
 type Rol = "owner" | "admin" | "member";
+
+interface CreateTenantData {
+  naam: string;
+  plan: string;
+  aantalGebruikers: number;
+  aantalOwners: number;
+  aantalAdmins: number;
+  aantalMembers: number;
+  actiefModules: string[];
+  maandprijs: number;
+  abonnementStatus: string;
+  abonnementStartDatum: number;
+  kvk: string | null;
+  btw: string | null;
+  adres: { land: string };
+  branding: { bedrijfsnaam: string };
+  displayName: string;
+  email: string;
+}
+
+
+/**
+ * Callable (v1): maakt tenant + user document aan en zet custom claims via Admin SDK.
+ * Omzeilt Firestore security rules — lost het race condition na createUserWithEmailAndPassword op.
+ * Gebruikt v1 om het IAM allUsers-invoker-beleid te omzeilen dat Gen 2 blokkeert.
+ * 
+ * Veranderd naar onRequest met expliciete CORS headers.
+ */
+export const initTenant = functionsV1.https.onRequest(async (req, res) => {
+  res.set("Access-Control-Allow-Origin", "*");
+  res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
+  if (req.method === "OPTIONS") {
+    res.status(204).send("");
+    return;
+  }
+
+  try {
+    if (req.method !== "POST") {
+      res.status(405).send("Method Not Allowed");
+      return;
+    }
+    
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      res.status(401).json({ error: "Niet ingelogd." });
+      return;
+    }
+    
+    const token = authHeader.split("Bearer ")[1];
+    const decodedToken = await admin.auth().verifyIdToken(token);
+    const uid = decodedToken.uid;
+    
+    const data = req.body.data;
+    if (!data) {
+      res.status(400).json({ error: "Geen data" });
+      return;
+    }
+
+    const { displayName, email, ...tenantFields } = data as CreateTenantData;
+
+    const tenantRef = db.collection("tenants").doc();
+    const userRef = db.doc(`users/${uid}`);
+
+    const batch = db.batch();
+    batch.set(tenantRef, {
+      ...tenantFields,
+      ownerUid: uid,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    batch.set(userRef, {
+      tenantId: tenantRef.id,
+      role: "owner" as Rol,
+      displayName,
+      email,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    await batch.commit();
+
+    await admin.auth().setCustomUserClaims(uid, {
+      tenantId: tenantRef.id,
+      role: "owner",
+    });
+
+    await userRef.update({
+      claimsRefreshedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    console.log(`initTenant: tenant=${tenantRef.id} aangemaakt voor uid=${uid}`);
+    res.status(200).json({ data: { tenantId: tenantRef.id } });
+  } catch (error: any) {
+    console.error(error);
+    res.status(500).json({ error: error.message });
+  }
+});
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));

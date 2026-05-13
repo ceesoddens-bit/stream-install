@@ -12,6 +12,8 @@
     "test": "tsx --test tests/*.ts",
     "seed": "tsx src/lib/firebaseSeeder.ts",
     "seed:reset": "tsx src/lib/firebaseSeeder.ts --reset",
+    "qa:seed": "tsx src/scripts/qaSeeder.ts",
+    "qa:audit": "tsx src/scripts/qaAudit.ts",
     "deploy": "firebase deploy",
     "deploy:hosting": "npm run build && firebase deploy --only hosting",
     "deploy:rules": "firebase deploy --only firestore:rules,firestore:indexes,storage:rules",

@@ -48,10 +48,10 @@ export const registrationSchema = z.object({
   // Stap 5 — Voorwaarden
   voorwaarden: z.literal(true, { errorMap: () => ({ message: 'Accepteer de voorwaarden om door te gaan' }) }),
 }).superRefine((val, ctx) => {
-  // Valideer dat teamleden-emails uniek zijn en niet gelijk aan de registrerende user
+  // Valideer dat teamleden-emails uniek zijn en niet gelijk aan de registrerende user (negeer lege strings)
   const emails = val.teamleden.map((t) => t.email.toLowerCase());
   const ownerEmail = val.email.toLowerCase();
-  const dupes = emails.filter((e, i) => emails.indexOf(e) !== i || e === ownerEmail);
+  const dupes = emails.filter((e, i) => e !== '' && (emails.indexOf(e) !== i || e === ownerEmail));
   dupes.forEach((_, i) => {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
