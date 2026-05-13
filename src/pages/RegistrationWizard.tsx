@@ -3,8 +3,8 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useForm, Controller, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { createUserWithEmailAndPassword, sendEmailVerification, signOut, updateProfile } from 'firebase/auth';
-import { doc, writeBatch, collection, serverTimestamp } from 'firebase/firestore';
-import { auth, db } from '@/lib/firebase';
+import { httpsCallable } from 'firebase/functions';
+import { auth, functions } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -151,15 +151,15 @@ export function RegistrationWizard() {
       const displayName = `${values.voornaam} ${values.achternaam}`.trim();
       await updateProfile(cred.user, { displayName });
 
-      const tenantRef = doc(collection(db, 'tenants'));
-      const userRef = doc(db, 'users', cred.user.uid);
       const aantalOwners = values.aantalOwners;
       const aantalAdmins = values.aantalAdmins;
       const aantalMembers = values.aantalMembers;
       const maandprijs = berekenMaandprijs(aantalOwners, aantalAdmins, aantalMembers, values.modules as ModuleKey[]);
 
-      const batch = writeBatch(db);
-      batch.set(tenantRef, {
+      // Admin SDK bypasses Firestore rules — elimineert het race condition na createUserWithEmailAndPassword.
+      // De CF zet ook direct de custom claims (tenantId, role) zodat de client ze kan refreshen.
+      const token = await cred.user.getIdToken();
+      const payload = {
         naam: values.bedrijfsnaam,
         plan: 'custom',
         aantalGebruikers: aantalOwners + aantalAdmins + aantalMembers,
@@ -174,41 +174,30 @@ export function RegistrationWizard() {
         btw: values.btw || null,
         adres: { land: values.land },
         branding: { bedrijfsnaam: values.bedrijfsnaam },
-        ownerUid: cred.user.uid,
-        createdAt: serverTimestamp(),
-      });
-      batch.set(userRef, {
-        tenantId: tenantRef.id,
-        role: 'owner',
         displayName,
         email: values.email,
-        createdAt: serverTimestamp(),
+      };
+
+      const response = await fetch('https://us-central1-streaminstall.cloudfunctions.net/initTenant', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ data: payload })
       });
 
-      // TIJDELIJK: diagnose — verwijder na debuggen
-      try {
-        const tokenDiag = await cred.user.getIdTokenResult();
-        console.log('[Registratie] Claims op moment van batch.commit():', JSON.stringify(tokenDiag.claims));
-        console.log('[Registratie] auth.currentUser uid:', auth.currentUser?.uid);
-        console.log('[Registratie] cred.user uid:', cred.user.uid);
-        console.log('[Registratie] tenantRef.id:', tenantRef.id);
-        console.log('[Registratie] userRef.id:', userRef.id);
-      } catch (diagErr) {
-        console.warn('[Registratie] Kon token niet ophalen voor diagnose:', diagErr);
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`Mislukt om tenant aan te maken via Cloud Function: ${errText}`);
       }
 
-      await batch.commit();
+      const cfResult = await response.json();
+      const tenantId = cfResult.data.tenantId;
       setPreparing(true);
 
-      // Poll until onUserCreated CF has set custom claims (tenantId, role) on the token.
-      // Without these claims the Firestore rules deny access to the tenant document.
-      for (let i = 0; i < 5; i++) {
-        try {
-          const result = await cred.user.getIdTokenResult(true);
-          if (result.claims['tenantId']) break;
-        } catch { /* ignore, tenantContext will retry as well */ }
-        if (i < 4) await new Promise(r => setTimeout(r, 2000));
-      }
+      // Refresh token zodat de nieuwe custom claims (tenantId, role) zichtbaar zijn.
+      await cred.user.getIdTokenResult(true);
 
       // Maak uitnodigingen aan voor teamleden (na batch commit, zodat tenantId bekend is)
       if (values.teamleden.length > 0) {
@@ -218,7 +207,7 @@ export function RegistrationWizard() {
             .filter((t) => t.email.trim())
             .map((t) =>
               userService.createInvite(
-                tenantRef.id,
+                tenantId,
                 values.bedrijfsnaam,
                 t.email,
                 t.role as 'owner' | 'admin' | 'member',
@@ -234,8 +223,7 @@ export function RegistrationWizard() {
     } catch (err: any) {
       console.error('[Registratie] Fout code:', err?.code);
       console.error('[Registratie] Fout message:', err?.message);
-      console.error('[Registratie] Volledig object:', err);
-      // Verwijder wees Auth-account als batch faalt na createUserWithEmailAndPassword
+      // Verwijder wees Auth-account als de createTenant CF faalt
       if (auth.currentUser) {
         try { await auth.currentUser.delete(); } catch { /* verwijdering mislukt, niet-fataal */ }
       }
@@ -468,7 +456,6 @@ export function RegistrationWizard() {
                   </div>
                 )}
 
-                {/* === STEP 5 — Bevestigen === */}
                 {step === 5 && (
                   <div className="space-y-4">
                     <Summary values={form.getValues()} totaal={liveTotaal} />
@@ -490,6 +477,14 @@ export function RegistrationWizard() {
                         </div>
                       )}
                     />
+                    {Object.keys(form.formState.errors).length > 0 && (
+                      <div className="bg-red-50 p-3 rounded border border-red-200">
+                        <p className="text-sm text-red-700 font-medium">Registratie kan niet worden voltooid</p>
+                        <p className="text-xs text-red-600 mt-1">
+                          Er is een validatiefout opgetreden. Controleer de voorgaande stappen (bijv. of alle e-mailadressen correct en uniek zijn).
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
 
