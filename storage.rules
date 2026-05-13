@@ -2,13 +2,34 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
     function isSignedIn() { return request.auth != null; }
-    function tenantId() { return request.auth.token.tenantId; }
+    function tokenTenantId() { return request.auth.token.tenantId; }
+    function tokenRole() { return request.auth.token.role; }
+    function isCustomer() { return tokenRole() == 'customer'; }
 
+    // Tenant staff: full read/write within their tenant folder (max 25 MB)
     match /tenants/{tId}/{allPaths=**} {
-      allow read: if isSignedIn() && tenantId() == tId;
+      allow read: if isSignedIn() && tokenTenantId() == tId && !isCustomer();
       allow write: if isSignedIn()
-                    && tenantId() == tId
+                    && tokenTenantId() == tId
+                    && !isCustomer()
                     && request.resource.size < 25 * 1024 * 1024;
+    }
+
+    // Portal (customer role): read-only access to their own quote/invoice PDFs.
+    // Path convention: tenants/{tenantId}/offertes/{contactId}/{file}
+    //                  tenants/{tenantId}/facturen/{contactId}/{file}
+    match /tenants/{tId}/offertes/{contactId}/{file} {
+      allow read: if isSignedIn()
+                   && tokenTenantId() == tId
+                   && isCustomer()
+                   && request.auth.uid == contactId;
+    }
+
+    match /tenants/{tId}/facturen/{contactId}/{file} {
+      allow read: if isSignedIn()
+                   && tokenTenantId() == tId
+                   && isCustomer()
+                   && request.auth.uid == contactId;
     }
   }
 }

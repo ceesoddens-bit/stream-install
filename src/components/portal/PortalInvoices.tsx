@@ -26,7 +26,7 @@ export function PortalInvoices() {
 
   useEffect(() => {
     if (!userDoc?.contactId) return;
-    const unsub = financeService.subscribeToInvoices(setInvoices, userDoc.contactId);
+    const unsub = financeService.subscribeToInvoices(setInvoices, { contactId: userDoc.contactId });
     return () => unsub();
   }, [userDoc?.contactId]);
 

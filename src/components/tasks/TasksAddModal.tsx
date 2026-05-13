@@ -1,7 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Send, Loader2, ListTodo } from 'lucide-react';
 import { tasksService, TaskItem } from '@/lib/tasksService';
 import { Button } from '@/components/ui/button';
+import { useTenant } from '@/lib/tenantContext';
+import { userService } from '@/lib/userService';
+import { useCollection } from '@/lib/useCollection';
+import { UserDoc } from '@/lib/tenantTypes';
 
 interface TasksAddModalProps {
   onClose: () => void;
@@ -9,6 +13,16 @@ interface TasksAddModalProps {
 }
 
 export function TasksAddModal({ onClose, defaultAssignee }: TasksAddModalProps) {
+  const { tenantId, userDoc } = useTenant();
+  const projects = useCollection('projects');
+  const [users, setUsers] = useState<UserDoc[]>([]);
+
+  useEffect(() => {
+    if (!tenantId) return;
+    const unsub = userService.subscribeToUsers(tenantId, setUsers);
+    return () => unsub();
+  }, [tenantId]);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState<Omit<TaskItem, 'id' | 'createdAt' | 'updatedAt'>>({
     title: '',
@@ -17,8 +31,8 @@ export function TasksAddModal({ onClose, defaultAssignee }: TasksAddModalProps) 
     priority: 'Medium',
     status: 'Open',
     assigneeId: defaultAssignee || 'current-user',
-    assigneeName: 'Huidige Gebruiker',
-    createdBy: 'current-user',
+    assigneeName: userDoc?.displayName || 'Huidige Gebruiker',
+    createdBy: userDoc?.uid || 'current-user',
     projectId: '',
     ticketId: ''
   });
@@ -103,6 +117,38 @@ export function TasksAddModal({ onClose, defaultAssignee }: TasksAddModalProps) 
                 <option value="Low">Laag</option>
                 <option value="Medium">Gemiddeld</option>
                 <option value="High">Hoog</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest pl-1">Toewijzen aan</label>
+              <select
+                value={formData.assigneeId || ''}
+                onChange={(e) => {
+                  const assigneeId = e.target.value;
+                  const assigneeName = users.find(u => u.uid === assigneeId)?.displayName || 'Onbekend';
+                  setFormData({ ...formData, assigneeId, assigneeName });
+                }}
+                className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:bg-white focus:outline-none focus:border-emerald-600"
+              >
+                {users.map(u => (
+                  <option key={u.uid} value={u.uid}>{u.displayName || u.email}</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest pl-1">Koppel Project</label>
+              <select
+                value={formData.projectId || ''}
+                onChange={(e) => setFormData({ ...formData, projectId: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:bg-white focus:outline-none focus:border-emerald-600"
+              >
+                <option value="">Geen project</option>
+                {projects.data.map((p: any) => (
+                  <option key={p.id} value={p.id}>{p.title}</option>
+                ))}
               </select>
             </div>
           </div>

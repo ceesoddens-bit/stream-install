@@ -1,6 +1,6 @@
-import React, { useMemo, useState, useEffect, useRef } from 'react';
-import { 
-  Layers, Settings, Columns3, SlidersHorizontal, AlignJustify, Maximize2, Download, Search, Plus, Archive, Edit, Info, ChevronDown, MoreHorizontal, CheckCircle2, FileText, Send, CheckSquare, MessageSquare, Check, X, UserCircle2
+import React, { useMemo, useState, useEffect, useRef, lazy, Suspense } from 'react';
+import {
+  Layers, Settings, Columns3, SlidersHorizontal, AlignJustify, Maximize2, Download, Search, Plus, Archive, Edit, Info, ChevronDown, MoreHorizontal, CheckCircle2, FileText, Send, CheckSquare, MessageSquare, Check, X, UserCircle2, ArrowRight, Eye
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -8,6 +8,9 @@ import { financeService } from '@/lib/financeService';
 import { Quote } from '@/types';
 import { QuoteEditDialog } from './FinanceEditDialogs';
 import { toast } from 'sonner';
+
+// PDFViewer is only available in browser and is a heavy import — lazy load it
+const PDFViewer = lazy(() => import('@react-pdf/renderer').then(m => ({ default: m.PDFViewer })));
 
 const eur = new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR' });
 
@@ -90,6 +93,7 @@ export function QuotesLayout() {
   const [isLoading, setIsLoading] = useState(true);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingQuote, setEditingQuote] = useState<Quote | null>(null);
+  const [previewQuote, setPreviewQuote] = useState<Quote | null>(null);
 
   useEffect(() => {
     const unsub = financeService.subscribeToQuotes((fetched) => {
@@ -138,6 +142,22 @@ export function QuotesLayout() {
     } catch (err) {
       console.error(err);
       toast.error('Fout bij genereren PDF', { id: toastId });
+    }
+  };
+
+  const handleConvertToInvoice = async (quote: Quote) => {
+    if (quote.status !== 'Geaccepteerd') {
+      toast.error('Alleen geaccepteerde offertes kunnen worden omgezet naar factuur');
+      return;
+    }
+    if (!window.confirm(`Offerte "${quote.title}" omzetten naar factuur?`)) return;
+    const toastId = toast.loading('Factuur aanmaken...');
+    try {
+      await financeService.convertQuoteToInvoice(quote);
+      toast.success('Factuur aangemaakt', { id: toastId });
+    } catch (err) {
+      console.error(err);
+      toast.error('Fout bij omzetten naar factuur', { id: toastId });
     }
   };
 
@@ -426,9 +446,20 @@ export function QuotesLayout() {
                         <button onClick={() => handleEdit(row)} title="Bewerken" className="hover:text-emerald-800 p-0.5"><Edit className="h-3.5 w-3.5" /></button>
                         <button onClick={() => handleDelete(row.id!)} title="Verwijderen" className="hover:text-red-600 p-0.5"><Archive className="h-3.5 w-3.5" /></button>
                       </PermissionGuard>
+                      <button onClick={() => setPreviewQuote(row)} title="Preview PDF" className="hover:text-emerald-800 p-0.5"><Eye className="h-3.5 w-3.5" /></button>
                       <button onClick={() => handleDownloadPDF(row)} title="Download PDF" className="hover:text-emerald-800 p-0.5"><Download className="h-3.5 w-3.5" /></button>
                       <PermissionGuard permission="offertes.versturen">
                         <button onClick={() => handleSendEmail(row)} className="hover:text-emerald-800 p-0.5 text-emerald-600" title="Verzenden"><Send className="h-3.5 w-3.5" /></button>
+                      </PermissionGuard>
+                      <PermissionGuard permission="facturen.aanmaken">
+                        <button
+                          onClick={() => handleConvertToInvoice(row)}
+                          title="Omzetten naar factuur"
+                          className={cn("p-0.5", row.status === 'Geaccepteerd' ? "hover:text-blue-600 text-blue-500" : "text-gray-300 cursor-not-allowed")}
+                          disabled={row.status !== 'Geaccepteerd'}
+                        >
+                          <ArrowRight className="h-3.5 w-3.5" />
+                        </button>
                       </PermissionGuard>
                     </div>
                   </td>
@@ -455,11 +486,45 @@ export function QuotesLayout() {
 
       </div>
 
-      <QuoteEditDialog 
+      <QuoteEditDialog
         open={isEditOpen}
         onOpenChange={setIsEditOpen}
         quote={editingQuote}
       />
+
+      {/* PDF Preview Modal */}
+      {previewQuote && tenant && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl h-[90vh] flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200 shrink-0">
+              <h2 className="text-sm font-bold text-gray-800">
+                PDF Preview — {previewQuote.quoteNumber || previewQuote.id}
+              </h2>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleDownloadPDF(previewQuote)}
+                  className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 hover:text-emerald-800 px-3 py-1.5 rounded-md border border-emerald-200 hover:bg-emerald-50"
+                >
+                  <Download className="h-3.5 w-3.5" /> Downloaden
+                </button>
+                <button
+                  onClick={() => setPreviewQuote(null)}
+                  className="p-1.5 text-gray-400 hover:text-gray-700 rounded-md hover:bg-gray-100"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <Suspense fallback={<div className="flex items-center justify-center h-full text-gray-400 text-sm animate-pulse">PDF laden...</div>}>
+                <PDFViewer width="100%" height="100%" showToolbar={false}>
+                  <QuoteTemplate quote={previewQuote} tenant={tenant} />
+                </PDFViewer>
+              </Suspense>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

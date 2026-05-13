@@ -1,6 +1,7 @@
-import { onSnapshot, query, orderBy, Timestamp, deleteDoc, addDoc, updateDoc, where } from 'firebase/firestore';
-import { tenantCol, tenantDoc } from './firebase';
+import { onSnapshot, query, orderBy, Timestamp, deleteDoc, addDoc, updateDoc, where, collection } from 'firebase/firestore';
+import { tenantCol, tenantDoc, db } from './firebase';
 import { Quote, Invoice } from '../types';
+import { pdfService } from './pdfService';
 
 const QUOTES_COLLECTION = 'quotes';
 const INVOICES_COLLECTION = 'invoices';
@@ -59,6 +60,31 @@ export const financeService = {
     }
   },
 
+  sendQuote: async (tenantId: string, quoteId: string, email: string, pdfBlob: Blob) => {
+    try {
+      const pdfUrl = await pdfService.uploadPDF(tenantId, 'offertes', quoteId, pdfBlob);
+      
+      // Update quote status
+      await updateDoc(tenantDoc(QUOTES_COLLECTION, quoteId), {
+        status: 'Verstuurd',
+        sentDate: new Date().toISOString(),
+        updatedAt: Timestamp.now(),
+      });
+
+      // Add to mail queue
+      await addDoc(collection(db, 'mail'), {
+        to: email,
+        message: {
+          subject: 'Nieuwe offerte',
+          html: `<p>Beste klant,</p><p>Hierbij ontvangt u uw offerte.</p><p><a href="${pdfUrl}">Download Offerte</a></p>`
+        }
+      });
+    } catch (error) {
+      console.error("Error sending quote: ", error);
+      throw error;
+    }
+  },
+
   // --- Invoices ---
   subscribeToInvoices: (callback: (invoices: Invoice[]) => void, filters?: { contactId?: string, projectId?: string }) => {
     let q = query(tenantCol(INVOICES_COLLECTION), orderBy('id', 'desc'));
@@ -108,6 +134,61 @@ export const financeService = {
       await deleteDoc(tenantDoc(INVOICES_COLLECTION, id));
     } catch (error) {
       console.error("Error deleting invoice: ", error);
+      throw error;
+    }
+  },
+
+  convertQuoteToInvoice: async (quote: Quote): Promise<string> => {
+    const invoiceCode = `FACT-${Date.now().toString().slice(-6)}`;
+    const docRef = await addDoc(tenantCol(INVOICES_COLLECTION), {
+      invoiceCode,
+      invoiceNumber: invoiceCode,
+      status: 'Concept',
+      projectName: quote.projectName || '',
+      contactName: quote.contactName || '',
+      contactId: quote.contactId || '',
+      clientName: quote.contactName || '',
+      totalExcl: quote.totalAmount || 0,
+      totalIncl: Math.round((quote.totalAmount || 0) * 1.21 * 100) / 100,
+      amount: quote.totalAmount || 0,
+      fullyPaid: false,
+      lineItems: quote.lineItems || [],
+      quoteId: quote.id,
+      date: new Date().toISOString().split('T')[0],
+      createdAt: Timestamp.now(),
+      updatedAt: Timestamp.now(),
+    });
+
+    // Mark quote as invoiced
+    await updateDoc(tenantDoc(QUOTES_COLLECTION, quote.id!), {
+      gefactureerd: true,
+      invoiceId: docRef.id,
+      updatedAt: Timestamp.now(),
+    });
+
+    return docRef.id;
+  },
+
+  sendInvoice: async (tenantId: string, invoiceId: string, email: string, pdfBlob: Blob) => {
+    try {
+      const pdfUrl = await pdfService.uploadPDF(tenantId, 'facturen', invoiceId, pdfBlob);
+      
+      // Update invoice status
+      await updateDoc(tenantDoc(INVOICES_COLLECTION, invoiceId), {
+        status: 'Verstuurd',
+        updatedAt: Timestamp.now(),
+      });
+
+      // Add to mail queue
+      await addDoc(collection(db, 'mail'), {
+        to: email,
+        message: {
+          subject: 'Nieuwe factuur',
+          html: `<p>Beste klant,</p><p>Hierbij ontvangt u uw factuur.</p><p><a href="${pdfUrl}">Download Factuur</a></p>`
+        }
+      });
+    } catch (error) {
+      console.error("Error sending invoice: ", error);
       throw error;
     }
   }

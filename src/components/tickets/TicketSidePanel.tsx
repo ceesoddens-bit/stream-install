@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
 import { nl } from 'date-fns/locale';
 import { useTenant } from '@/lib/tenantContext';
+import { toast } from 'sonner';
 import { aiService } from '@/lib/aiService';
 
 interface TicketSidePanelProps {

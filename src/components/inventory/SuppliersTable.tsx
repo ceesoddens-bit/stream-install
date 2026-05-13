@@ -12,10 +12,14 @@ import {
   Plus,
   Settings,
   SlidersHorizontal,
-  ArrowUp,
   ZoomIn,
-  Boxes
+  Boxes,
+  Edit,
+  Trash2,
+  ArrowUp
 } from 'lucide-react';
+import { SupplierDialog } from './SupplierDialog';
+import { toast } from 'sonner';
 
 const pageSize = 25;
 
@@ -69,6 +73,8 @@ export function SuppliersTable() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [query, setQuery] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
 
   const [columnWidths, setColumnWidths] = useState<Record<SuppliersColumnKey, number>>(() => {
     return suppliersColumns.reduce((acc, col) => {
@@ -165,8 +171,18 @@ export function SuppliersTable() {
   const formatTimestamp = (ts: any) => {
     if (!ts) return '-';
     if (typeof ts === 'string') return ts;
-    if (ts.toDate) return ts.toDate().toLocaleString('nl-NL');
     return '-';
+  };
+
+  const handleDelete = async (id: string) => {
+    if (window.confirm("Weet je zeker dat je deze leverancier wilt verwijderen?")) {
+      try {
+        await inventoryService.deleteSupplier(id);
+        toast.success("Leverancier verwijderd");
+      } catch (e: any) {
+        toast.error("Fout bij verwijderen: " + e.message);
+      }
+    }
   };
 
   return (
@@ -174,7 +190,10 @@ export function SuppliersTable() {
       <div className="flex items-center justify-between gap-4 mb-4">
         <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Leveranciers</h1>
         <div className="flex items-center gap-2">
-          <Button className="h-9 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold gap-2">
+          <Button 
+            onClick={() => { setEditingSupplier(null); setIsDialogOpen(true); }}
+            className="h-9 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold gap-2"
+          >
             <Plus className="h-4 w-4" />
             Nieuwe Leverancier
           </Button>
@@ -311,13 +330,24 @@ export function SuppliersTable() {
                       <UserBadge initials={row.updatedByInitials} name={row.updatedByName} />
                     </td>
                     <td className="p-3 pr-4 text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50"
-                      >
-                        <ExternalLink className="h-4 w-4" />
-                      </Button>
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => { setEditingSupplier(row); setIsDialogOpen(true); }}
+                          className="h-8 w-8 text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDelete(row.id!)}
+                          className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -367,6 +397,12 @@ export function SuppliersTable() {
           </div>
         </div>
       </div>
+      
+      <SupplierDialog 
+        open={isDialogOpen} 
+        onOpenChange={setIsDialogOpen} 
+        supplier={editingSupplier} 
+      />
     </div>
   );
 }

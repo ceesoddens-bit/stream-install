@@ -13,8 +13,11 @@ import {
   Plus,
   Settings,
   SlidersHorizontal,
-  X
+  X,
+  Trash2
 } from 'lucide-react';
+import { WarehouseDialog } from './WarehouseDialog';
+import { toast } from 'sonner';
 
 const pageSize = 25;
 
@@ -66,6 +69,8 @@ export function WarehousesTable() {
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [query, setQuery] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingWarehouse, setEditingWarehouse] = useState<Warehouse | null>(null);
 
   const [columnWidths, setColumnWidths] = useState<Record<WarehousesColumnKey, number>>(() => {
     return columns.reduce((acc, col) => {
@@ -160,8 +165,18 @@ export function WarehousesTable() {
   const formatTimestamp = (ts: any) => {
     if (!ts) return '-';
     if (typeof ts === 'string') return ts;
-    if (ts.toDate) return ts.toDate().toLocaleString('nl-NL');
     return '-';
+  };
+
+  const handleDelete = async (id: string) => {
+    if (window.confirm("Weet je zeker dat je dit magazijn wilt verwijderen?")) {
+      try {
+        await inventoryService.deleteWarehouse(id);
+        toast.success("Magazijn verwijderd");
+      } catch (e: any) {
+        toast.error("Fout bij verwijderen: " + e.message);
+      }
+    }
   };
 
   return (
@@ -169,7 +184,10 @@ export function WarehousesTable() {
       <div className="flex items-center justify-between gap-4 mb-4">
         <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Magazijnen</h1>
         <div className="flex items-center gap-2">
-          <Button className="h-9 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold gap-2">
+          <Button 
+            onClick={() => { setEditingWarehouse(null); setIsDialogOpen(true); }}
+            className="h-9 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold gap-2"
+          >
             <Plus className="h-4 w-4" />
             Magazijn Maken
           </Button>
@@ -305,14 +323,21 @@ export function WarehousesTable() {
                     </td>
                     <td className="p-3 pr-4">
                       <div className="flex items-center justify-end gap-1">
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-gray-800 hover:bg-gray-50">
-                          <X className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-gray-800 hover:bg-gray-50">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => { setEditingWarehouse(row); setIsDialogOpen(true); }}
+                          className="h-8 w-8 text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50"
+                        >
                           <Pencil className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50">
-                          <MapPin className="h-4 w-4" />
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => handleDelete(row.id!)}
+                          className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                     </td>
@@ -364,6 +389,11 @@ export function WarehousesTable() {
           </div>
         </div>
       </div>
+      <WarehouseDialog 
+        open={isDialogOpen} 
+        onOpenChange={setIsDialogOpen} 
+        warehouse={editingWarehouse} 
+      />
     </div>
   );
 }

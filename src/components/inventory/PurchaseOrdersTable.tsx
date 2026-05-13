@@ -3,7 +3,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { inventoryService, PurchaseOrder } from '@/lib/inventoryService';
 import { cn } from '@/lib/utils';
-import { Boxes, Columns3, Download, Filter, Plus, Settings, SlidersHorizontal, ZoomIn } from 'lucide-react';
+import { Boxes, Columns3, Download, Filter, Plus, Settings, SlidersHorizontal, ZoomIn, Edit, Trash2 } from 'lucide-react';
+import { PurchaseOrderDialog } from './PurchaseOrderDialog';
+import { toast } from 'sonner';
 
 const pageSize = 25;
 
@@ -11,6 +13,8 @@ export function PurchaseOrdersTable() {
   const [subTab, setSubTab] = useState<'inkooporders' | 'regels'>('inkooporders');
   const [query, setQuery] = useState('');
   const [orders, setOrders] = useState<PurchaseOrder[]>([]);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingOrder, setEditingOrder] = useState<PurchaseOrder | null>(null);
 
   useEffect(() => {
     return inventoryService.subscribeToPurchaseOrders(setOrders);
@@ -23,12 +27,26 @@ export function PurchaseOrdersTable() {
 
   const count = filteredOrders.length;
 
+  const handleDelete = async (id: string) => {
+    if (window.confirm("Weet je zeker dat je deze inkooporder wilt verwijderen?")) {
+      try {
+        await inventoryService.deletePurchaseOrder(id);
+        toast.success("Inkooporder verwijderd");
+      } catch (e: any) {
+        toast.error("Fout bij verwijderen: " + e.message);
+      }
+    }
+  };
+
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between gap-4 mb-4">
         <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Inkooporders</h1>
         <div className="flex items-center gap-2">
-          <Button className="h-9 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold gap-2">
+          <Button 
+            onClick={() => { setEditingOrder(null); setIsDialogOpen(true); }}
+            className="h-9 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold gap-2"
+          >
             <Plus className="h-4 w-4" />
             Inkooporder Aanmaken
           </Button>
@@ -171,7 +189,26 @@ export function PurchaseOrdersTable() {
                     <td className="p-3 text-sm font-bold text-gray-900">€ {order.totalAmount.toFixed(2)}</td>
                     <td className="p-3 text-sm text-gray-700">-</td>
                     <td className="p-3 text-sm text-gray-700">{new Date(order.orderDate).toLocaleDateString()}</td>
-                    <td className="p-3 pr-6 text-sm text-gray-700">-</td>
+                    <td className="p-3 pr-6 text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => { setEditingOrder(order); setIsDialogOpen(true); }}
+                          className="h-8 w-8 text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => handleDelete(order.id!)}
+                          className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </td>
                   </tr>
                 ))
               )}
@@ -203,6 +240,11 @@ export function PurchaseOrdersTable() {
           </div>
         </div>
       </div>
+      <PurchaseOrderDialog 
+        open={isDialogOpen} 
+        onOpenChange={setIsDialogOpen} 
+        order={editingOrder} 
+      />
     </div>
   );
 }
